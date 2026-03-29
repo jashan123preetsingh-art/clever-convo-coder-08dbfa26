@@ -8,6 +8,7 @@ interface AuthState {
   loading: boolean;
   isAdmin: boolean;
   profile: any | null;
+  roleLoading: boolean;
 }
 
 export function useAuth() {
@@ -17,34 +18,34 @@ export function useAuth() {
     loading: true,
     isAdmin: false,
     profile: null,
+    roleLoading: true,
   });
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         const user = session?.user ?? null;
-        let isAdmin = false;
-        let profile = null;
 
         if (user) {
+          setState(prev => ({ ...prev, user, session, loading: false, roleLoading: true }));
           // Fetch profile & roles with setTimeout to avoid deadlock
           setTimeout(async () => {
             const [profileRes, roleRes] = await Promise.all([
               supabase.from('profiles').select('*').eq('id', user.id).single(),
               supabase.from('user_roles').select('role').eq('user_id', user.id),
             ]);
-            profile = profileRes.data;
-            isAdmin = roleRes.data?.some((r: any) => r.role === 'admin') ?? false;
-            setState({ user, session, loading: false, isAdmin, profile });
+            const profile = profileRes.data;
+            const isAdmin = roleRes.data?.some((r: any) => r.role === 'admin') ?? false;
+            setState({ user, session, loading: false, isAdmin, profile, roleLoading: false });
           }, 0);
+        } else {
+          setState({ user: null, session: null, loading: false, isAdmin: false, profile: null, roleLoading: false });
         }
-
-        setState(prev => ({ ...prev, user, session, loading: false }));
       }
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setState(prev => ({ ...prev, loading: false }));
+      if (!session) setState(prev => ({ ...prev, loading: false, roleLoading: false }));
     });
 
     return () => subscription.unsubscribe();
@@ -52,7 +53,7 @@ export function useAuth() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setState({ user: null, session: null, loading: false, isAdmin: false, profile: null });
+    setState({ user: null, session: null, loading: false, isAdmin: false, profile: null, roleLoading: false });
   };
 
   return { ...state, signOut };
