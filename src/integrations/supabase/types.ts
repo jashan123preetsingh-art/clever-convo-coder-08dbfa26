@@ -44,6 +44,39 @@ export type Database = {
         }
         Relationships: []
       }
+      price_alerts: {
+        Row: {
+          condition: string
+          created_at: string | null
+          id: string
+          symbol: string
+          target_price: number
+          triggered: boolean | null
+          triggered_at: string | null
+          user_id: string
+        }
+        Insert: {
+          condition: string
+          created_at?: string | null
+          id?: string
+          symbol: string
+          target_price: number
+          triggered?: boolean | null
+          triggered_at?: string | null
+          user_id: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string | null
+          id?: string
+          symbol?: string
+          target_price?: number
+          triggered?: boolean | null
+          triggered_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -88,6 +121,33 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      watchlists: {
+        Row: {
+          added_price: number | null
+          created_at: string | null
+          id: string
+          quantity: number | null
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          added_price?: number | null
+          created_at?: string | null
+          id?: string
+          quantity?: number | null
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          added_price?: number | null
+          created_at?: string | null
+          id?: string
+          quantity?: number | null
+          symbol?: string
           user_id?: string
         }
         Relationships: []
