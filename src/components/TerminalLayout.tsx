@@ -6,6 +6,7 @@ import { formatPercent } from '@/utils/format';
 import { useStockSearch } from '@/hooks/useStockData';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertBell } from '@/components/PriceAlerts';
+import { useTheme } from '@/hooks/useTheme';
 import CommandPalette from '@/components/CommandPalette';
 
 const AiAssistant = lazy(() => import('@/components/AiAssistant'));
