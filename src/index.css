@@ -255,4 +255,30 @@
     @apply font-data font-black tracking-tight;
     text-shadow: 0 0 20px currentColor;
   }
+
+  /* Safe area for mobile notch/home indicator */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* Mobile-specific overrides */
+@media (max-width: 768px) {
+  .t-card {
+    border-radius: 0.5rem;
+  }
+
+  /* Improve touch targets */
+  button, a, [role="button"] {
+    min-height: 32px;
+  }
+
+  /* Hide scrollbars on mobile for cleaner look */
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
 }
