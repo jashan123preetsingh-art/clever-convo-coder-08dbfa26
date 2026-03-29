@@ -5,6 +5,8 @@ import { useFullStockData, useStockChart, useAIAnalysis } from '@/hooks/useStock
 import { getStock, generateCandleData } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import { useWatchlist } from '@/hooks/useWatchlist';
+import { useQuery } from '@tanstack/react-query';
+import ReactMarkdown from 'react-markdown';
 
 // ─── Shared Components ───
 
