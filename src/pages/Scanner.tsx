@@ -696,16 +696,10 @@ function BreakoutDetailCard({ stock, onClose }: { stock: Stock; onClose: () => v
 
 // ═══ MAIN COMPONENT ═══
 export default function Scanner() {
-  const [tab, setTab] = useState<'feeds' | 'custom'>('feeds');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [activeScan, setActiveScan] = useState<ScanPreset | null>(null);
   const [scanResults, setScanResults] = useState<Stock[] | null>(null);
   const [expandedStock, setExpandedStock] = useState<string | null>(null);
-
-  const [conditions, setConditions] = useState<Condition[]>([newCondition()]);
-  const [logicMode, setLogicMode] = useState<'all' | 'any'>('all');
-  const [customResults, setCustomResults] = useState<Stock[] | null>(null);
-  const [hasRunCustom, setHasRunCustom] = useState(false);
 
   const [sortKey, setSortKey] = useState('change_pct');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
