@@ -5,344 +5,341 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Yahoo Finance base
 const YF_BASE = "https://query1.finance.yahoo.com";
+const YF_BASE2 = "https://query2.finance.yahoo.com";
 
-// Index symbol mapping (these don't use .NS suffix)
 const INDEX_MAP: Record<string, string> = {
-  "NIFTY": "^NSEI",
-  "NIFTY 50": "^NSEI",
-  "BANKNIFTY": "^NSEBANK",
+  "NIFTY": "^NSEI", "NIFTY 50": "^NSEI", "NIFTY50": "^NSEI",
+  "BANKNIFTY": "^NSEBANK", "BANK NIFTY": "^NSEBANK",
   "SENSEX": "^BSESN",
-  "NIFTYIT": "^CNXIT",
+  "NIFTYIT": "^CNXIT", "NIFTY IT": "^CNXIT",
   "NIFTYNEXT50": "^NSMIDCP",
 };
 
 function toYahooSymbol(symbol: string): string {
-  const upper = symbol.toUpperCase();
+  const upper = symbol.toUpperCase().trim();
   if (INDEX_MAP[upper]) return INDEX_MAP[upper];
-  if (symbol.includes(".") || symbol.startsWith("^")) return symbol;
-  return `${symbol}.NS`;
+  if (symbol.startsWith("^") || symbol.includes(".")) return symbol;
+  // Skip clearly invalid symbols (mutual fund IDs etc)
+  if (/^[0-9A-Z]{10,}$/.test(upper) && !upper.match(/[A-Z]{3,}/)) return "";
+  return `${upper}.NS`;
 }
 
-async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
+async function fetchSafe(url: string, retries = 1): Promise<Response | null> {
   for (let i = 0; i <= retries; i++) {
     try {
       const resp = await fetch(url, {
         headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           "Accept": "application/json",
+          "Accept-Language": "en-US,en;q=0.9",
         },
       });
       if (resp.ok) return resp;
-    } catch (e) {
-      if (i === retries) throw e;
+      // If 403/429, try alternate domain
+      if (i === 0 && (resp.status === 403 || resp.status === 429)) {
+        const altUrl = url.replace(YF_BASE, YF_BASE2);
+        if (altUrl !== url) {
+          const altResp = await fetch(altUrl, {
+            headers: { "User-Agent": "Mozilla/5.0", "Accept": "application/json" },
+          });
+          if (altResp.ok) return altResp;
+        }
+      }
+    } catch {
+      if (i === retries) return null;
+      await new Promise(r => setTimeout(r, 500));
     }
   }
-  throw new Error("All retries failed");
+  return null;
 }
 
-// Get quote data from Yahoo Finance
+// Get quote via chart endpoint (most reliable)
 async function getQuote(symbol: string) {
   const yfSymbol = toYahooSymbol(symbol);
-  const url = `${YF_BASE}/v8/finance/chart/${yfSymbol}?interval=1d&range=5d&includePrePost=false`;
-  const resp = await fetchWithRetry(url);
+  if (!yfSymbol) return null;
+
+  const resp = await fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=5d&includePrePost=false`);
+  if (!resp) return null;
+
   const data = await resp.json();
   const result = data?.chart?.result?.[0];
   if (!result) return null;
 
   const meta = result.meta;
   const quote = result.indicators?.quote?.[0];
-  const timestamps = result.timestamp || [];
-  const lastIdx = timestamps.length - 1;
+  const ts = result.timestamp || [];
+  const last = ts.length - 1;
+  const prev = meta.chartPreviousClose || meta.previousClose || 0;
 
   return {
-    symbol: symbol,
-    name: meta.longName || meta.shortName || symbol,
+    symbol, name: meta.longName || meta.shortName || symbol,
     ltp: meta.regularMarketPrice,
-    prev_close: meta.chartPreviousClose || meta.previousClose,
-    open: quote?.open?.[lastIdx],
-    high: quote?.high?.[lastIdx],
-    low: quote?.low?.[lastIdx],
-    close: quote?.close?.[lastIdx],
-    volume: quote?.volume?.[lastIdx],
-    change: meta.regularMarketPrice - (meta.chartPreviousClose || meta.previousClose || 0),
-    change_pct: ((meta.regularMarketPrice - (meta.chartPreviousClose || meta.previousClose || 1)) / (meta.chartPreviousClose || meta.previousClose || 1)) * 100,
-    week_52_high: meta.fiftyTwoWeekHigh,
-    week_52_low: meta.fiftyTwoWeekLow,
-    exchange: meta.exchangeName || "NSE",
-    currency: meta.currency,
-    market_cap: meta.marketCap,
-    timezone: meta.exchangeTimezoneName,
+    prev_close: prev,
+    open: quote?.open?.[last], high: quote?.high?.[last],
+    low: quote?.low?.[last], close: quote?.close?.[last],
+    volume: quote?.volume?.[last],
+    change: round(meta.regularMarketPrice - prev),
+    change_pct: round(prev ? ((meta.regularMarketPrice - prev) / prev) * 100 : 0),
+    week_52_high: meta.fiftyTwoWeekHigh, week_52_low: meta.fiftyTwoWeekLow,
+    exchange: meta.exchangeName || "NSE", currency: meta.currency,
+    market_cap: meta.marketCap, timezone: meta.exchangeTimezoneName,
   };
 }
 
-// Get historical chart data
 async function getChart(symbol: string, interval = "1d", range = "1y") {
   const yfSymbol = toYahooSymbol(symbol);
-  const url = `${YF_BASE}/v8/finance/chart/${yfSymbol}?interval=${interval}&range=${range}&includePrePost=false`;
-  const resp = await fetchWithRetry(url);
+  if (!yfSymbol) return [];
+
+  const resp = await fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=${interval}&range=${range}&includePrePost=false`);
+  if (!resp) return [];
+
   const data = await resp.json();
   const result = data?.chart?.result?.[0];
   if (!result) return [];
 
   const timestamps = result.timestamp || [];
-  const quote = result.indicators?.quote?.[0] || {};
+  const q = result.indicators?.quote?.[0] || {};
   const candles = [];
 
   for (let i = 0; i < timestamps.length; i++) {
-    if (quote.open?.[i] == null) continue;
+    if (q.open?.[i] == null) continue;
     candles.push({
       time: new Date(timestamps[i] * 1000).toISOString().split("T")[0],
-      open: Math.round((quote.open[i] || 0) * 100) / 100,
-      high: Math.round((quote.high[i] || 0) * 100) / 100,
-      low: Math.round((quote.low[i] || 0) * 100) / 100,
-      close: Math.round((quote.close[i] || 0) * 100) / 100,
-      volume: quote.volume?.[i] || 0,
+      open: round(q.open[i]), high: round(q.high[i]),
+      low: round(q.low[i]), close: round(q.close[i]),
+      volume: q.volume?.[i] || 0,
     });
   }
   return candles;
 }
 
-// Get fundamental data from Yahoo Finance
+// Fundamentals - use v8 chart with modules (more reliable than v10)
 async function getFundamentals(symbol: string) {
   const yfSymbol = toYahooSymbol(symbol);
-  const modules = "summaryDetail,defaultKeyStatistics,financialData,earningsHistory,earningsTrend,industryTrend,indexTrend,sectorTrend";
-  const url = `${YF_BASE}/v10/finance/quoteSummary/${yfSymbol}?modules=${modules}`;
+  if (!yfSymbol) return null;
+
+  // Try v8 chart with all financial modules
+  const modules = "summaryDetail,defaultKeyStatistics,financialData";
+  const resp = await fetchSafe(
+    `${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=1d&includePrePost=false&modules=${modules}`,
+    1
+  );
+
+  if (!resp) {
+    // Fallback: try v10 quoteSummary
+    const resp2 = await fetchSafe(
+      `${YF_BASE}/v10/finance/quoteSummary/${encodeURIComponent(yfSymbol)}?modules=summaryDetail,defaultKeyStatistics,financialData`,
+      0
+    );
+    if (!resp2) return null;
+    try {
+      const data = await resp2.json();
+      const r = data?.quoteSummary?.result?.[0];
+      if (!r) return null;
+      return extractFundamentals(r.summaryDetail, r.defaultKeyStatistics, r.financialData);
+    } catch { return null; }
+  }
 
   try {
-    const resp = await fetchWithRetry(url);
     const data = await resp.json();
-    const result = data?.quoteSummary?.result?.[0];
+    // v8 with modules returns data differently
+    const result = data?.chart?.result?.[0];
     if (!result) return null;
 
-    const summary = result.summaryDetail || {};
+    // Check if modules data is available in the response
+    const summaryDetail = result.summaryDetail || {};
     const keyStats = result.defaultKeyStatistics || {};
     const financial = result.financialData || {};
-
+    
+    // If v8 modules didn't work, try the meta data for basic info
+    const meta = result.meta || {};
+    
     return {
-      pe_ratio: summary.trailingPE?.raw || null,
-      forward_pe: summary.forwardPE?.raw || null,
-      pb_ratio: summary.priceToBook?.raw || null,
-      dividend_yield: summary.dividendYield?.raw ? summary.dividendYield.raw * 100 : null,
-      dividend_rate: summary.dividendRate?.raw || null,
-      market_cap: summary.marketCap?.raw || null,
-      enterprise_value: keyStats.enterpriseValue?.raw || null,
-      profit_margins: financial.profitMargins?.raw ? financial.profitMargins.raw * 100 : null,
-      roe: financial.returnOnEquity?.raw ? financial.returnOnEquity.raw * 100 : null,
-      roa: financial.returnOnAssets?.raw ? financial.returnOnAssets.raw * 100 : null,
-      revenue_growth: financial.revenueGrowth?.raw ? financial.revenueGrowth.raw * 100 : null,
-      earnings_growth: financial.earningsGrowth?.raw ? financial.earningsGrowth.raw * 100 : null,
-      debt_to_equity: financial.debtToEquity?.raw ? financial.debtToEquity.raw / 100 : null,
-      current_ratio: financial.currentRatio?.raw || null,
-      quick_ratio: financial.quickRatio?.raw || null,
-      operating_margins: financial.operatingMargins?.raw ? financial.operatingMargins.raw * 100 : null,
-      gross_margins: financial.grossMargins?.raw ? financial.grossMargins.raw * 100 : null,
-      ebitda: financial.ebitda?.raw || null,
-      total_revenue: financial.totalRevenue?.raw || null,
-      free_cashflow: financial.freeCashflow?.raw || null,
-      operating_cashflow: financial.operatingCashflow?.raw || null,
-      eps_trailing: keyStats.trailingEps?.raw || null,
-      eps_forward: keyStats.forwardEps?.raw || null,
-      beta: keyStats.beta?.raw || null,
-      book_value: keyStats.bookValue?.raw || null,
-      shares_outstanding: keyStats.sharesOutstanding?.raw || null,
-      float_shares: keyStats.floatShares?.raw || null,
-      peg_ratio: keyStats.pegRatio?.raw || null,
-      short_ratio: keyStats.shortRatio?.raw || null,
-      target_mean_price: financial.targetMeanPrice?.raw || null,
-      target_high_price: financial.targetHighPrice?.raw || null,
-      target_low_price: financial.targetLowPrice?.raw || null,
+      pe_ratio: getRaw(summaryDetail.trailingPE) || null,
+      forward_pe: getRaw(summaryDetail.forwardPE) || null,
+      pb_ratio: getRaw(summaryDetail.priceToBook) || null,
+      dividend_yield: getRaw(summaryDetail.dividendYield) ? getRaw(summaryDetail.dividendYield) * 100 : null,
+      dividend_rate: getRaw(summaryDetail.dividendRate) || null,
+      market_cap: getRaw(summaryDetail.marketCap) || meta.marketCap || null,
+      enterprise_value: getRaw(keyStats.enterpriseValue) || null,
+      profit_margins: getRaw(financial.profitMargins) ? getRaw(financial.profitMargins) * 100 : null,
+      roe: getRaw(financial.returnOnEquity) ? getRaw(financial.returnOnEquity) * 100 : null,
+      roa: getRaw(financial.returnOnAssets) ? getRaw(financial.returnOnAssets) * 100 : null,
+      revenue_growth: getRaw(financial.revenueGrowth) ? getRaw(financial.revenueGrowth) * 100 : null,
+      earnings_growth: getRaw(financial.earningsGrowth) ? getRaw(financial.earningsGrowth) * 100 : null,
+      debt_to_equity: getRaw(financial.debtToEquity) ? getRaw(financial.debtToEquity) / 100 : null,
+      current_ratio: getRaw(financial.currentRatio) || null,
+      quick_ratio: getRaw(financial.quickRatio) || null,
+      operating_margins: getRaw(financial.operatingMargins) ? getRaw(financial.operatingMargins) * 100 : null,
+      gross_margins: getRaw(financial.grossMargins) ? getRaw(financial.grossMargins) * 100 : null,
+      ebitda: getRaw(financial.ebitda) || null,
+      total_revenue: getRaw(financial.totalRevenue) || null,
+      free_cashflow: getRaw(financial.freeCashflow) || null,
+      operating_cashflow: getRaw(financial.operatingCashflow) || null,
+      eps_trailing: getRaw(keyStats.trailingEps) || null,
+      eps_forward: getRaw(keyStats.forwardEps) || null,
+      beta: getRaw(keyStats.beta) || null,
+      book_value: getRaw(keyStats.bookValue) || null,
+      shares_outstanding: getRaw(keyStats.sharesOutstanding) || null,
+      peg_ratio: getRaw(keyStats.pegRatio) || null,
+      target_mean_price: getRaw(financial.targetMeanPrice) || null,
+      target_high_price: getRaw(financial.targetHighPrice) || null,
+      target_low_price: getRaw(financial.targetLowPrice) || null,
       recommendation: financial.recommendationKey || null,
-      num_analysts: financial.numberOfAnalystOpinions?.raw || null,
-      week_52_high: summary.fiftyTwoWeekHigh?.raw || null,
-      week_52_low: summary.fiftyTwoWeekLow?.raw || null,
-      fifty_day_avg: summary.fiftyDayAverage?.raw || null,
-      two_hundred_day_avg: summary.twoHundredDayAverage?.raw || null,
-      avg_volume: summary.averageVolume?.raw || null,
-      avg_volume_10d: summary.averageDailyVolume10Day?.raw || null,
+      num_analysts: getRaw(financial.numberOfAnalystOpinions) || null,
+      week_52_high: getRaw(summaryDetail.fiftyTwoWeekHigh) || null,
+      week_52_low: getRaw(summaryDetail.fiftyTwoWeekLow) || null,
+      fifty_day_avg: getRaw(summaryDetail.fiftyDayAverage) || null,
+      two_hundred_day_avg: getRaw(summaryDetail.twoHundredDayAverage) || null,
+      avg_volume: getRaw(summaryDetail.averageVolume) || null,
+      avg_volume_10d: getRaw(summaryDetail.averageDailyVolume10Day) || null,
     };
-  } catch (e) {
-    console.error("Fundamentals error:", e);
-    return null;
-  }
+  } catch { return null; }
 }
 
-// Calculate technical indicators from chart data
-function calculateTechnicals(candles: any[]) {
-  if (candles.length < 20) return null;
+function getRaw(obj: any): number | null {
+  if (obj == null) return null;
+  if (typeof obj === "number") return obj;
+  return obj?.raw ?? obj?.fmt ? parseFloat(obj.fmt.replace(/,/g, "")) : null;
+}
 
-  const closes = candles.map((c) => c.close);
-  const highs = candles.map((c) => c.high);
-  const lows = candles.map((c) => c.low);
+function extractFundamentals(summary: any = {}, keyStats: any = {}, financial: any = {}) {
+  return {
+    pe_ratio: getRaw(summary.trailingPE), forward_pe: getRaw(summary.forwardPE),
+    pb_ratio: getRaw(summary.priceToBook),
+    dividend_yield: getRaw(summary.dividendYield) ? getRaw(summary.dividendYield)! * 100 : null,
+    dividend_rate: getRaw(summary.dividendRate),
+    market_cap: getRaw(summary.marketCap), enterprise_value: getRaw(keyStats.enterpriseValue),
+    profit_margins: getRaw(financial.profitMargins) ? getRaw(financial.profitMargins)! * 100 : null,
+    roe: getRaw(financial.returnOnEquity) ? getRaw(financial.returnOnEquity)! * 100 : null,
+    roa: getRaw(financial.returnOnAssets) ? getRaw(financial.returnOnAssets)! * 100 : null,
+    revenue_growth: getRaw(financial.revenueGrowth) ? getRaw(financial.revenueGrowth)! * 100 : null,
+    earnings_growth: getRaw(financial.earningsGrowth) ? getRaw(financial.earningsGrowth)! * 100 : null,
+    debt_to_equity: getRaw(financial.debtToEquity) ? getRaw(financial.debtToEquity)! / 100 : null,
+    current_ratio: getRaw(financial.currentRatio), quick_ratio: getRaw(financial.quickRatio),
+    operating_margins: getRaw(financial.operatingMargins) ? getRaw(financial.operatingMargins)! * 100 : null,
+    gross_margins: getRaw(financial.grossMargins) ? getRaw(financial.grossMargins)! * 100 : null,
+    ebitda: getRaw(financial.ebitda), total_revenue: getRaw(financial.totalRevenue),
+    free_cashflow: getRaw(financial.freeCashflow), operating_cashflow: getRaw(financial.operatingCashflow),
+    eps_trailing: getRaw(keyStats.trailingEps), eps_forward: getRaw(keyStats.forwardEps),
+    beta: getRaw(keyStats.beta), book_value: getRaw(keyStats.bookValue),
+    shares_outstanding: getRaw(keyStats.sharesOutstanding), peg_ratio: getRaw(keyStats.pegRatio),
+    target_mean_price: getRaw(financial.targetMeanPrice),
+    target_high_price: getRaw(financial.targetHighPrice),
+    target_low_price: getRaw(financial.targetLowPrice),
+    recommendation: financial.recommendationKey || null,
+    num_analysts: getRaw(financial.numberOfAnalystOpinions),
+    week_52_high: getRaw(summary.fiftyTwoWeekHigh), week_52_low: getRaw(summary.fiftyTwoWeekLow),
+    fifty_day_avg: getRaw(summary.fiftyDayAverage),
+    two_hundred_day_avg: getRaw(summary.twoHundredDayAverage),
+    avg_volume: getRaw(summary.averageVolume), avg_volume_10d: getRaw(summary.averageDailyVolume10Day),
+  };
+}
+
+function calculateTechnicals(candles: any[]) {
+  if (!candles || candles.length < 20) return null;
+
+  const closes = candles.map(c => c.close);
   const last = closes[closes.length - 1];
 
-  // Simple Moving Averages
-  const sma = (arr: number[], period: number) => {
-    if (arr.length < period) return null;
-    const slice = arr.slice(-period);
-    return slice.reduce((a, b) => a + b, 0) / period;
+  const sma = (arr: number[], p: number) => {
+    if (arr.length < p) return null;
+    return arr.slice(-p).reduce((a, b) => a + b, 0) / p;
   };
 
-  // EMA
-  const ema = (arr: number[], period: number) => {
-    if (arr.length < period) return null;
-    const k = 2 / (period + 1);
-    let e = arr.slice(0, period).reduce((a, b) => a + b, 0) / period;
-    for (let i = period; i < arr.length; i++) {
-      e = arr[i] * k + e * (1 - k);
-    }
+  const ema = (arr: number[], p: number) => {
+    if (arr.length < p) return null;
+    const k = 2 / (p + 1);
+    let e = arr.slice(0, p).reduce((a, b) => a + b, 0) / p;
+    for (let i = p; i < arr.length; i++) e = arr[i] * k + e * (1 - k);
     return e;
   };
 
-  // RSI
-  const calcRSI = (arr: number[], period = 14) => {
-    if (arr.length < period + 1) return null;
+  const calcRSI = (arr: number[], p = 14) => {
+    if (arr.length < p + 1) return null;
     let gains = 0, losses = 0;
-    for (let i = arr.length - period; i < arr.length; i++) {
-      const diff = arr[i] - arr[i - 1];
-      if (diff > 0) gains += diff;
-      else losses -= diff;
+    for (let i = arr.length - p; i < arr.length; i++) {
+      const d = arr[i] - arr[i - 1];
+      if (d > 0) gains += d; else losses -= d;
     }
     if (losses === 0) return 100;
-    const rs = (gains / period) / (losses / period);
-    return 100 - (100 / (1 + rs));
+    return 100 - (100 / (1 + (gains / p) / (losses / p)));
   };
 
-  // MACD
-  const ema12 = ema(closes, 12);
-  const ema26 = ema(closes, 26);
+  const ema12 = ema(closes, 12), ema26 = ema(closes, 26);
   const macd = ema12 && ema26 ? ema12 - ema26 : null;
 
-  // ATR
-  const calcATR = (period = 14) => {
-    if (candles.length < period + 1) return null;
+  const lastC = candles[candles.length - 1];
+  const pivot = (lastC.high + lastC.low + lastC.close) / 3;
+  const s1 = 2 * pivot - lastC.high, r1 = 2 * pivot - lastC.low;
+  const s2 = pivot - (lastC.high - lastC.low), r2 = pivot + (lastC.high - lastC.low);
+  const s3 = lastC.low - 2 * (lastC.high - pivot), r3 = lastC.high + 2 * (pivot - lastC.low);
+
+  const sma20 = sma(closes, 20);
+  let bbStd = 0;
+  if (sma20) { const s = closes.slice(-20); bbStd = Math.sqrt(s.reduce((sum, v) => sum + (v - sma20) ** 2, 0) / 20); }
+
+  const calcATR = (p = 14) => {
+    if (candles.length < p + 1) return null;
     let atr = 0;
-    for (let i = candles.length - period; i < candles.length; i++) {
-      const tr = Math.max(
-        highs[i] - lows[i],
-        Math.abs(highs[i] - closes[i - 1]),
-        Math.abs(lows[i] - closes[i - 1])
-      );
-      atr += tr;
+    for (let i = candles.length - p; i < candles.length; i++) {
+      atr += Math.max(candles[i].high - candles[i].low, Math.abs(candles[i].high - closes[i - 1]), Math.abs(candles[i].low - closes[i - 1]));
     }
-    return atr / period;
+    return atr / p;
   };
 
-  // Pivot Points (Standard)
-  const lastCandle = candles[candles.length - 1];
-  const pivot = (lastCandle.high + lastCandle.low + lastCandle.close) / 3;
-  const s1 = 2 * pivot - lastCandle.high;
-  const r1 = 2 * pivot - lastCandle.low;
-  const s2 = pivot - (lastCandle.high - lastCandle.low);
-  const r2 = pivot + (lastCandle.high - lastCandle.low);
-  const s3 = lastCandle.low - 2 * (lastCandle.high - pivot);
-  const r3 = lastCandle.high + 2 * (pivot - lastCandle.low);
-
-  // Bollinger Bands
-  const sma20Val = sma(closes, 20);
-  let bbStdDev = 0;
-  if (sma20Val) {
-    const slice = closes.slice(-20);
-    bbStdDev = Math.sqrt(slice.reduce((sum, v) => sum + (v - sma20Val) ** 2, 0) / 20);
-  }
-
-  // ADX approximation
-  const atr14 = calcATR(14);
-
-  // Volume analysis
   const avgVol20 = sma(candles.map(c => c.volume), 20);
-  const currentVol = candles[candles.length - 1].volume;
-  const volumeRatio = avgVol20 ? currentVol / avgVol20 : 1;
+  const volRatio = avgVol20 ? candles[candles.length - 1].volume / avgVol20 : 1;
 
-  // Candlestick pattern detection
   const detectPattern = () => {
     const c = candles[candles.length - 1];
-    const body = Math.abs(c.close - c.open);
-    const range = c.high - c.low;
-    const upperWick = c.high - Math.max(c.open, c.close);
-    const lowerWick = Math.min(c.open, c.close) - c.low;
-    const bullish = c.close > c.open;
-
+    const body = Math.abs(c.close - c.open), range = c.high - c.low;
+    const upperW = c.high - Math.max(c.open, c.close), lowerW = Math.min(c.open, c.close) - c.low;
+    const bull = c.close > c.open;
     const patterns: string[] = [];
-
-    // Doji
     if (body < range * 0.1) patterns.push("Doji");
-    // Hammer
-    if (lowerWick > body * 2 && upperWick < body * 0.5 && body > 0) patterns.push(bullish ? "Hammer" : "Hanging Man");
-    // Shooting Star
-    if (upperWick > body * 2 && lowerWick < body * 0.5 && body > 0) patterns.push(bullish ? "Inverted Hammer" : "Shooting Star");
-    // Marubozu
-    if (body > range * 0.8) patterns.push(bullish ? "Bullish Marubozu" : "Bearish Marubozu");
-    // Spinning Top
-    if (body < range * 0.3 && body > range * 0.1) patterns.push("Spinning Top");
-
-    // Two-candle patterns
+    if (lowerW > body * 2 && upperW < body * 0.5 && body > 0) patterns.push(bull ? "Hammer" : "Hanging Man");
+    if (upperW > body * 2 && lowerW < body * 0.5 && body > 0) patterns.push(bull ? "Inverted Hammer" : "Shooting Star");
+    if (body > range * 0.8) patterns.push(bull ? "Bullish Marubozu" : "Bearish Marubozu");
     if (candles.length >= 2) {
       const prev = candles[candles.length - 2];
-      const prevBullish = prev.close > prev.open;
-      // Engulfing
-      if (bullish && !prevBullish && c.open < prev.close && c.close > prev.open) patterns.push("Bullish Engulfing");
-      if (!bullish && prevBullish && c.open > prev.close && c.close < prev.open) patterns.push("Bearish Engulfing");
+      if (bull && prev.close < prev.open && c.open < prev.close && c.close > prev.open) patterns.push("Bullish Engulfing");
+      if (!bull && prev.close > prev.open && c.open > prev.close && c.close < prev.open) patterns.push("Bearish Engulfing");
     }
-
     return patterns;
   };
 
   const rsi = calcRSI(closes);
+  const sma50 = sma(closes, 50), sma200 = sma(closes, 200);
 
-  return {
-    sma_5: round(sma(closes, 5)),
-    sma_10: round(sma(closes, 10)),
-    sma_20: round(sma20Val),
-    sma_50: round(sma(closes, 50)),
-    sma_100: round(sma(closes, 100)),
-    sma_200: round(sma(closes, 200)),
-    ema_9: round(ema(closes, 9)),
-    ema_12: round(ema12),
-    ema_20: round(ema(closes, 20)),
-    ema_26: round(ema26),
-    ema_50: round(ema(closes, 50)),
-    ema_200: round(ema(closes, 200)),
-    rsi_14: round(rsi),
-    macd: round(macd),
-    macd_signal: null, // simplified
-    atr_14: round(atr14),
-    pivot,
-    s1: round(s1), s2: round(s2), s3: round(s3),
-    r1: round(r1), r2: round(r2), r3: round(r3),
-    bollinger_upper: round(sma20Val ? sma20Val + 2 * bbStdDev : null),
-    bollinger_middle: round(sma20Val),
-    bollinger_lower: round(sma20Val ? sma20Val - 2 * bbStdDev : null),
-    volume_ratio: round(volumeRatio),
-    avg_volume_20: Math.round(avgVol20 || 0),
-    candle_patterns: detectPattern(),
-    trend: determineTrend(closes, sma(closes, 20), sma(closes, 50), sma(closes, 200)),
-    trend_strength: rsi ? (rsi > 70 ? "Strong" : rsi > 50 ? "Moderate" : rsi > 30 ? "Weak" : "Oversold") : "N/A",
-  };
-}
-
-function determineTrend(closes: number[], sma20: number | null, sma50: number | null, sma200: number | null) {
-  const last = closes[closes.length - 1];
   let bullish = 0, bearish = 0;
   if (sma20 && last > sma20) bullish++; else bearish++;
   if (sma50 && last > sma50) bullish++; else bearish++;
   if (sma200 && last > sma200) bullish++; else bearish++;
   if (sma20 && sma50 && sma20 > sma50) bullish++; else bearish++;
-  if (bullish >= 3) return "Bullish";
-  if (bearish >= 3) return "Bearish";
-  return "Sideways";
+  const trend = bullish >= 3 ? "Bullish" : bearish >= 3 ? "Bearish" : "Sideways";
+
+  return {
+    sma_20: round(sma20), sma_50: round(sma50), sma_200: round(sma200),
+    ema_9: round(ema(closes, 9)), ema_20: round(ema(closes, 20)),
+    ema_50: round(ema(closes, 50)), ema_200: round(ema(closes, 200)),
+    rsi_14: round(rsi), macd: round(macd), atr_14: round(calcATR()),
+    pivot: round(pivot), s1: round(s1), s2: round(s2), s3: round(s3),
+    r1: round(r1), r2: round(r2), r3: round(r3),
+    bollinger_upper: round(sma20 ? sma20 + 2 * bbStd : null),
+    bollinger_middle: round(sma20),
+    bollinger_lower: round(sma20 ? sma20 - 2 * bbStd : null),
+    volume_ratio: round(volRatio), avg_volume_20: Math.round(avgVol20 || 0),
+    candle_patterns: detectPattern(), trend,
+    trend_strength: rsi ? (rsi > 70 ? "Strong" : rsi > 50 ? "Moderate" : rsi > 30 ? "Weak" : "Oversold") : "N/A",
+  };
 }
 
-function round(v: number | null | undefined) {
-  return v != null ? Math.round(v * 100) / 100 : null;
-}
+function round(v: number | null | undefined) { return v != null ? Math.round(v * 100) / 100 : null; }
 
-// Batch quotes for multiple symbols
 async function getBatchQuotes(symbols: string[]) {
-  const results = await Promise.allSettled(
-    symbols.map((s) => getQuote(s))
-  );
+  const results = await Promise.allSettled(symbols.slice(0, 20).map(s => getQuote(s)));
   return results.map((r, i) => ({
     symbol: symbols[i],
     data: r.status === "fulfilled" ? r.value : null,
@@ -350,13 +347,12 @@ async function getBatchQuotes(symbols: string[]) {
   }));
 }
 
-// Search stocks
 async function searchStocks(query: string) {
-  const url = `${YF_BASE}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=20&newsCount=0&listsCount=0&quotesQueryId=tss_match_phrase_query`;
-  const resp = await fetchWithRetry(url);
+  const resp = await fetchSafe(`${YF_BASE}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=20&newsCount=0`);
+  if (!resp) return [];
   const data = await resp.json();
   return (data.quotes || [])
-    .filter((q: any) => q.exchange === "NSI" || q.exchange === "BSE" || q.exchange === "NSE")
+    .filter((q: any) => ["NSI", "BSE", "NSE"].includes(q.exchange))
     .map((q: any) => ({
       symbol: q.symbol?.replace(".NS", "").replace(".BO", ""),
       name: q.longname || q.shortname || q.symbol,
@@ -365,25 +361,19 @@ async function searchStocks(query: string) {
     }));
 }
 
-// Market indices
 async function getIndices() {
   const indices = ["^NSEI", "^BSESN", "^NSEBANK"];
   const names = ["NIFTY 50", "SENSEX", "BANKNIFTY"];
   const results = await Promise.allSettled(
-    indices.map((idx) =>
-      fetchWithRetry(`${YF_BASE}/v8/finance/chart/${idx}?interval=1d&range=5d`)
-        .then((r) => r.json())
-    )
+    indices.map(idx => fetchSafe(`${YF_BASE}/v8/finance/chart/${idx}?interval=1d&range=5d`).then(r => r?.json()))
   );
-
   return results.map((r, i) => {
-    if (r.status !== "fulfilled") return { symbol: names[i], error: true };
+    if (r.status !== "fulfilled" || !r.value) return { symbol: names[i], error: true };
     const meta = r.value?.chart?.result?.[0]?.meta;
     if (!meta) return { symbol: names[i], error: true };
     const prev = meta.chartPreviousClose || meta.previousClose || 0;
     return {
-      symbol: names[i],
-      ltp: round(meta.regularMarketPrice),
+      symbol: names[i], ltp: round(meta.regularMarketPrice),
       open: round(meta.regularMarketOpen || meta.regularMarketPrice),
       high: round(meta.regularMarketDayHigh || meta.regularMarketPrice),
       low: round(meta.regularMarketDayLow || meta.regularMarketPrice),
@@ -395,9 +385,7 @@ async function getIndices() {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const url = new URL(req.url);
@@ -411,51 +399,42 @@ serve(async (req) => {
     let result: any;
 
     switch (action) {
-      case "quote":
-        result = await getQuote(symbol);
-        break;
-      case "chart":
-        result = await getChart(symbol, interval, range);
-        break;
-      case "fundamentals":
-        result = await getFundamentals(symbol);
-        break;
+      case "quote": result = await getQuote(symbol); break;
+      case "chart": result = await getChart(symbol, interval, range); break;
+      case "fundamentals": result = await getFundamentals(symbol); break;
       case "technicals": {
-        const chartData = await getChart(symbol, "1d", "1y");
-        result = calculateTechnicals(chartData);
+        const cd = await getChart(symbol, "1d", "1y");
+        result = calculateTechnicals(cd);
         break;
       }
       case "full": {
+        // Run all in parallel, never fail the whole request
         const [quoteData, chartData, fundData] = await Promise.all([
-          getQuote(symbol),
-          getChart(symbol, "1d", "1y"),
-          getFundamentals(symbol),
+          getQuote(symbol).catch(() => null),
+          getChart(symbol, "1d", "1y").catch(() => []),
+          getFundamentals(symbol).catch(() => null),
         ]);
-        const technicals = calculateTechnicals(chartData);
-        result = { quote: quoteData, fundamentals: fundData, technicals, chart_summary: { total_candles: chartData.length } };
+        const technicals = Array.isArray(chartData) && chartData.length > 0 ? calculateTechnicals(chartData) : null;
+        result = {
+          quote: quoteData, fundamentals: fundData, technicals,
+          chart_summary: { total_candles: Array.isArray(chartData) ? chartData.length : 0 },
+        };
         break;
       }
-      case "batch":
-        result = await getBatchQuotes(symbols);
-        break;
-      case "search":
-        result = await searchStocks(query);
-        break;
-      case "indices":
-        result = await getIndices();
-        break;
-      default:
-        result = { error: "Unknown action" };
+      case "batch": result = await getBatchQuotes(symbols); break;
+      case "search": result = await searchStocks(query); break;
+      case "indices": result = await getIndices(); break;
+      default: result = { error: "Unknown action" };
     }
 
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify(result || {}), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error("stock-data error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Service temporarily unavailable", details: e instanceof Error ? e.message : "Unknown" }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
