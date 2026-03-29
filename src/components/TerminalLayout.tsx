@@ -60,10 +60,17 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   };
 
   const localStockResults = searchInput.length >= 1
-    ? getAllStocks().filter(s => s.symbol.toLowerCase().includes(searchInput.toLowerCase()) || s.name.toLowerCase().includes(searchInput.toLowerCase())).slice(0, 8)
+    ? getAllStocks().filter(s => s.symbol.toLowerCase().includes(searchInput.toLowerCase()) || s.name.toLowerCase().includes(searchInput.toLowerCase())).slice(0, 12)
     : [];
 
-  const combinedResults = searchResults?.length > 0 ? searchResults.slice(0, 8) : localStockResults;
+  // Merge API + local results, deduplicate by symbol, local results always available
+  const apiResults = Array.isArray(searchResults) ? searchResults : [];
+  const mergedMap = new Map<string, any>();
+  for (const s of localStockResults) mergedMap.set(s.symbol, s);
+  for (const s of apiResults) {
+    if (!mergedMap.has(s.symbol)) mergedMap.set(s.symbol, s);
+  }
+  const combinedResults = Array.from(mergedMap.values()).slice(0, 10);
   const marketOpen = isMarketOpen();
 
   return (

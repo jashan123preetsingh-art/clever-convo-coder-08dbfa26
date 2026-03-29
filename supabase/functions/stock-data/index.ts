@@ -20,7 +20,6 @@ function toYahooSymbol(symbol: string): string {
   const upper = symbol.toUpperCase().trim();
   if (INDEX_MAP[upper]) return INDEX_MAP[upper];
   if (symbol.startsWith("^") || symbol.includes(".")) return symbol;
-  // Skip clearly invalid symbols (mutual fund IDs etc)
   if (/^[0-9A-Z]{10,}$/.test(upper) && !upper.match(/[A-Z]{3,}/)) return "";
   return `${upper}.NS`;
 }
@@ -36,7 +35,6 @@ async function fetchSafe(url: string, retries = 1): Promise<Response | null> {
         },
       });
       if (resp.ok) return resp;
-      // If 403/429, try alternate domain
       if (i === 0 && (resp.status === 403 || resp.status === 429)) {
         const altUrl = url.replace(YF_BASE, YF_BASE2);
         if (altUrl !== url) {
@@ -54,7 +52,6 @@ async function fetchSafe(url: string, retries = 1): Promise<Response | null> {
   return null;
 }
 
-// Get quote via chart endpoint (most reliable)
 async function getQuote(symbol: string) {
   const yfSymbol = toYahooSymbol(symbol);
   if (!yfSymbol) return null;
@@ -114,87 +111,77 @@ async function getChart(symbol: string, interval = "1d", range = "1y") {
   return candles;
 }
 
-// Fundamentals - use v8 chart with modules (more reliable than v10)
+// Fundamentals - use v6 quote endpoint (most reliable for Indian stocks)
 async function getFundamentals(symbol: string) {
   const yfSymbol = toYahooSymbol(symbol);
   if (!yfSymbol) return null;
 
-  // Try v8 chart with all financial modules
-  const modules = "summaryDetail,defaultKeyStatistics,financialData";
+  // Try v6 quote endpoint first - most reliable
   const resp = await fetchSafe(
-    `${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=1d&includePrePost=false&modules=${modules}`,
+    `${YF_BASE}/v6/finance/quote?symbols=${encodeURIComponent(yfSymbol)}`,
     1
   );
 
-  if (!resp) {
-    // Fallback: try v10 quoteSummary
-    const resp2 = await fetchSafe(
-      `${YF_BASE}/v10/finance/quoteSummary/${encodeURIComponent(yfSymbol)}?modules=summaryDetail,defaultKeyStatistics,financialData`,
-      0
-    );
-    if (!resp2) return null;
+  if (resp) {
     try {
-      const data = await resp2.json();
-      const r = data?.quoteSummary?.result?.[0];
-      if (!r) return null;
-      return extractFundamentals(r.summaryDetail, r.defaultKeyStatistics, r.financialData);
-    } catch { return null; }
+      const data = await resp.json();
+      const q = data?.quoteResponse?.result?.[0];
+      if (q) {
+        return {
+          pe_ratio: q.trailingPE || null,
+          forward_pe: q.forwardPE || null,
+          pb_ratio: q.priceToBook || null,
+          dividend_yield: q.trailingAnnualDividendYield ? q.trailingAnnualDividendYield * 100 : null,
+          dividend_rate: q.trailingAnnualDividendRate || null,
+          market_cap: q.marketCap || null,
+          enterprise_value: q.enterpriseValue || null,
+          profit_margins: q.profitMargins ? q.profitMargins * 100 : null,
+          roe: q.returnOnEquity ? q.returnOnEquity * 100 : null,
+          roa: null,
+          revenue_growth: q.revenueGrowth ? q.revenueGrowth * 100 : null,
+          earnings_growth: q.earningsQuarterlyGrowth ? q.earningsQuarterlyGrowth * 100 : null,
+          debt_to_equity: null,
+          current_ratio: null,
+          quick_ratio: null,
+          operating_margins: null,
+          gross_margins: null,
+          ebitda: q.ebitda || null,
+          total_revenue: q.totalRevenue || null,
+          free_cashflow: null,
+          operating_cashflow: null,
+          eps_trailing: q.trailingEps || null,
+          eps_forward: q.epsForward || null,
+          beta: q.beta || null,
+          book_value: q.bookValue || null,
+          shares_outstanding: q.sharesOutstanding || null,
+          peg_ratio: q.pegRatio || null,
+          target_mean_price: q.targetMeanPrice || null,
+          target_high_price: q.targetHighPrice || null,
+          target_low_price: q.targetLowPrice || null,
+          recommendation: q.recommendationKey || null,
+          num_analysts: q.numberOfAnalystOpinions || null,
+          week_52_high: q.fiftyTwoWeekHigh || null,
+          week_52_low: q.fiftyTwoWeekLow || null,
+          fifty_day_avg: q.fiftyDayAverage || null,
+          two_hundred_day_avg: q.twoHundredDayAverage || null,
+          avg_volume: q.averageDailyVolume3Month || null,
+          avg_volume_10d: q.averageDailyVolume10Day || null,
+        };
+      }
+    } catch {}
   }
 
+  // Fallback: v10 quoteSummary
+  const resp2 = await fetchSafe(
+    `${YF_BASE}/v10/finance/quoteSummary/${encodeURIComponent(yfSymbol)}?modules=summaryDetail,defaultKeyStatistics,financialData`,
+    0
+  );
+  if (!resp2) return null;
   try {
-    const data = await resp.json();
-    // v8 with modules returns data differently
-    const result = data?.chart?.result?.[0];
-    if (!result) return null;
-
-    // Check if modules data is available in the response
-    const summaryDetail = result.summaryDetail || {};
-    const keyStats = result.defaultKeyStatistics || {};
-    const financial = result.financialData || {};
-    
-    // If v8 modules didn't work, try the meta data for basic info
-    const meta = result.meta || {};
-    
-    return {
-      pe_ratio: getRaw(summaryDetail.trailingPE) || null,
-      forward_pe: getRaw(summaryDetail.forwardPE) || null,
-      pb_ratio: getRaw(summaryDetail.priceToBook) || null,
-      dividend_yield: getRaw(summaryDetail.dividendYield) ? getRaw(summaryDetail.dividendYield) * 100 : null,
-      dividend_rate: getRaw(summaryDetail.dividendRate) || null,
-      market_cap: getRaw(summaryDetail.marketCap) || meta.marketCap || null,
-      enterprise_value: getRaw(keyStats.enterpriseValue) || null,
-      profit_margins: getRaw(financial.profitMargins) ? getRaw(financial.profitMargins) * 100 : null,
-      roe: getRaw(financial.returnOnEquity) ? getRaw(financial.returnOnEquity) * 100 : null,
-      roa: getRaw(financial.returnOnAssets) ? getRaw(financial.returnOnAssets) * 100 : null,
-      revenue_growth: getRaw(financial.revenueGrowth) ? getRaw(financial.revenueGrowth) * 100 : null,
-      earnings_growth: getRaw(financial.earningsGrowth) ? getRaw(financial.earningsGrowth) * 100 : null,
-      debt_to_equity: getRaw(financial.debtToEquity) ? getRaw(financial.debtToEquity) / 100 : null,
-      current_ratio: getRaw(financial.currentRatio) || null,
-      quick_ratio: getRaw(financial.quickRatio) || null,
-      operating_margins: getRaw(financial.operatingMargins) ? getRaw(financial.operatingMargins) * 100 : null,
-      gross_margins: getRaw(financial.grossMargins) ? getRaw(financial.grossMargins) * 100 : null,
-      ebitda: getRaw(financial.ebitda) || null,
-      total_revenue: getRaw(financial.totalRevenue) || null,
-      free_cashflow: getRaw(financial.freeCashflow) || null,
-      operating_cashflow: getRaw(financial.operatingCashflow) || null,
-      eps_trailing: getRaw(keyStats.trailingEps) || null,
-      eps_forward: getRaw(keyStats.forwardEps) || null,
-      beta: getRaw(keyStats.beta) || null,
-      book_value: getRaw(keyStats.bookValue) || null,
-      shares_outstanding: getRaw(keyStats.sharesOutstanding) || null,
-      peg_ratio: getRaw(keyStats.pegRatio) || null,
-      target_mean_price: getRaw(financial.targetMeanPrice) || null,
-      target_high_price: getRaw(financial.targetHighPrice) || null,
-      target_low_price: getRaw(financial.targetLowPrice) || null,
-      recommendation: financial.recommendationKey || null,
-      num_analysts: getRaw(financial.numberOfAnalystOpinions) || null,
-      week_52_high: getRaw(summaryDetail.fiftyTwoWeekHigh) || null,
-      week_52_low: getRaw(summaryDetail.fiftyTwoWeekLow) || null,
-      fifty_day_avg: getRaw(summaryDetail.fiftyDayAverage) || null,
-      two_hundred_day_avg: getRaw(summaryDetail.twoHundredDayAverage) || null,
-      avg_volume: getRaw(summaryDetail.averageVolume) || null,
-      avg_volume_10d: getRaw(summaryDetail.averageDailyVolume10Day) || null,
-    };
+    const data = await resp2.json();
+    const r = data?.quoteSummary?.result?.[0];
+    if (!r) return null;
+    return extractFundamentals(r.summaryDetail, r.defaultKeyStatistics, r.financialData);
   } catch { return null; }
 }
 
@@ -348,17 +335,25 @@ async function getBatchQuotes(symbols: string[]) {
 }
 
 async function searchStocks(query: string) {
-  const resp = await fetchSafe(`${YF_BASE}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=20&newsCount=0`);
+  // Try Yahoo Finance search with broader filtering
+  const resp = await fetchSafe(`${YF_BASE}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=25&newsCount=0&listsCount=0`);
   if (!resp) return [];
   const data = await resp.json();
-  return (data.quotes || [])
-    .filter((q: any) => ["NSI", "BSE", "NSE"].includes(q.exchange))
+  const results = (data.quotes || [])
+    .filter((q: any) => {
+      // Accept Indian exchanges + any .NS or .BO symbols
+      const isIndian = ["NSI", "BSE", "NSE", "BOM"].includes(q.exchange) ||
+        q.symbol?.endsWith(".NS") || q.symbol?.endsWith(".BO");
+      return isIndian;
+    })
     .map((q: any) => ({
       symbol: q.symbol?.replace(".NS", "").replace(".BO", ""),
       name: q.longname || q.shortname || q.symbol,
-      exchange: q.exchange === "BSE" ? "BSE" : "NSE",
+      exchange: q.exchange === "BSE" || q.exchange === "BOM" ? "BSE" : "NSE",
       type: q.quoteType,
     }));
+  
+  return results;
 }
 
 async function getIndices() {
@@ -408,7 +403,6 @@ serve(async (req) => {
         break;
       }
       case "full": {
-        // Run all in parallel, never fail the whole request
         const [quoteData, chartData, fundData] = await Promise.all([
           getQuote(symbol).catch(() => null),
           getChart(symbol, "1d", "1y").catch(() => []),
