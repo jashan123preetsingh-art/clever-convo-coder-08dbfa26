@@ -13,11 +13,11 @@ type LiveContext = {
 };
 
 const SUGGESTIONS = [
-  'Analyze Nifty trend with current levels',
+  'Analyze RELIANCE',
+  'Analyze TCS',
   'Best options strategy for current market?',
   "What does today's FII/DII data indicate?",
   'Support/resistance for BankNifty today',
-  'Straddle strategy at current Nifty level',
   'How to hedge my portfolio right now?',
 ];
 
