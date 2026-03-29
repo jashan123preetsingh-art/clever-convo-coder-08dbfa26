@@ -12,6 +12,7 @@ const Screener = lazy(() => import("./pages/Screener"));
 const OptionsChain = lazy(() => import("./pages/OptionsChain"));
 const Sectors = lazy(() => import("./pages/Sectors"));
 const FiiDii = lazy(() => import("./pages/FiiDii"));
+const OIAnalysis = lazy(() => import("./pages/OIAnalysis"));
 const News = lazy(() => import("./pages/News"));
 const StockDetail = lazy(() => import("./pages/StockDetail"));
 const NotFound = lazy(() => import("./pages/NotFound"));
