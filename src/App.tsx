@@ -42,6 +42,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 const AppRoutes = () => (
   <Routes>
     <Route path="/auth" element={<Auth />} />
+    <Route path="/welcome" element={<Landing />} />
     <Route path="/" element={<ProtectedRoute><TerminalLayout><Dashboard /></TerminalLayout></ProtectedRoute>} />
     <Route path="/heatmap" element={<ProtectedRoute><TerminalLayout><Heatmap /></TerminalLayout></ProtectedRoute>} />
     <Route path="/scanner" element={<ProtectedRoute><TerminalLayout><Scanner /></TerminalLayout></ProtectedRoute>} />
