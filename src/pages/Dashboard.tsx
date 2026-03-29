@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { INDICES, getTopGainers, getTopLosers, getMostActive, getSectorPerformance, NEWS } from '@/data/mockData';
+import { useIndices } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
 
 function SectionHeader({ title, badge, link, linkText }: { title: string; badge?: string; link?: string; linkText?: string }) {
@@ -17,6 +18,9 @@ function SectionHeader({ title, badge, link, linkText }: { title: string; badge?
 }
 
 export default function Dashboard() {
+  const { data: liveIndices } = useIndices();
+  const indices = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : INDICES;
+
   const gainers = getTopGainers();
   const losers = getTopLosers();
   const active = getMostActive();
@@ -26,17 +30,20 @@ export default function Dashboard() {
     <div className="p-3 max-w-[1800px] mx-auto">
       {/* Index Cards */}
       <div className="grid grid-cols-3 gap-2 mb-3">
-        {INDICES.map((idx, i) => (
-          <div key={i} className="t-card">
+        {indices.map((idx: any, i: number) => (
+          <motion.div key={i} initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="t-card">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] text-muted-foreground font-semibold tracking-wide">{idx.symbol}</span>
-              <span className={`text-[8px] px-1.5 py-0.5 rounded ${idx.change_pct >= 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
-                {idx.change_pct >= 0 ? 'BULL' : 'BEAR'}
-              </span>
+              <div className="flex items-center gap-1">
+                {liveIndices?.length > 0 && !liveIndices[0]?.error && <span className="text-[7px] text-primary">● LIVE</span>}
+                <span className={`text-[8px] px-1.5 py-0.5 rounded ${(idx.change_pct || 0) >= 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
+                  {(idx.change_pct || 0) >= 0 ? 'BULL' : 'BEAR'}
+                </span>
+              </div>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-bold text-foreground">{Number(idx.ltp).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
-              <span className={`text-xs font-semibold ${idx.change_pct >= 0 ? 'text-terminal-green' : 'text-terminal-red'}`}>
+              <span className={`text-xs font-semibold ${(idx.change_pct || 0) >= 0 ? 'text-primary' : 'text-destructive'}`}>
                 {formatPercent(idx.change_pct)}
               </span>
             </div>
@@ -45,7 +52,7 @@ export default function Dashboard() {
               <span>H: {Number(idx.high).toLocaleString('en-IN')}</span>
               <span>L: {Number(idx.low).toLocaleString('en-IN')}</span>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
@@ -66,7 +73,7 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-[11px] text-foreground">{formatCurrency(stock.ltp)}</p>
-                    <p className="text-[10px] font-semibold text-terminal-green">{formatPercent(stock.change_pct)}</p>
+                    <p className="text-[10px] font-semibold text-primary">{formatPercent(stock.change_pct)}</p>
                   </div>
                 </Link>
               ))}
@@ -90,7 +97,7 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-[11px] text-foreground">{formatCurrency(stock.ltp)}</p>
-                    <p className="text-[10px] font-semibold text-terminal-red">{formatPercent(stock.change_pct)}</p>
+                    <p className="text-[10px] font-semibold text-destructive">{formatPercent(stock.change_pct)}</p>
                   </div>
                 </Link>
               ))}
@@ -114,7 +121,7 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-[11px] text-foreground">{formatCurrency(stock.ltp)}</p>
-                    <p className={`text-[10px] font-semibold ${stock.change_pct >= 0 ? 'text-terminal-green' : 'text-terminal-red'}`}>{formatPercent(stock.change_pct)}</p>
+                    <p className={`text-[10px] font-semibold ${stock.change_pct >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatPercent(stock.change_pct)}</p>
                   </div>
                 </Link>
               ))}
@@ -136,9 +143,9 @@ export default function Dashboard() {
                     <span className="text-[9px] text-muted-foreground">({sec.count})</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className={`h-1 rounded-full ${sec.avg_change >= 0 ? 'bg-terminal-green' : 'bg-terminal-red'}`}
+                    <div className={`h-1 rounded-full ${sec.avg_change >= 0 ? 'bg-primary' : 'bg-destructive'}`}
                       style={{ width: `${Math.min(Math.abs(sec.avg_change) * 20, 60)}px` }} />
-                    <span className={`text-[10px] font-semibold w-14 text-right ${sec.avg_change >= 0 ? 'text-terminal-green' : 'text-terminal-red'}`}>
+                    <span className={`text-[10px] font-semibold w-14 text-right ${sec.avg_change >= 0 ? 'text-primary' : 'text-destructive'}`}>
                       {formatPercent(sec.avg_change)}
                     </span>
                   </div>
