@@ -151,7 +151,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
 
       <div className="flex flex-1 overflow-hidden">
         {/* ═══ Sidebar ═══ */}
-        <aside className={`${sidebarOpen ? 'w-44' : 'w-[52px]'} flex-shrink-0 bg-[hsl(var(--sidebar-background))] border-r border-sidebar-border flex flex-col transition-all duration-200`}>
+        <aside className={`${sidebarOpen ? 'w-44' : 'w-[52px]'} flex-shrink-0 bg-[hsl(var(--sidebar-background))] border-r border-sidebar-border/60 flex flex-col transition-all duration-300 ease-out`}>
           <nav className="flex-1 py-2 px-1.5 space-y-0.5 overflow-y-auto">
             {NAV_ITEMS.map((item) => {
               const isActive = location.pathname === item.path ||
