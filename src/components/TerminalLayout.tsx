@@ -92,7 +92,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
           <div className="w-px h-5 bg-border/50" />
 
           {/* Search */}
-          <div className="relative">
+          <div className="relative z-[70]">
             <div className="flex items-center bg-secondary/60 border border-border/50 rounded-md px-3 py-1.5 gap-2 focus-within:border-primary/40 focus-within:bg-secondary transition-all">
               <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -104,10 +104,10 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
                 className="bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground w-36 focus:w-52 focus:outline-none transition-all" />
               <kbd className="hidden sm:inline text-[8px] text-muted-foreground bg-background/60 px-1.5 py-0.5 rounded border border-border/50 font-mono">/</kbd>
             </div>
-            {showSearch && searchInput.length >= 1 && combinedResults.length > 0 && (
-              <div className="absolute top-full left-0 mt-2 w-72 bg-card border border-border/60 rounded-lg shadow-lg z-50 overflow-hidden" style={{ boxShadow: 'var(--shadow-elevated)' }}>
-                {combinedResults.map((stock: any, i: number) => (
-                  <button key={i} onClick={() => handleSearchSelect(stock.symbol)}
+            {showSearch && searchInput.length >= 1 && (
+              <div className="absolute top-full left-0 mt-2 w-72 bg-card border border-border/60 rounded-lg shadow-lg z-[80] overflow-hidden" style={{ boxShadow: 'var(--shadow-elevated)' }}>
+                {combinedResults.length > 0 ? combinedResults.map((stock: any, i: number) => (
+                  <button key={`${stock.symbol}-${i}`} type="button" onMouseDown={(e) => { e.preventDefault(); handleSearchSelect(stock.symbol); }}
                     className="w-full text-left flex items-center justify-between px-3.5 py-2.5 hover:bg-secondary/60 transition-colors border-b border-border/20 last:border-0">
                     <div>
                       <p className="text-[11px] font-semibold text-foreground">{stock.symbol}</p>
@@ -115,7 +115,9 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
                     </div>
                     <span className="text-[8px] text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">{stock.exchange || 'NSE'}</span>
                   </button>
-                ))}
+                )) : (
+                  <div className="px-3.5 py-3 text-[10px] text-muted-foreground">No matching stocks found</div>
+                )}
               </div>
             )}
           </div>
