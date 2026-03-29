@@ -263,6 +263,68 @@
   .safe-area-top {
     padding-top: env(safe-area-inset-top, 0px);
   }
+
+  /* Trading Agent flow node */
+  .flow-node-pulse {
+    animation: flow-node-pulse 2s ease-in-out infinite;
+  }
+  @keyframes flow-node-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--terminal-amber) / 0.4); }
+    50% { box-shadow: 0 0 16px 4px hsl(var(--terminal-amber) / 0.2); }
+  }
+
+  .flow-node-done {
+    box-shadow: 0 0 12px 2px hsl(var(--primary) / 0.2);
+  }
+
+  /* Thinking dots */
+  .thinking-dot {
+    animation: thinking-bounce 1.4s ease-in-out infinite;
+  }
+  .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes thinking-bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Typewriter cursor */
+  .typewriter-cursor::after {
+    content: '|';
+    animation: blink-cursor 1s step-end infinite;
+    color: hsl(var(--primary));
+  }
+  @keyframes blink-cursor {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* Circular gauge */
+  .gauge-ring {
+    transition: stroke-dashoffset 1s ease-out;
+  }
+
+  /* Agent group accent borders */
+  .agent-accent-analysts { border-left: 3px solid hsl(var(--primary)); }
+  .agent-accent-debate { border-left: 3px solid hsl(var(--terminal-amber)); }
+  .agent-accent-manager { border-left: 3px solid hsl(var(--terminal-cyan)); }
+  .agent-accent-trader { border-left: 3px solid hsl(var(--terminal-blue)); }
+  .agent-accent-risk { border-left: 3px solid hsl(var(--terminal-purple)); }
+  .agent-accent-portfolio { border-left: 3px solid hsl(var(--terminal-amber)); }
+
+  /* Float animation for empty state */
+  .float-node {
+    animation: float-node 6s ease-in-out infinite;
+  }
+  .float-node:nth-child(2) { animation-delay: -1s; }
+  .float-node:nth-child(3) { animation-delay: -2s; }
+  .float-node:nth-child(4) { animation-delay: -3s; }
+  .float-node:nth-child(5) { animation-delay: -4s; }
+  .float-node:nth-child(6) { animation-delay: -5s; }
+  @keyframes float-node {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
 }
 
 /* Mobile-specific overrides */
