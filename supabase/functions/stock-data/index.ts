@@ -8,6 +8,23 @@ const corsHeaders = {
 // Yahoo Finance base
 const YF_BASE = "https://query1.finance.yahoo.com";
 
+// Index symbol mapping (these don't use .NS suffix)
+const INDEX_MAP: Record<string, string> = {
+  "NIFTY": "^NSEI",
+  "NIFTY 50": "^NSEI",
+  "BANKNIFTY": "^NSEBANK",
+  "SENSEX": "^BSESN",
+  "NIFTYIT": "^CNXIT",
+  "NIFTYNEXT50": "^NSMIDCP",
+};
+
+function toYahooSymbol(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  if (INDEX_MAP[upper]) return INDEX_MAP[upper];
+  if (symbol.includes(".") || symbol.startsWith("^")) return symbol;
+  return `${symbol}.NS`;
+}
+
 async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
   for (let i = 0; i <= retries; i++) {
     try {
@@ -27,7 +44,7 @@ async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
 
 // Get quote data from Yahoo Finance
 async function getQuote(symbol: string) {
-  const yfSymbol = symbol.includes(".") ? symbol : `${symbol}.NS`;
+  const yfSymbol = toYahooSymbol(symbol);
   const url = `${YF_BASE}/v8/finance/chart/${yfSymbol}?interval=1d&range=5d&includePrePost=false`;
   const resp = await fetchWithRetry(url);
   const data = await resp.json();
@@ -62,7 +79,7 @@ async function getQuote(symbol: string) {
 
 // Get historical chart data
 async function getChart(symbol: string, interval = "1d", range = "1y") {
-  const yfSymbol = symbol.includes(".") ? symbol : `${symbol}.NS`;
+  const yfSymbol = toYahooSymbol(symbol);
   const url = `${YF_BASE}/v8/finance/chart/${yfSymbol}?interval=${interval}&range=${range}&includePrePost=false`;
   const resp = await fetchWithRetry(url);
   const data = await resp.json();
@@ -89,7 +106,7 @@ async function getChart(symbol: string, interval = "1d", range = "1y") {
 
 // Get fundamental data from Yahoo Finance
 async function getFundamentals(symbol: string) {
-  const yfSymbol = symbol.includes(".") ? symbol : `${symbol}.NS`;
+  const yfSymbol = toYahooSymbol(symbol);
   const modules = "summaryDetail,defaultKeyStatistics,financialData,earningsHistory,earningsTrend,industryTrend,indexTrend,sectorTrend";
   const url = `${YF_BASE}/v10/finance/quoteSummary/${yfSymbol}?modules=${modules}`;
 
