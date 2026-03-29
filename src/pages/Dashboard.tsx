@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { INDICES, getTopGainers, getTopLosers, getMostActive, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
 import { useIndices, useMarketBreadth } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
+import MarketBrief from '@/components/MarketBrief';
 
 // ── Quick Action Card ──
 function QuickAction({ icon, title, desc, to }: { icon: string; title: string; desc: string; to: string }) {
