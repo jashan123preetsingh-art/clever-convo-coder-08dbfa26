@@ -62,7 +62,7 @@ export default function Admin() {
     },
   });
 
-  if (loading) return <div className="flex items-center justify-center h-full"><div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
+  if (loading || roleLoading) return <div className="flex items-center justify-center h-full"><div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
   if (!user || !isAdmin) return <Navigate to="/" replace />;
 
   return (
