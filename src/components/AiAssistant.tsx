@@ -103,6 +103,32 @@ export default function AiAssistant() {
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, open]);
   useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
 
+  // Clipboard paste support for images
+  useEffect(() => {
+    if (!open) return;
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (!file) continue;
+          try {
+            const compressed = await compressImage(file);
+            setPendingImage(compressed);
+            if (inputRef.current) inputRef.current.focus();
+          } catch (err) {
+            console.error('Paste image error:', err);
+          }
+          break;
+        }
+      }
+    };
+    window.addEventListener('paste', handlePaste);
+    return () => window.removeEventListener('paste', handlePaste);
+  }, [open]);
+
   const getContext = () => {
     const path = location.pathname;
     const parts = path.split('/');
