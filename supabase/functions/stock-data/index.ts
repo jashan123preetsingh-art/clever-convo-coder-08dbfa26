@@ -118,6 +118,7 @@ async function getFundamentals(symbol: string) {
 
   let quoteFundamentals: Record<string, any> = {};
 
+  // Try v6 quote API first
   const resp = await fetchSafe(
     `${YF_BASE}/v6/finance/quote?symbols=${encodeURIComponent(yfSymbol)}`,
     1
@@ -172,27 +173,65 @@ async function getFundamentals(symbol: string) {
     } catch {}
   }
 
+  // Try quoteSummary API
   const resp2 = await fetchSafe(
     `${YF_BASE}/v10/finance/quoteSummary/${encodeURIComponent(yfSymbol)}?modules=summaryDetail,defaultKeyStatistics,financialData`,
     0
   );
 
-  if (!resp2) return Object.keys(quoteFundamentals).length ? quoteFundamentals : null;
-
-  try {
-    const data = await resp2.json();
-    const r = data?.quoteSummary?.result?.[0];
-    if (!r) return Object.keys(quoteFundamentals).length ? quoteFundamentals : null;
-    const summaryFundamentals = extractFundamentals(r.summaryDetail, r.defaultKeyStatistics, r.financialData);
-
-    const merged = { ...summaryFundamentals, ...quoteFundamentals };
-    for (const [key, value] of Object.entries(summaryFundamentals)) {
-      if (merged[key] == null && value != null) merged[key] = value;
-    }
-    return merged;
-  } catch {
-    return Object.keys(quoteFundamentals).length ? quoteFundamentals : null;
+  if (resp2) {
+    try {
+      const data = await resp2.json();
+      const r = data?.quoteSummary?.result?.[0];
+      if (r) {
+        const summaryFundamentals = extractFundamentals(r.summaryDetail, r.defaultKeyStatistics, r.financialData);
+        const merged = { ...summaryFundamentals, ...quoteFundamentals };
+        for (const [key, value] of Object.entries(summaryFundamentals)) {
+          if (merged[key] == null && value != null) merged[key] = value;
+        }
+        if (Object.values(merged).some(v => v != null)) return merged;
+      }
+    } catch {}
   }
+
+  // Fallback: extract from chart API meta which is more reliable
+  if (Object.values(quoteFundamentals).every(v => v == null) || Object.keys(quoteFundamentals).length === 0) {
+    const chartResp = await fetchSafe(
+      `${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=5d&includePrePost=false`,
+      1
+    );
+    if (chartResp) {
+      try {
+        const data = await chartResp.json();
+        const meta = data?.chart?.result?.[0]?.meta;
+        if (meta) {
+          return {
+            pe_ratio: null, forward_pe: null, pb_ratio: null,
+            market_cap: meta.marketCap || null,
+            week_52_high: meta.fiftyTwoWeekHigh || null,
+            week_52_low: meta.fiftyTwoWeekLow || null,
+            fifty_day_avg: meta.fiftyDayAverage || null,
+            two_hundred_day_avg: meta.twoHundredDayAverage || null,
+            dividend_yield: null, dividend_rate: null,
+            roe: null, roa: null, debt_to_equity: null,
+            revenue_growth: null, earnings_growth: null,
+            profit_margins: null, operating_margins: null, gross_margins: null,
+            current_ratio: null, quick_ratio: null, beta: null,
+            book_value: null, shares_outstanding: null,
+            ebitda: null, total_revenue: null,
+            free_cashflow: null, operating_cashflow: null,
+            eps_trailing: null, eps_forward: null,
+            peg_ratio: null, enterprise_value: null,
+            target_mean_price: null, target_high_price: null, target_low_price: null,
+            recommendation: null, num_analysts: null,
+            avg_volume: null, avg_volume_10d: null,
+          };
+        }
+      } catch {}
+    }
+  }
+
+  return Object.keys(quoteFundamentals).length ? quoteFundamentals : null;
 }
 
 function getRaw(obj: any): number | null {

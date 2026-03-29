@@ -157,6 +157,17 @@
   }
 }
 
+/* Fix Recharts tooltip text color for dark theme */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  color: hsl(var(--foreground)) !important;
+}
+.recharts-tooltip-wrapper .recharts-default-tooltip .recharts-tooltip-label {
+  color: hsl(var(--muted-foreground)) !important;
+}
+.recharts-tooltip-wrapper .recharts-default-tooltip .recharts-tooltip-item {
+  color: hsl(var(--foreground)) !important;
+}
+
 @layer components {
   /* Premium card with subtle glow */
   .t-card {

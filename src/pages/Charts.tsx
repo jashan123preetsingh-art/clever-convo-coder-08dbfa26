@@ -50,7 +50,8 @@ export default function Charts() {
         grid: { vertLines: { color: '#1c233320' }, horzLines: { color: '#1c233320' } },
         crosshair: { mode: 0, vertLine: { color: '#58a6ff30', width: 1 }, horzLine: { color: '#58a6ff30', width: 1 } },
         rightPriceScale: { borderColor: '#1c233360', scaleMargins: { top: 0.05, bottom: 0.2 } },
-        timeScale: { borderColor: '#1c233360', rightOffset: 5, barSpacing: 8 },
+        timeScale: { borderColor: '#1c233360', rightOffset: 5, barSpacing: 8, minBarSpacing: 4 },
+        handleScroll: { vertTouchDrag: false },
       });
 
       const candleSeries = chart.addSeries(CandlestickSeries, {
