@@ -106,7 +106,7 @@ async function getChart(symbol: string, interval = "1d", range = "1y") {
 
 // Get fundamental data from Yahoo Finance
 async function getFundamentals(symbol: string) {
-  const yfSymbol = symbol.includes(".") ? symbol : `${symbol}.NS`;
+  const yfSymbol = toYahooSymbol(symbol);
   const modules = "summaryDetail,defaultKeyStatistics,financialData,earningsHistory,earningsTrend,industryTrend,indexTrend,sectorTrend";
   const url = `${YF_BASE}/v10/finance/quoteSummary/${yfSymbol}?modules=${modules}`;
 
