@@ -114,7 +114,7 @@ export default function StockDetail() {
     if (!chartRef.current || !realChartData?.length) return;
 
     try {
-      const { createChart, CandlestickSeries, HistogramSeries, LineSeries } = await import('lightweight-charts');
+      const { createChart, CandlestickSeries, HistogramSeries } = await import('lightweight-charts');
       const height = chartExpanded ? 560 : 380;
       const isDark = true;
 
