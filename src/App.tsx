@@ -1,12 +1,11 @@
 import { Suspense, lazy } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import TerminalLayout from "@/components/TerminalLayout";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const Charts = lazy(() => import("./pages/Charts"));
 const Heatmap = lazy(() => import("./pages/Heatmap"));
 const Scanner = lazy(() => import("./pages/Scanner"));
 const Screener = lazy(() => import("./pages/Screener"));
@@ -37,8 +36,6 @@ const App = () => (
           <Suspense fallback={<Loading />}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/charts" element={<Charts />} />
-              <Route path="/charts/:symbol" element={<Charts />} />
               <Route path="/heatmap" element={<Heatmap />} />
               <Route path="/scanner" element={<Scanner />} />
               <Route path="/scanner/:key" element={<Scanner />} />
@@ -50,6 +47,9 @@ const App = () => (
               <Route path="/fii-dii" element={<FiiDii />} />
               <Route path="/news" element={<News />} />
               <Route path="/stock/:symbol" element={<StockDetail />} />
+              {/* Redirect old chart routes to stock detail */}
+              <Route path="/charts" element={<Navigate to="/" replace />} />
+              <Route path="/charts/:symbol" element={<StockDetail />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

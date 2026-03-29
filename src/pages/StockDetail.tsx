@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useFullStockData, useStockChart, useAIAnalysis } from '@/hooks/useStockData';
@@ -6,18 +6,13 @@ import { getStock, generateCandleData } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import useStore from '@/store/useStore';
 
-function ScoreBar({ label, score, maxScore = 20, color = 'bg-primary' }: { label: string; score: number; maxScore?: number; color?: string }) {
+function ScoreBar({ label, score, maxScore = 20 }: { label: string; score: number; maxScore?: number }) {
   const pct = Math.min((score / maxScore) * 100, 100);
   return (
     <div className="flex items-center gap-2">
       <span className="text-[9px] text-muted-foreground w-20 text-right shrink-0">{label}</span>
       <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          className={`h-full rounded-full ${color}`}
-        />
+        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8 }} className="h-full rounded-full bg-primary" />
       </div>
       <span className="text-[9px] text-foreground w-8">{score}/{maxScore}</span>
     </div>
@@ -26,14 +21,10 @@ function ScoreBar({ label, score, maxScore = 20, color = 'bg-primary' }: { label
 
 function GradeBadge({ grade }: { grade: string }) {
   const colors: Record<string, string> = {
-    'A+': 'bg-primary/20 text-primary border-primary/30',
-    'A': 'bg-primary/15 text-primary border-primary/25',
-    'B+': 'bg-terminal-blue/15 text-terminal-blue border-terminal-blue/25',
-    'B': 'bg-terminal-blue/10 text-terminal-blue border-terminal-blue/20',
-    'C+': 'bg-terminal-amber/15 text-terminal-amber border-terminal-amber/25',
-    'C': 'bg-terminal-amber/10 text-terminal-amber border-terminal-amber/20',
-    'D': 'bg-destructive/15 text-destructive border-destructive/25',
-    'F': 'bg-destructive/20 text-destructive border-destructive/30',
+    'A+': 'bg-primary/20 text-primary border-primary/30', 'A': 'bg-primary/15 text-primary border-primary/25',
+    'B+': 'bg-terminal-blue/15 text-terminal-blue border-terminal-blue/25', 'B': 'bg-terminal-blue/10 text-terminal-blue border-terminal-blue/20',
+    'C+': 'bg-terminal-amber/15 text-terminal-amber border-terminal-amber/25', 'C': 'bg-terminal-amber/10 text-terminal-amber border-terminal-amber/20',
+    'D': 'bg-destructive/15 text-destructive border-destructive/25', 'F': 'bg-destructive/20 text-destructive border-destructive/30',
   };
   return (
     <span className={`inline-flex items-center justify-center w-8 h-8 rounded-md text-xs font-black border ${colors[grade] || 'bg-secondary text-muted-foreground border-border'}`}>
@@ -41,6 +32,18 @@ function GradeBadge({ grade }: { grade: string }) {
     </span>
   );
 }
+
+const INTERVALS = [
+  { key: '1d', label: 'D', desc: 'Daily' },
+  { key: '60m', label: '4H', desc: '4 Hour' },
+  { key: '1wk', label: 'W', desc: 'Weekly' },
+  { key: '1mo', label: 'M', desc: 'Monthly' },
+];
+
+const RANGES = [
+  { key: '1mo', label: '1M' }, { key: '3mo', label: '3M' }, { key: '6mo', label: '6M' },
+  { key: '1y', label: '1Y' }, { key: '2y', label: '2Y' }, { key: '5y', label: '5Y' },
+];
 
 export default function StockDetail() {
   const { symbol } = useParams();
@@ -52,82 +55,101 @@ export default function StockDetail() {
   const [chartInterval, setChartInterval] = useState('1d');
   const [showAI, setShowAI] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'technicals' | 'fundamentals' | 'ai'>('overview');
+  const [crosshairData, setCrosshairData] = useState<any>(null);
+  const [chartExpanded, setChartExpanded] = useState(false);
 
-  // Fetch real data
   const { data: fullData, isLoading, error } = useFullStockData(symbol || '');
-  const { data: chartData } = useStockChart(symbol || '', chartInterval, period);
+  const { data: chartData, isLoading: chartLoading } = useStockChart(symbol || '', chartInterval, period);
   const { data: aiAnalysis, isLoading: aiLoading, refetch: refetchAI } = useAIAnalysis(fullData, showAI);
 
-  // Fallback to mock data
   const mockStock = getStock(symbol || '');
   const quote = fullData?.quote || mockStock;
   const technicals = fullData?.technicals;
   const fundamentals = fullData?.fundamentals;
-  const realChartData = chartData || generateCandleData(symbol || '', 250);
+  const realChartData = chartData?.length > 0 ? chartData : generateCandleData(symbol || '', 250);
 
-  useEffect(() => {
-    if (chartRef.current && (realChartData?.length > 0 || mockStock)) renderChart();
-    return () => { if (chartInstanceRef.current) { try { chartInstanceRef.current.remove(); } catch {} } };
-  }, [symbol, period, chartInterval, realChartData]);
-
-  const renderChart = async () => {
+  const renderChart = useCallback(async () => {
     if (chartInstanceRef.current) { try { chartInstanceRef.current.remove(); } catch {} }
-    if (!chartRef.current) return;
-    const data = realChartData?.length > 0 ? realChartData : generateCandleData(symbol || '', 250);
-    if (!data.length) return;
+    if (!chartRef.current || !realChartData?.length) return;
 
     try {
       const { createChart, CandlestickSeries, HistogramSeries, LineSeries } = await import('lightweight-charts');
+      const height = chartExpanded ? 600 : 420;
       const chart = createChart(chartRef.current, {
-        width: chartRef.current.clientWidth, height: 350,
+        width: chartRef.current.clientWidth, height,
         layout: { background: { color: '#0a0e14' }, textColor: '#484f58', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' },
-        grid: { vertLines: { color: '#1c233320' }, horzLines: { color: '#1c233320' } },
-        crosshair: { mode: 0 },
-        rightPriceScale: { borderColor: '#1c233360' },
-        timeScale: { borderColor: '#1c233360' },
+        grid: { vertLines: { color: '#1c233315' }, horzLines: { color: '#1c233315' } },
+        crosshair: { mode: 0, vertLine: { color: '#58a6ff20', width: 1 }, horzLine: { color: '#58a6ff20', width: 1 } },
+        rightPriceScale: { borderColor: '#1c233340', scaleMargins: { top: 0.05, bottom: 0.18 } },
+        timeScale: { borderColor: '#1c233340', rightOffset: 5, barSpacing: 8 },
       });
 
-      const cs = chart.addSeries(CandlestickSeries, { upColor: '#00d68f', downColor: '#ff4757', borderUpColor: '#00d68f', borderDownColor: '#ff4757', wickUpColor: '#00d68f80', wickDownColor: '#ff475780' });
-      cs.setData(data);
+      const cs = chart.addSeries(CandlestickSeries, {
+        upColor: '#00d68f', downColor: '#ff4757', borderUpColor: '#00d68f', borderDownColor: '#ff4757',
+        wickUpColor: '#00d68f80', wickDownColor: '#ff475780',
+      });
+      cs.setData(realChartData);
 
+      // Volume
       const vs = chart.addSeries(HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'volume' });
       chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
-      vs.setData(data.map((c: any) => ({ time: c.time, value: c.volume, color: c.close >= c.open ? '#00d68f18' : '#ff475718' })));
+      vs.setData(realChartData.map((c: any) => ({ time: c.time, value: c.volume, color: c.close >= c.open ? '#00d68f10' : '#ff475710' })));
 
-      // Add SMA lines if we have enough data
-      if (data.length > 20) {
-        const sma20 = chart.addSeries(LineSeries, { color: '#e3b34160', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-        const sma20Data = [];
-        for (let i = 19; i < data.length; i++) {
-          const sum = data.slice(i - 19, i + 1).reduce((s: number, c: any) => s + c.close, 0);
-          sma20Data.push({ time: data[i].time, value: sum / 20 });
+      // EMA helper
+      const addEMA = (period: number, color: string) => {
+        if (realChartData.length <= period) return;
+        const k = 2 / (period + 1);
+        let e = realChartData.slice(0, period).reduce((s: number, c: any) => s + c.close, 0) / period;
+        const emaData = [{ time: realChartData[period - 1].time, value: e }];
+        for (let i = period; i < realChartData.length; i++) {
+          e = realChartData[i].close * k + e * (1 - k);
+          emaData.push({ time: realChartData[i].time, value: e });
         }
-        sma20.setData(sma20Data);
-      }
+        const s = chart.addSeries(LineSeries, { color, lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+        s.setData(emaData);
+      };
 
-      // Add support/resistance lines if technicals available
+      // Only 20, 50, 200 EMA
+      addEMA(20, '#e3b34170');
+      addEMA(50, '#58a6ff50');
+      addEMA(200, '#ff475750');
+
+      // Auto S1-S3, R1-R3 price lines
       if (technicals) {
-        const markers = [];
-        if (technicals.s1) {
-          const priceLine = cs.createPriceLine({ price: technicals.s1, color: '#ff475760', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'S1' });
-        }
-        if (technicals.r1) {
-          cs.createPriceLine({ price: technicals.r1, color: '#00d68f60', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: 'R1' });
-        }
+        const levels = [
+          { price: technicals.s1, title: 'S1', color: '#ff475750' },
+          { price: technicals.s2, title: 'S2', color: '#ff475740' },
+          { price: technicals.s3, title: 'S3', color: '#ff475730' },
+          { price: technicals.r1, title: 'R1', color: '#00d68f50' },
+          { price: technicals.r2, title: 'R2', color: '#00d68f40' },
+          { price: technicals.r3, title: 'R3', color: '#00d68f30' },
+        ];
+        levels.forEach(l => {
+          if (l.price) {
+            cs.createPriceLine({ price: l.price, color: l.color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: l.title });
+          }
+        });
       }
+
+      chart.subscribeCrosshairMove((param: any) => {
+        if (!param?.time) { setCrosshairData(null); return; }
+        const candle = param.seriesData?.get(cs);
+        if (candle) setCrosshairData({ ...candle, time: param.time });
+      });
 
       chart.timeScale().fitContent();
       chartInstanceRef.current = chart;
       const ro = new ResizeObserver(() => { if (chartRef.current) chart.applyOptions({ width: chartRef.current.clientWidth }); });
       ro.observe(chartRef.current);
     } catch {}
-  };
+  }, [realChartData, technicals, chartExpanded]);
 
-  const handleAnalyze = () => {
-    setShowAI(true);
-    setActiveTab('ai');
-    refetchAI();
-  };
+  useEffect(() => {
+    if (chartRef.current && realChartData?.length > 0) renderChart();
+    return () => { if (chartInstanceRef.current) { try { chartInstanceRef.current.remove(); } catch {} } };
+  }, [renderChart]);
+
+  const handleAnalyze = () => { setShowAI(true); setActiveTab('ai'); refetchAI(); };
 
   if (!quote && !isLoading) return <div className="flex items-center justify-center h-96 text-muted-foreground text-[11px]">Stock not found</div>;
 
@@ -144,77 +166,114 @@ export default function StockDetail() {
               <h1 className="text-lg font-bold text-foreground">{symbol}</h1>
               <span className="text-[8px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">{quote?.exchange || 'NSE'}</span>
               {quote?.sector && <span className="text-[8px] px-1.5 py-0.5 rounded bg-terminal-blue/10 text-terminal-blue">{quote.sector}</span>}
-              {isLoading && <span className="text-[8px] text-terminal-amber animate-pulse">● LOADING LIVE DATA...</span>}
+              {isLoading && <span className="text-[8px] text-terminal-amber animate-pulse">● LOADING...</span>}
               {!isLoading && !error && <span className="text-[8px] text-primary">● LIVE</span>}
             </div>
             <p className="text-[10px] text-muted-foreground">{quote?.name || symbol}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button onClick={handleAnalyze} disabled={aiLoading}
-              className="t-btn border-terminal-cyan/30 text-terminal-cyan hover:bg-terminal-cyan/10">
+              className="t-btn border-terminal-cyan/30 text-terminal-cyan hover:bg-terminal-cyan/10 text-[9px]">
               {aiLoading ? '⏳ ANALYZING...' : '🤖 AI ANALYSIS'}
             </button>
             <button onClick={() => inWatchlist ? removeFromWatchlist(symbol!) : addToWatchlist(symbol!)}
-              className={`t-btn ${inWatchlist ? 'border-terminal-amber/30 text-terminal-amber' : ''}`}>
-              {inWatchlist ? '★ WATCHING' : '☆ WATCH'}
+              className={`t-btn text-[9px] ${inWatchlist ? 'border-terminal-amber/30 text-terminal-amber' : ''}`}>
+              {inWatchlist ? '★' : '☆'}
             </button>
-            <Link to={`/charts/${symbol}`} className="t-btn t-btn-active">FULL CHART</Link>
-            <Link to={`/options/${symbol}`} className="t-btn">OPTIONS</Link>
+            <Link to={`/options/${symbol}`} className="t-btn text-[9px]">OPTIONS</Link>
           </div>
         </div>
-        <div className="flex items-baseline gap-3 mt-2">
-          <span className="text-3xl font-bold text-foreground">{formatCurrency(ltp)}</span>
-          <span className={`text-lg font-semibold ${changePct >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatPercent(changePct)}</span>
+        <div className="flex items-baseline gap-3 mt-1.5">
+          <span className="text-2xl font-bold text-foreground">{formatCurrency(ltp)}</span>
+          <span className={`text-base font-semibold ${changePct >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatPercent(changePct)}</span>
           {quote?.volume && <span className="text-[10px] text-muted-foreground">Vol: {formatVolume(quote.volume)}</span>}
-          {(quote?.market_cap || fundamentals?.market_cap) && (
-            <span className="text-[10px] text-muted-foreground">MCap: {formatMarketCap(quote.market_cap || fundamentals?.market_cap)}</span>
-          )}
+          {(quote?.market_cap || fundamentals?.market_cap) && <span className="text-[10px] text-muted-foreground">MCap: {formatMarketCap(quote.market_cap || fundamentals?.market_cap)}</span>}
         </div>
       </motion.div>
+
+      {/* Full Chart Section */}
+      <div className="t-card p-2 mb-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            {/* Interval */}
+            <div className="flex gap-0.5 bg-background rounded p-0.5">
+              {INTERVALS.map(i => (
+                <button key={i.key} onClick={() => setChartInterval(i.key)}
+                  className={`px-2 py-0.5 rounded text-[9px] font-semibold transition-all ${chartInterval === i.key ? 'bg-terminal-blue/15 text-terminal-blue' : 'text-muted-foreground hover:text-foreground'}`}>
+                  {i.label}
+                </button>
+              ))}
+            </div>
+            <div className="w-px h-4 bg-border" />
+            {/* Range */}
+            <div className="flex gap-0.5 bg-background rounded p-0.5">
+              {RANGES.map(r => (
+                <button key={r.key} onClick={() => setPeriod(r.key)}
+                  className={`px-2 py-0.5 rounded text-[9px] font-semibold transition-all ${period === r.key ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <div className="w-px h-4 bg-border" />
+            {/* EMA legend */}
+            <div className="flex items-center gap-2 text-[8px]">
+              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-terminal-amber/70 rounded" /> EMA 20</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-terminal-blue/50 rounded" /> EMA 50</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-destructive/50 rounded" /> EMA 200</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {chartLoading && <span className="text-[8px] text-terminal-amber animate-pulse">● LOADING...</span>}
+            <button onClick={() => setChartExpanded(!chartExpanded)} className="text-[9px] text-muted-foreground hover:text-foreground">
+              {chartExpanded ? '⊟ COLLAPSE' : '⊞ EXPAND'}
+            </button>
+          </div>
+        </div>
+        {/* OHLCV crosshair */}
+        {crosshairData && (
+          <div className="flex items-center gap-3 text-[9px] mb-1 px-1">
+            <span className="text-muted-foreground">O:<span className="text-foreground ml-0.5">{crosshairData.open?.toFixed(2)}</span></span>
+            <span className="text-muted-foreground">H:<span className="text-foreground ml-0.5">{crosshairData.high?.toFixed(2)}</span></span>
+            <span className="text-muted-foreground">L:<span className="text-foreground ml-0.5">{crosshairData.low?.toFixed(2)}</span></span>
+            <span className="text-muted-foreground">C:<span className="text-foreground ml-0.5">{crosshairData.close?.toFixed(2)}</span></span>
+          </div>
+        )}
+        <div ref={chartRef} className="w-full" style={{ height: chartExpanded ? 600 : 420 }} />
+        {/* S/R Quick Reference */}
+        {technicals && (
+          <div className="flex items-center justify-between px-2 pt-2 border-t border-border/30 mt-1">
+            <div className="flex items-center gap-3 text-[8px]">
+              <span className="text-destructive">S3: {formatCurrency(technicals.s3)}</span>
+              <span className="text-destructive">S2: {formatCurrency(technicals.s2)}</span>
+              <span className="text-destructive">S1: {formatCurrency(technicals.s1)}</span>
+            </div>
+            <span className="text-[8px] text-terminal-amber">Pivot: {formatCurrency(technicals.pivot)}</span>
+            <div className="flex items-center gap-3 text-[8px]">
+              <span className="text-primary">R1: {formatCurrency(technicals.r1)}</span>
+              <span className="text-primary">R2: {formatCurrency(technicals.r2)}</span>
+              <span className="text-primary">R3: {formatCurrency(technicals.r3)}</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Tab Navigation */}
       <div className="flex gap-0.5 mb-3 bg-secondary/50 p-0.5 rounded-sm w-fit">
         {(['overview', 'technicals', 'fundamentals', 'ai'] as const).map(tab => (
           <button key={tab} onClick={() => { setActiveTab(tab); if (tab === 'ai' && !showAI) handleAnalyze(); }}
             className={`px-3 py-1 rounded-sm text-[10px] font-semibold transition-all ${activeTab === tab ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-            {tab === 'ai' ? '🤖 AI ANALYSIS' : tab.toUpperCase()}
+            {tab === 'ai' ? '🤖 AI' : tab.toUpperCase()}
           </button>
         ))}
       </div>
 
-      {/* Chart */}
-      <div className="t-card p-2 mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] text-muted-foreground font-semibold">PRICE CHART</span>
-          <div className="flex gap-2">
-            <div className="flex gap-0.5">
-              {[{ k: '1d', l: 'D' }, { k: '1wk', l: 'W' }, { k: '1mo', l: 'M' }].map(i => (
-                <button key={i.k} onClick={() => setChartInterval(i.k)}
-                  className={`px-2 py-0.5 rounded text-[9px] font-semibold ${chartInterval === i.k ? 'bg-terminal-blue/15 text-terminal-blue' : 'text-muted-foreground hover:text-foreground'}`}>{i.l}</button>
-              ))}
-            </div>
-            <div className="w-px h-4 bg-border self-center" />
-            <div className="flex gap-0.5">
-              {[{ k: '1mo', l: '1M' }, { k: '3mo', l: '3M' }, { k: '6mo', l: '6M' }, { k: '1y', l: '1Y' }, { k: '2y', l: '2Y' }, { k: '5y', l: '5Y' }].map(p => (
-                <button key={p.k} onClick={() => setPeriod(p.k)}
-                  className={`px-2 py-0.5 rounded text-[9px] font-semibold ${period === p.k ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'}`}>{p.l}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div ref={chartRef} className="w-full" style={{ height: 350 }} />
-      </div>
-
       {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          {/* OHLC + Key Metrics */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[
-              { l: 'Open', v: formatCurrency(quote?.open) },
-              { l: 'High', v: formatCurrency(quote?.high) },
-              { l: 'Low', v: formatCurrency(quote?.low) },
-              { l: 'Prev Close', v: formatCurrency(quote?.prev_close) },
+              { l: 'Open', v: formatCurrency(quote?.open) }, { l: 'High', v: formatCurrency(quote?.high) },
+              { l: 'Low', v: formatCurrency(quote?.low) }, { l: 'Prev Close', v: formatCurrency(quote?.prev_close) },
               { l: '52W High', v: formatCurrency(quote?.week_52_high || fundamentals?.week_52_high) },
               { l: '52W Low', v: formatCurrency(quote?.week_52_low || fundamentals?.week_52_low) },
               { l: 'Volume', v: formatVolume(quote?.volume) },
@@ -229,7 +288,7 @@ export default function StockDetail() {
 
           {/* Support & Resistance */}
           {technicals && (
-            <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="grid grid-cols-2 gap-2">
               <div className="t-card p-3">
                 <h3 className="text-[10px] font-semibold text-primary mb-2 tracking-wide">▼ SUPPORT LEVELS</h3>
                 <div className="space-y-2">
@@ -280,6 +339,25 @@ export default function StockDetail() {
               ))}
             </div>
           </div>
+
+          {/* Quick links for paid data */}
+          <div className="t-card p-3">
+            <h3 className="text-[10px] font-semibold text-muted-foreground mb-2 tracking-wide">📊 DETAILED DATA SOURCES</h3>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: 'Screener.in', url: `https://www.screener.in/company/${symbol}/` },
+                { label: 'Moneycontrol', url: `https://www.moneycontrol.com/india/stockpricequote/${symbol}` },
+                { label: 'Trendlyne', url: `https://trendlyne.com/equity/${symbol}/` },
+                { label: 'Tickertape', url: `https://www.tickertape.in/stocks/${symbol}` },
+                { label: 'Yahoo Finance', url: `https://finance.yahoo.com/quote/${symbol}.NS` },
+              ].map((link, i) => (
+                <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                  className="text-[9px] px-2 py-1 rounded bg-terminal-blue/10 text-terminal-blue border border-terminal-blue/20 hover:bg-terminal-blue/20 transition-colors">
+                  {link.label} ↗
+                </a>
+              ))}
+            </div>
+          </div>
         </motion.div>
       )}
 
@@ -293,18 +371,15 @@ export default function StockDetail() {
                 <h3 className="text-[10px] font-semibold text-muted-foreground mb-3 tracking-wide">MOVING AVERAGES</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
-                    { l: 'SMA 5', v: technicals.sma_5 }, { l: 'SMA 10', v: technicals.sma_10 },
-                    { l: 'SMA 20', v: technicals.sma_20 }, { l: 'SMA 50', v: technicals.sma_50 },
-                    { l: 'SMA 100', v: technicals.sma_100 }, { l: 'SMA 200', v: technicals.sma_200 },
-                    { l: 'EMA 9', v: technicals.ema_9 }, { l: 'EMA 12', v: technicals.ema_12 },
-                    { l: 'EMA 20', v: technicals.ema_20 }, { l: 'EMA 26', v: technicals.ema_26 },
-                    { l: 'EMA 50', v: technicals.ema_50 }, { l: 'EMA 200', v: technicals.ema_200 },
+                    { l: 'EMA 20', v: technicals.ema_20 }, { l: 'EMA 50', v: technicals.ema_50 },
+                    { l: 'EMA 200', v: technicals.ema_200 }, { l: 'SMA 20', v: technicals.sma_20 },
+                    { l: 'SMA 50', v: technicals.sma_50 }, { l: 'SMA 200', v: technicals.sma_200 },
                   ].map((m, i) => (
                     <div key={i} className="flex items-center justify-between py-1 border-b border-border/20">
                       <span className="text-[9px] text-muted-foreground">{m.l}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] text-foreground">{m.v ? formatCurrency(m.v) : '—'}</span>
-                        {m.v && <span className={`text-[8px] ${ltp > m.v ? 'text-primary' : 'text-destructive'}`}>{ltp > m.v ? '▲' : '▼'}</span>}
+                        {m.v && <span className={`text-[8px] ${ltp > m.v ? 'text-primary' : 'text-destructive'}`}>{ltp > m.v ? '▲ Above' : '▼ Below'}</span>}
                       </div>
                     </div>
                   ))}
@@ -358,9 +433,7 @@ export default function StockDetail() {
                         <span key={i} className="text-[9px] px-2 py-0.5 rounded bg-terminal-amber/10 text-terminal-amber border border-terminal-amber/20">{p}</span>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-[9px] text-muted-foreground">No patterns detected</p>
-                  )}
+                  ) : <p className="text-[9px] text-muted-foreground">No patterns detected</p>}
                 </div>
               </div>
 
@@ -368,18 +441,9 @@ export default function StockDetail() {
               <div className="t-card p-3">
                 <h3 className="text-[10px] font-semibold text-muted-foreground mb-2">BOLLINGER BANDS (20,2)</h3>
                 <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <p className="text-[8px] text-muted-foreground">Upper</p>
-                    <p className="text-[11px] text-foreground">{formatCurrency(technicals.bollinger_upper)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[8px] text-muted-foreground">Middle</p>
-                    <p className="text-[11px] text-foreground">{formatCurrency(technicals.bollinger_middle)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[8px] text-muted-foreground">Lower</p>
-                    <p className="text-[11px] text-foreground">{formatCurrency(technicals.bollinger_lower)}</p>
-                  </div>
+                  <div><p className="text-[8px] text-muted-foreground">Upper</p><p className="text-[11px] text-foreground">{formatCurrency(technicals.bollinger_upper)}</p></div>
+                  <div><p className="text-[8px] text-muted-foreground">Middle</p><p className="text-[11px] text-foreground">{formatCurrency(technicals.bollinger_middle)}</p></div>
+                  <div><p className="text-[8px] text-muted-foreground">Lower</p><p className="text-[11px] text-foreground">{formatCurrency(technicals.bollinger_lower)}</p></div>
                 </div>
               </div>
 
@@ -417,9 +481,7 @@ export default function StockDetail() {
             </>
           ) : (
             <div className="t-card p-8 text-center">
-              <p className="text-muted-foreground text-[11px]">
-                {isLoading ? '⏳ Loading technical data...' : 'Technical data unavailable — using mock fallback'}
-              </p>
+              <p className="text-muted-foreground text-[11px]">{isLoading ? '⏳ Loading technical data...' : 'Technical data unavailable'}</p>
             </div>
           )}
         </motion.div>
@@ -430,27 +492,20 @@ export default function StockDetail() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           {fundamentals ? (
             <>
-              {/* Valuation */}
               <div className="t-card p-3">
                 <h3 className="text-[10px] font-semibold text-muted-foreground mb-3 tracking-wide">VALUATION</h3>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
                   {[
-                    { l: 'Trailing P/E', v: fundamentals.pe_ratio?.toFixed(1) },
-                    { l: 'Forward P/E', v: fundamentals.forward_pe?.toFixed(1) },
-                    { l: 'P/B Ratio', v: fundamentals.pb_ratio?.toFixed(2) },
-                    { l: 'PEG Ratio', v: fundamentals.peg_ratio?.toFixed(2) },
+                    { l: 'Trailing P/E', v: fundamentals.pe_ratio?.toFixed(1) }, { l: 'Forward P/E', v: fundamentals.forward_pe?.toFixed(1) },
+                    { l: 'P/B Ratio', v: fundamentals.pb_ratio?.toFixed(2) }, { l: 'PEG Ratio', v: fundamentals.peg_ratio?.toFixed(2) },
                     { l: 'EV/EBITDA', v: fundamentals.enterprise_value && fundamentals.ebitda ? (fundamentals.enterprise_value / fundamentals.ebitda).toFixed(1) : null },
                     { l: 'Book Value', v: fundamentals.book_value ? `₹${fundamentals.book_value.toFixed(2)}` : null },
                   ].map((m, i) => (
-                    <div key={i}>
-                      <p className="text-[8px] text-muted-foreground mb-0.5">{m.l}</p>
-                      <p className="text-[12px] font-semibold text-foreground">{m.v ?? '—'}</p>
-                    </div>
+                    <div key={i}><p className="text-[8px] text-muted-foreground mb-0.5">{m.l}</p><p className="text-[12px] font-semibold text-foreground">{m.v ?? '—'}</p></div>
                   ))}
                 </div>
               </div>
 
-              {/* Profitability */}
               <div className="t-card p-3">
                 <h3 className="text-[10px] font-semibold text-muted-foreground mb-3 tracking-wide">PROFITABILITY</h3>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
@@ -462,15 +517,11 @@ export default function StockDetail() {
                     { l: 'Gross Margin', v: fundamentals.gross_margins ? `${fundamentals.gross_margins.toFixed(1)}%` : null },
                     { l: 'EPS (TTM)', v: fundamentals.eps_trailing ? `₹${fundamentals.eps_trailing.toFixed(2)}` : null },
                   ].map((m, i) => (
-                    <div key={i}>
-                      <p className="text-[8px] text-muted-foreground mb-0.5">{m.l}</p>
-                      <p className="text-[12px] font-semibold text-foreground">{m.v ?? '—'}</p>
-                    </div>
+                    <div key={i}><p className="text-[8px] text-muted-foreground mb-0.5">{m.l}</p><p className="text-[12px] font-semibold text-foreground">{m.v ?? '—'}</p></div>
                   ))}
                 </div>
               </div>
 
-              {/* Growth */}
               <div className="t-card p-3">
                 <h3 className="text-[10px] font-semibold text-muted-foreground mb-3 tracking-wide">GROWTH & HEALTH</h3>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
@@ -482,42 +533,23 @@ export default function StockDetail() {
                     { l: 'Quick Ratio', v: fundamentals.quick_ratio?.toFixed(2) },
                     { l: 'Beta', v: fundamentals.beta?.toFixed(2) },
                   ].map((m, i) => (
-                    <div key={i}>
-                      <p className="text-[8px] text-muted-foreground mb-0.5">{m.l}</p>
-                      <p className="text-[12px] font-semibold text-foreground">{m.v ?? '—'}</p>
-                    </div>
+                    <div key={i}><p className="text-[8px] text-muted-foreground mb-0.5">{m.l}</p><p className="text-[12px] font-semibold text-foreground">{m.v ?? '—'}</p></div>
                   ))}
                 </div>
               </div>
 
-              {/* Analyst */}
               {fundamentals.recommendation && (
                 <div className="t-card p-3">
                   <h3 className="text-[10px] font-semibold text-muted-foreground mb-3 tracking-wide">ANALYST CONSENSUS</h3>
                   <div className="grid grid-cols-4 gap-3">
-                    <div>
-                      <p className="text-[8px] text-muted-foreground mb-0.5">Recommendation</p>
-                      <p className={`text-[12px] font-bold uppercase ${fundamentals.recommendation?.includes('buy') ? 'text-primary' : fundamentals.recommendation?.includes('sell') ? 'text-destructive' : 'text-terminal-amber'}`}>
-                        {fundamentals.recommendation}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[8px] text-muted-foreground mb-0.5">Target Mean</p>
-                      <p className="text-[12px] font-semibold text-foreground">{formatCurrency(fundamentals.target_mean_price)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[8px] text-muted-foreground mb-0.5">Target Range</p>
-                      <p className="text-[10px] text-muted-foreground">{formatCurrency(fundamentals.target_low_price)} - {formatCurrency(fundamentals.target_high_price)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[8px] text-muted-foreground mb-0.5"># Analysts</p>
-                      <p className="text-[12px] font-semibold text-foreground">{fundamentals.num_analysts || '—'}</p>
-                    </div>
+                    <div><p className="text-[8px] text-muted-foreground mb-0.5">Recommendation</p><p className={`text-[12px] font-bold uppercase ${fundamentals.recommendation?.includes('buy') ? 'text-primary' : fundamentals.recommendation?.includes('sell') ? 'text-destructive' : 'text-terminal-amber'}`}>{fundamentals.recommendation}</p></div>
+                    <div><p className="text-[8px] text-muted-foreground mb-0.5">Target Mean</p><p className="text-[12px] font-semibold text-foreground">{formatCurrency(fundamentals.target_mean_price)}</p></div>
+                    <div><p className="text-[8px] text-muted-foreground mb-0.5">Target Range</p><p className="text-[10px] text-muted-foreground">{formatCurrency(fundamentals.target_low_price)} - {formatCurrency(fundamentals.target_high_price)}</p></div>
+                    <div><p className="text-[8px] text-muted-foreground mb-0.5"># Analysts</p><p className="text-[12px] font-semibold text-foreground">{fundamentals.num_analysts || '—'}</p></div>
                   </div>
                 </div>
               )}
 
-              {/* Dividends & Cashflow */}
               <div className="t-card p-3">
                 <h3 className="text-[10px] font-semibold text-muted-foreground mb-3 tracking-wide">DIVIDENDS & CASHFLOW</h3>
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
@@ -529,25 +561,20 @@ export default function StockDetail() {
                     { l: 'Total Revenue', v: fundamentals.total_revenue ? formatCurrency(fundamentals.total_revenue, true) : null },
                     { l: 'EBITDA', v: fundamentals.ebitda ? formatCurrency(fundamentals.ebitda, true) : null },
                   ].map((m, i) => (
-                    <div key={i}>
-                      <p className="text-[8px] text-muted-foreground mb-0.5">{m.l}</p>
-                      <p className="text-[12px] font-semibold text-foreground">{m.v ?? '—'}</p>
-                    </div>
+                    <div key={i}><p className="text-[8px] text-muted-foreground mb-0.5">{m.l}</p><p className="text-[12px] font-semibold text-foreground">{m.v ?? '—'}</p></div>
                   ))}
                 </div>
               </div>
             </>
           ) : (
             <div className="t-card p-8 text-center">
-              <p className="text-muted-foreground text-[11px]">
-                {isLoading ? '⏳ Loading fundamental data...' : 'Fundamental data unavailable'}
-              </p>
+              <p className="text-muted-foreground text-[11px]">{isLoading ? '⏳ Loading...' : 'Fundamental data unavailable'}</p>
             </div>
           )}
         </motion.div>
       )}
 
-      {/* AI Analysis Tab */}
+      {/* AI Tab */}
       {activeTab === 'ai' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3">
           {aiLoading ? (
@@ -558,135 +585,73 @@ export default function StockDetail() {
                 <p className="text-[9px] text-muted-foreground">Evaluating technicals, fundamentals, patterns & risk</p>
               </div>
             </div>
-          ) : aiAnalysis ? (
+          ) : aiAnalysis && !aiAnalysis.error ? (
             <>
-              {/* Summary Header */}
               <div className="t-card p-3 border-l-2 border-terminal-cyan">
                 <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-terminal-cyan font-semibold">● {aiAnalysis.freshness || 'Fresh'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <GradeBadge grade={aiAnalysis.grade} />
-                    <span className="text-lg font-bold text-foreground">{aiAnalysis.overall_score}/100</span>
+                    <div>
+                      <span className="text-lg font-bold text-foreground">{aiAnalysis.overall_score}/100</span>
+                      <p className={`text-[10px] font-semibold ${aiAnalysis.verdict?.includes('Buy') ? 'text-primary' : aiAnalysis.verdict?.includes('Sell') ? 'text-destructive' : 'text-terminal-amber'}`}>
+                        {aiAnalysis.verdict}
+                      </p>
+                    </div>
                   </div>
+                  <span className="text-[9px] text-terminal-cyan">● {aiAnalysis.freshness || 'Fresh'}</span>
                 </div>
                 <p className="text-[11px] text-foreground leading-relaxed">{aiAnalysis.summary}</p>
               </div>
 
-              {/* Key Info Cards */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <div className="t-card p-2">
-                  <p className="text-[8px] text-muted-foreground mb-1">🎯 Key Level</p>
+                  <p className="text-[8px] text-muted-foreground mb-1">🎯 Key Levels</p>
                   <p className="text-[10px] text-foreground">Support: {formatCurrency(aiAnalysis.key_levels?.immediate_support)}</p>
                   <p className="text-[10px] text-foreground">Resistance: {formatCurrency(aiAnalysis.key_levels?.immediate_resistance)}</p>
+                  <p className="text-[10px] text-destructive">SL: {formatCurrency(aiAnalysis.key_levels?.stop_loss)}</p>
                 </div>
                 <div className="t-card p-2">
-                  <p className="text-[8px] text-muted-foreground mb-1">📊 Volume</p>
-                  <p className="text-[10px] text-foreground">{technicals?.volume_ratio?.toFixed(1)}x avg volume</p>
+                  <p className="text-[8px] text-muted-foreground mb-1">🎯 Targets</p>
+                  <p className="text-[10px] text-primary">T1: {formatCurrency(aiAnalysis.key_levels?.target_1)}</p>
+                  <p className="text-[10px] text-primary">T2: {formatCurrency(aiAnalysis.key_levels?.target_2)}</p>
                 </div>
                 <div className="t-card p-2">
                   <p className="text-[8px] text-muted-foreground mb-1">🕯️ Candle</p>
                   <p className="text-[10px] text-foreground">{aiAnalysis.candle_analysis?.pattern || 'None'}</p>
-                  <p className="text-[8px] text-muted-foreground">{aiAnalysis.candle_analysis?.description}</p>
-                </div>
-              </div>
-
-              {/* MA & Structure Analysis */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                <div className="t-card p-2">
-                  <p className="text-[8px] text-muted-foreground mb-1">📐 Structure</p>
-                  <p className={`text-[10px] font-semibold ${aiAnalysis.ma_analysis?.alignment === 'Bullish' ? 'text-primary' : aiAnalysis.ma_analysis?.alignment === 'Bearish' ? 'text-destructive' : 'text-terminal-amber'}`}>
-                    {aiAnalysis.ma_analysis?.alignment} MA stack
+                  <p className={`text-[9px] ${aiAnalysis.candle_analysis?.bias === 'Bullish' ? 'text-primary' : aiAnalysis.candle_analysis?.bias === 'Bearish' ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {aiAnalysis.candle_analysis?.bias}
                   </p>
-                  <p className="text-[8px] text-muted-foreground">{aiAnalysis.ma_analysis?.description}</p>
-                </div>
-                <div className="t-card p-2">
-                  <p className="text-[8px] text-muted-foreground mb-1">💪 Relative Strength</p>
-                  <p className="text-[10px] text-foreground">{aiAnalysis.scores?.relative_strength?.comment}</p>
-                </div>
-                <div className="t-card p-2">
-                  <p className="text-[8px] text-muted-foreground mb-1">🏭 Sector</p>
-                  <p className="text-[10px] text-foreground">{aiAnalysis.sector_context}</p>
                 </div>
               </div>
 
-              {/* Quality Score Breakdown */}
               <div className="t-card p-3">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="text-[10px] font-semibold text-foreground">⭐ Quality Score</span>
-                  <GradeBadge grade={aiAnalysis.grade} />
-                  <span className="text-[10px] text-muted-foreground">{aiAnalysis.overall_score}/100</span>
-                </div>
+                <h3 className="text-[10px] font-semibold text-foreground mb-3">⭐ Quality Score Breakdown</h3>
                 <div className="space-y-1.5">
                   {aiAnalysis.scores && Object.entries(aiAnalysis.scores).map(([key, val]: [string, any]) => (
-                    <ScoreBar
-                      key={key}
-                      label={key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
-                      score={val?.score || 0}
-                      maxScore={20}
-                      color="bg-primary"
-                    />
+                    <ScoreBar key={key} label={key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} score={val?.score || 0} maxScore={20} />
                   ))}
                 </div>
               </div>
 
-              {/* Risk Assessment */}
               <div className="t-card p-3">
                 <h3 className="text-[10px] font-semibold text-muted-foreground mb-2">⚠️ RISK ASSESSMENT</h3>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] text-muted-foreground">Risk:</span>
-                    <span className={`text-[10px] font-semibold ${aiAnalysis.risk_assessment?.risk_level === 'Low' ? 'text-primary' : aiAnalysis.risk_assessment?.risk_level === 'High' ? 'text-destructive' : 'text-terminal-amber'}`}>
-                      {aiAnalysis.risk_assessment?.risk_level}
-                    </span>
-                  </div>
-                  {aiAnalysis.risk_assessment?.risk_factors?.map((f: string, i: number) => (
-                    <p key={i} className="text-[9px] text-muted-foreground">• {f}</p>
-                  ))}
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[9px] text-destructive font-semibold">🚫 Invalidation:</span>
-                    <span className="text-[9px] text-muted-foreground">{aiAnalysis.risk_assessment?.invalidation}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Verdict & Targets */}
-              <div className="t-card p-3 border-t-2 border-primary">
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`text-sm font-bold ${
-                    aiAnalysis.verdict?.includes('Buy') ? 'text-primary' :
-                    aiAnalysis.verdict?.includes('Sell') ? 'text-destructive' : 'text-terminal-amber'
-                  }`}>
-                    {aiAnalysis.verdict}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${aiAnalysis.risk_assessment?.risk_level === 'Low' ? 'bg-primary/10 text-primary' : aiAnalysis.risk_assessment?.risk_level === 'High' || aiAnalysis.risk_assessment?.risk_level === 'Very High' ? 'bg-destructive/10 text-destructive' : 'bg-terminal-amber/10 text-terminal-amber'}`}>
+                    {aiAnalysis.risk_assessment?.risk_level}
                   </span>
                 </div>
-                {aiAnalysis.key_levels && (
-                  <div className="grid grid-cols-4 gap-3">
-                    <div>
-                      <p className="text-[8px] text-muted-foreground">Stop Loss</p>
-                      <p className="text-[11px] font-semibold text-destructive">{formatCurrency(aiAnalysis.key_levels.stop_loss)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[8px] text-muted-foreground">Support</p>
-                      <p className="text-[11px] font-semibold text-foreground">{formatCurrency(aiAnalysis.key_levels.immediate_support)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[8px] text-muted-foreground">Target 1</p>
-                      <p className="text-[11px] font-semibold text-primary">{formatCurrency(aiAnalysis.key_levels.target_1)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[8px] text-muted-foreground">Target 2</p>
-                      <p className="text-[11px] font-semibold text-primary">{formatCurrency(aiAnalysis.key_levels.target_2)}</p>
-                    </div>
-                  </div>
+                {aiAnalysis.risk_assessment?.risk_factors?.map((f: string, i: number) => (
+                  <p key={i} className="text-[9px] text-muted-foreground">• {f}</p>
+                ))}
+                {aiAnalysis.risk_assessment?.invalidation && (
+                  <p className="text-[9px] text-destructive mt-1">⚡ Invalidation: {aiAnalysis.risk_assessment.invalidation}</p>
                 )}
               </div>
             </>
           ) : (
-            <div className="t-card p-12 text-center">
-              <p className="text-muted-foreground text-[11px] mb-2">Click "AI ANALYSIS" to get a comprehensive analysis</p>
-              <button onClick={handleAnalyze} className="t-btn border-terminal-cyan/30 text-terminal-cyan">🤖 RUN AI ANALYSIS</button>
+            <div className="t-card p-8 text-center">
+              <p className="text-muted-foreground text-[11px]">{aiAnalysis?.error || 'Click AI ANALYSIS to get started'}</p>
+              <button onClick={handleAnalyze} className="t-btn mt-3 border-terminal-cyan/30 text-terminal-cyan">🤖 RUN ANALYSIS</button>
             </div>
           )}
         </motion.div>
