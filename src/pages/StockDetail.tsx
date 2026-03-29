@@ -183,7 +183,7 @@ export default function StockDetail() {
       })));
 
       // EMA overlays with better visibility
-      const addEMA = (p: number, color: string, width: number = 1) => {
+      const addEMA = (p: number, color: string, width: 1 | 2 | 3 | 4 = 1) => {
         if (realChartData.length <= p) return;
         const k = 2 / (p + 1);
         let e = realChartData.slice(0, p).reduce((s: number, c: any) => s + c.close, 0) / p;
