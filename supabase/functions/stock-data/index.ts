@@ -44,7 +44,7 @@ async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
 
 // Get quote data from Yahoo Finance
 async function getQuote(symbol: string) {
-  const yfSymbol = symbol.includes(".") ? symbol : `${symbol}.NS`;
+  const yfSymbol = toYahooSymbol(symbol);
   const url = `${YF_BASE}/v8/finance/chart/${yfSymbol}?interval=1d&range=5d&includePrePost=false`;
   const resp = await fetchWithRetry(url);
   const data = await resp.json();
