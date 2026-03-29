@@ -32,61 +32,101 @@ interface TreeNode {
   sector: string;
 }
 
-// Squarified treemap layout algorithm
-function squarify(nodes: TreeNode[], x: number, y: number, w: number, h: number): { node: TreeNode; x: number; y: number; w: number; h: number }[] {
+type Rect = { x: number; y: number; w: number; h: number };
+type LayoutItem = { node: TreeNode; x: number; y: number; w: number; h: number };
+
+// Proper squarified treemap (Bruls, Huizing, van Wijk)
+function squarify(nodes: TreeNode[], x: number, y: number, w: number, h: number): LayoutItem[] {
   if (nodes.length === 0) return [];
   if (nodes.length === 1) return [{ node: nodes[0], x, y, w, h }];
 
-  const total = nodes.reduce((s, n) => s + n.market_cap, 0);
-  if (total === 0) return [];
+  const totalArea = w * h;
+  const totalValue = nodes.reduce((s, n) => s + (n.market_cap || 1), 0);
+  if (totalValue === 0) return [];
 
-  const result: { node: TreeNode; x: number; y: number; w: number; h: number }[] = [];
+  const items = nodes.map(n => ({ node: n, area: ((n.market_cap || 1) / totalValue) * totalArea }));
+  return layoutSquarified(items, { x, y, w, h });
+}
 
-  // Simple slice-and-dice
-  const isHorizontal = w >= h;
-  let offset = 0;
+function layoutSquarified(items: { node: TreeNode; area: number }[], rect: Rect): LayoutItem[] {
+  if (items.length === 0) return [];
+  if (items.length === 1) return [{ node: items[0].node, x: rect.x, y: rect.y, w: rect.w, h: rect.h }];
 
-  for (let i = 0; i < nodes.length; i++) {
-    const ratio = nodes[i].market_cap / total;
-    if (isHorizontal) {
-      const nodeW = w * ratio;
-      result.push({ node: nodes[i], x: x + offset, y, w: nodeW, h });
-      offset += nodeW;
+  const results: LayoutItem[] = [];
+  let remaining = [...items];
+
+  while (remaining.length > 0) {
+    const row: { node: TreeNode; area: number }[] = [remaining[0]];
+    remaining = remaining.slice(1);
+    let bestAspect = worstAspect(row, rect);
+
+    while (remaining.length > 0) {
+      const candidate = [...row, remaining[0]];
+      const newAspect = worstAspect(candidate, rect);
+      if (newAspect <= bestAspect) {
+        row.push(remaining[0]);
+        remaining = remaining.slice(1);
+        bestAspect = newAspect;
+      } else {
+        break;
+      }
+    }
+
+    const rowArea = row.reduce((s, r) => s + r.area, 0);
+    const vertical = rect.w >= rect.h;
+
+    if (vertical) {
+      const rowW = rect.h > 0 ? rowArea / rect.h : rect.w;
+      let yOff = rect.y;
+      for (const item of row) {
+        const itemH = rowW > 0 ? item.area / rowW : rect.h;
+        results.push({ node: item.node, x: rect.x, y: yOff, w: rowW, h: itemH });
+        yOff += itemH;
+      }
+      rect = { x: rect.x + rowW, y: rect.y, w: Math.max(rect.w - rowW, 0), h: rect.h };
     } else {
-      const nodeH = h * ratio;
-      result.push({ node: nodes[i], x, y: y + offset, w, h: nodeH });
-      offset += nodeH;
+      const rowH = rect.w > 0 ? rowArea / rect.w : rect.h;
+      let xOff = rect.x;
+      for (const item of row) {
+        const itemW = rowH > 0 ? item.area / rowH : rect.w;
+        results.push({ node: item.node, x: xOff, y: rect.y, w: itemW, h: rowH });
+        xOff += itemW;
+      }
+      rect = { x: rect.x, y: rect.y + rowH, w: rect.w, h: Math.max(rect.h - rowH, 0) };
     }
   }
 
-  return result;
+  return results;
 }
 
-// Sector-level treemap
+function worstAspect(row: { area: number }[], rect: Rect): number {
+  const totalArea = row.reduce((s, r) => s + r.area, 0);
+  const side = rect.w >= rect.h ? rect.h : rect.w;
+  if (side === 0 || totalArea === 0) return Infinity;
+  const rowLen = totalArea / side;
+  let worst = 0;
+  for (const item of row) {
+    const otherSide = item.area / rowLen;
+    const aspect = Math.max(rowLen / otherSide, otherSide / rowLen);
+    if (aspect > worst) worst = aspect;
+  }
+  return worst;
+}
+
+// Sector-level treemap using same squarify
 function sectorTreemap(
   sectors: { sector: string; stocks: TreeNode[]; totalMcap: number }[],
   width: number, height: number
 ) {
-  const total = sectors.reduce((s, sec) => s + sec.totalMcap, 0);
-  if (total === 0) return [];
-
-  const result: { sector: string; x: number; y: number; w: number; h: number; stocks: TreeNode[] }[] = [];
-  let offset = 0;
-  const isH = width >= height;
-
-  for (const sec of sectors) {
-    const ratio = sec.totalMcap / total;
-    if (isH) {
-      const sw = width * ratio;
-      result.push({ sector: sec.sector, x: offset, y: 0, w: sw, h: height, stocks: sec.stocks });
-      offset += sw;
-    } else {
-      const sh = height * ratio;
-      result.push({ sector: sec.sector, x: 0, y: offset, w: width, h: sh, stocks: sec.stocks });
-      offset += sh;
-    }
-  }
-  return result;
+  const fakeNodes: TreeNode[] = sectors.map(s => ({
+    symbol: s.sector, name: s.sector, change_pct: 0, market_cap: s.totalMcap, ltp: 0, sector: s.sector,
+  }));
+  const layout = squarify(fakeNodes, 0, 0, width, height);
+  return layout.map((item, i) => ({
+    sector: sectors[i].sector,
+    x: item.x, y: item.y, w: item.w, h: item.h,
+    stocks: sectors[i].stocks,
+  }));
 }
 
 export default function Heatmap() {
