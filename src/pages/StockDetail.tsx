@@ -78,13 +78,6 @@ function PivotLevel({ label, value, ltp, type }: { label: string; value: number 
 
 // ─── Constants ───
 
-const INTERVALS = [
-  { key: '1d', label: 'D', desc: 'Daily' },
-  { key: '60m', label: '4H', desc: '4 Hour' },
-  { key: '1wk', label: 'W', desc: 'Weekly' },
-  { key: '1mo', label: 'M', desc: 'Monthly' },
-];
-
 const RANGES = [
   { key: '1mo', label: '1M' }, { key: '3mo', label: '3M' }, { key: '6mo', label: '6M' },
   { key: '1y', label: '1Y' }, { key: '2y', label: '2Y' }, { key: '5y', label: '5Y' },
@@ -99,7 +92,7 @@ export default function StockDetail() {
   const { watchlist, addToWatchlist, removeFromWatchlist } = useStore();
   const inWatchlist = watchlist.includes(symbol || '');
   const [period, setPeriod] = useState('1y');
-  const [chartInterval, setChartInterval] = useState('1d');
+  const [chartInterval] = useState('1d');
   const [showAI, setShowAI] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'technicals' | 'fundamentals' | 'ai'>('overview');
   const [crosshairData, setCrosshairData] = useState<any>(null);
@@ -121,7 +114,7 @@ export default function StockDetail() {
     if (!chartRef.current || !realChartData?.length) return;
 
     try {
-      const { createChart, CandlestickSeries, HistogramSeries, LineSeries } = await import('lightweight-charts');
+      const { createChart, CandlestickSeries, HistogramSeries } = await import('lightweight-charts');
       const height = chartExpanded ? 560 : 380;
       const isDark = true;
 
@@ -181,37 +174,6 @@ export default function StockDetail() {
         value: c.volume,
         color: c.close >= c.open ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
       })));
-
-      // EMA overlays with better visibility
-      const addEMA = (p: number, color: string, width: 1 | 2 | 3 | 4 = 1) => {
-        if (realChartData.length <= p) return;
-        const k = 2 / (p + 1);
-        let e = realChartData.slice(0, p).reduce((s: number, c: any) => s + c.close, 0) / p;
-        const data = [{ time: realChartData[p - 1].time, value: e }];
-        for (let i = p; i < realChartData.length; i++) {
-          e = realChartData[i].close * k + e * (1 - k);
-          data.push({ time: realChartData[i].time, value: e });
-        }
-        chart.addSeries(LineSeries, {
-          color, lineWidth: width, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-        }).setData(data);
-      };
-
-      addEMA(20, '#f59e0b80', 1);
-      addEMA(50, '#3b82f660', 1);
-      addEMA(200, '#ef444450', 1);
-
-      // S/R price lines
-      if (technicals) {
-        [
-          { price: technicals.s1, title: 'S1', color: '#ef444440' },
-          { price: technicals.s2, title: 'S2', color: '#ef444425' },
-          { price: technicals.r1, title: 'R1', color: '#10b98140' },
-          { price: technicals.r2, title: 'R2', color: '#10b98125' },
-        ].forEach(l => {
-          if (l.price) cs.createPriceLine({ price: l.price, color: l.color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: l.title });
-        });
-      }
 
       chart.subscribeCrosshairMove((param: any) => {
         if (!param?.time) { setCrosshairData(null); return; }
@@ -303,14 +265,7 @@ export default function StockDetail() {
       <div className="t-card p-4 overflow-hidden">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="flex gap-0.5 bg-secondary/50 rounded-md p-0.5">
-              {INTERVALS.map(i => (
-                <button key={i.key} onClick={() => setChartInterval(i.key)}
-                  className={`px-2.5 py-1.5 rounded-md text-[10px] font-semibold transition-all ${chartInterval === i.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-                  {i.label}
-                </button>
-              ))}
-            </div>
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Daily Chart</span>
             <div className="w-px h-4 bg-border/30" />
             <div className="flex gap-0.5 bg-secondary/50 rounded-md p-0.5">
               {RANGES.map(r => (
@@ -320,15 +275,13 @@ export default function StockDetail() {
                 </button>
               ))}
             </div>
-            <div className="w-px h-4 bg-border/30" />
-            <div className="hidden md:flex items-center gap-3 text-[9px] text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-accent/60 rounded" /> EMA 20</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[hsl(var(--terminal-blue)/0.6)] rounded" /> EMA 50</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-destructive/40 rounded" /> EMA 200</span>
-            </div>
           </div>
           <div className="flex items-center gap-2">
             {chartLoading && <span className="text-[9px] text-accent animate-pulse font-medium">Loading…</span>}
+            <a href={`https://www.tradingview.com/chart/?symbol=NSE:${symbol}`} target="_blank" rel="noopener noreferrer"
+              className="text-[10px] text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-md bg-secondary/50 border border-border/30 transition-all flex items-center gap-1">
+              📊 Advanced Chart ↗
+            </a>
             <button onClick={() => setChartExpanded(!chartExpanded)}
               className="text-[10px] text-muted-foreground hover:text-foreground px-2.5 py-1 rounded-md bg-secondary/50 border border-border/30 transition-all">
               {chartExpanded ? '⊟' : '⊞'}
