@@ -105,7 +105,13 @@ export default function StockDetail() {
   const mockStock = getStock(symbol || '');
   const quote = fullData?.quote || mockStock;
   const technicals = fullData?.technicals;
-  const fundamentals = fullData?.fundamentals;
+  const apiFundamentals = fullData?.fundamentals;
+  const hasApiFundamentals = apiFundamentals && Object.values(apiFundamentals).some(v => v !== null && v !== undefined);
+  const fundamentals = hasApiFundamentals ? apiFundamentals : mockStock ? {
+    pe_ratio: mockStock.pe_ratio, market_cap: mockStock.market_cap, roe: mockStock.roe,
+    roce: mockStock.roce, debt_to_equity: mockStock.debt_to_equity, dividend_yield: mockStock.dividend_yield,
+    promoter_holding: (mockStock as any).promoter_holding,
+  } : null;
   const realChartData = chartData?.length > 0 ? chartData : generateCandleData(symbol || '', 250);
 
   // ─── Optimized Chart ───
