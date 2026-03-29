@@ -8,35 +8,35 @@ const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 interface AgentResult {
   symbol: string;
   stockData: any;
-  agents: {
-    fundamental: string;
-    technical: string;
-    sentiment: string;
-    news: string;
-    bullCase: string;
-    bearCase: string;
-    traderDecision: string;
-    riskAssessment: string;
-  };
+  agents: Record<string, string>;
 }
 
+/* ── TradingAgents Graph Steps ─────────────────────────── */
 const AGENT_STEPS = [
-  { key: 'analysts', label: 'Analyst Team', icon: '🔬', agents: ['fundamental', 'technical', 'sentiment', 'news'] },
-  { key: 'debate', label: 'Bull vs Bear Debate', icon: '⚔️', agents: ['bullCase', 'bearCase'] },
-  { key: 'trader', label: 'Trader Decision', icon: '📊', agents: ['traderDecision'] },
-  { key: 'risk', label: 'Risk Assessment', icon: '🛡️', agents: ['riskAssessment'] },
+  { key: 'analysts', label: 'Analyst Team', icon: '🔬', agents: ['market', 'sentiment', 'news', 'fundamentals'] },
+  { key: 'debate', label: 'Researcher Debate', icon: '⚔️', agents: ['bullCase', 'bearCase'] },
+  { key: 'manager', label: 'Research Manager', icon: '📋', agents: ['researchManager'] },
+  { key: 'trader', label: 'Trader Agent', icon: '📊', agents: ['traderDecision'] },
+  { key: 'risk', label: 'Risk Debate', icon: '⚖️', agents: ['aggressiveRisk', 'conservativeRisk', 'neutralRisk'] },
+  { key: 'portfolio', label: 'Portfolio Manager', icon: '🏛️', agents: ['portfolioManager'] },
 ];
 
-const AGENT_META: Record<string, { label: string; icon: string; color: string }> = {
-  fundamental: { label: 'Fundamentals', icon: '📈', color: 'terminal-blue' },
-  technical: { label: 'Technical', icon: '📉', color: 'terminal-cyan' },
-  sentiment: { label: 'Sentiment', icon: '💭', color: 'terminal-purple' },
-  news: { label: 'News & Macro', icon: '📰', color: 'terminal-amber' },
-  bullCase: { label: 'Bull Case', icon: '🐂', color: 'terminal-green' },
-  bearCase: { label: 'Bear Case', icon: '🐻', color: 'terminal-red' },
-  traderDecision: { label: 'Trading Decision', icon: '🎯', color: 'primary' },
-  riskAssessment: { label: 'Risk Assessment', icon: '🛡️', color: 'terminal-amber' },
+const AGENT_META: Record<string, { label: string; icon: string; group: string }> = {
+  market: { label: 'Market / Technical', icon: '📉', group: 'Analyst Team' },
+  sentiment: { label: 'Sentiment', icon: '💭', group: 'Analyst Team' },
+  news: { label: 'News & Macro', icon: '📰', group: 'Analyst Team' },
+  fundamentals: { label: 'Fundamentals', icon: '📈', group: 'Analyst Team' },
+  bullCase: { label: 'Bull Researcher', icon: '🐂', group: 'Researcher Debate' },
+  bearCase: { label: 'Bear Researcher', icon: '🐻', group: 'Researcher Debate' },
+  researchManager: { label: 'Research Manager', icon: '📋', group: 'Research Manager' },
+  traderDecision: { label: 'Trader Agent', icon: '🎯', group: 'Trader' },
+  aggressiveRisk: { label: 'Aggressive Analyst', icon: '🔥', group: 'Risk Debate' },
+  conservativeRisk: { label: 'Conservative Analyst', icon: '🛡️', group: 'Risk Debate' },
+  neutralRisk: { label: 'Neutral Analyst', icon: '⚖️', group: 'Risk Debate' },
+  portfolioManager: { label: 'Portfolio Manager', icon: '🏛️', group: 'Portfolio Manager' },
 };
+
+const FULL_SPAN_AGENTS = new Set(['researchManager', 'traderDecision', 'portfolioManager']);
 
 export default function TradingAgent() {
   const [symbol, setSymbol] = useState('');
@@ -53,14 +53,13 @@ export default function TradingAgent() {
     setExpandedAgent(null);
 
     try {
-      // Simulate step progression
       const stepTimer = setInterval(() => {
         setCurrentStep(prev => {
-          if (prev < 3) return prev + 1;
+          if (prev < 5) return prev + 1;
           clearInterval(stepTimer);
           return prev;
         });
-      }, 4000);
+      }, 5000);
 
       const resp = await fetch(`${FUNCTIONS_URL}/trading-agent`, {
         method: 'POST',
@@ -80,8 +79,8 @@ export default function TradingAgent() {
 
       const data = await resp.json();
       setResult(data);
-      setCurrentStep(4);
-      toast.success(`Analysis complete for ${data.symbol}`);
+      setCurrentStep(6);
+      toast.success(`TradingAgents analysis complete for ${data.symbol}`);
     } catch (err: any) {
       toast.error(err.message || 'Agent failed');
       setCurrentStep(-1);
@@ -90,16 +89,23 @@ export default function TradingAgent() {
     }
   };
 
+  const isExpanded = (key: string) => expandedAgent === key || expandedAgent === 'all';
+
   return (
     <div className="p-3 md:p-6 max-w-[1400px] mx-auto">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xl">🤖</span>
-          <h1 className="text-base md:text-lg font-black text-foreground tracking-wide">TRADING AGENT</h1>
-          <span className="text-[8px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">AI-POWERED</span>
+          <h1 className="text-base md:text-lg font-black text-foreground tracking-wide">TRADING AGENTS</h1>
+          <span className="text-[8px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold border border-primary/20">TradingAgents Framework</span>
         </div>
-        <p className="text-[10px] md:text-xs text-muted-foreground">Multi-agent stock analysis inspired by TradingAgents framework — 4 Analysts → Bull/Bear Debate → Trader Decision → Risk Assessment</p>
+        <p className="text-[10px] md:text-xs text-muted-foreground">
+          Multi-agent LLM trading framework — 4 Analysts → Bull/Bear Debate → Research Manager → Trader → Risk Debate (Aggressive/Conservative/Neutral) → Portfolio Manager
+        </p>
+        <p className="text-[8px] text-muted-foreground/60 mt-0.5">
+          Inspired by <a href="https://github.com/TauricResearch/TradingAgents" target="_blank" rel="noopener" className="text-primary/60 hover:text-primary underline">TauricResearch/TradingAgents</a>
+        </p>
       </div>
 
       {/* Input */}
@@ -128,12 +134,11 @@ export default function TradingAgent() {
                   <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                   Running Agents...
                 </span>
-              ) : '🚀 Run Analysis'}
+              ) : '🚀 Run TradingAgents'}
             </button>
           </div>
         </div>
 
-        {/* Quick suggestions */}
         <div className="flex flex-wrap gap-1.5 mt-3">
           {['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'TATAMOTORS', 'ADANIENT'].map(s => (
             <button key={s} onClick={() => setSymbol(s)}
@@ -144,25 +149,24 @@ export default function TradingAgent() {
         </div>
       </div>
 
-      {/* Agent Workflow Progress */}
+      {/* Agent Workflow Progress — 6 steps */}
       {(loading || result) && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="mb-4 overflow-x-auto">
+          <div className="flex items-center justify-between min-w-[600px] mb-3">
             {AGENT_STEPS.map((step, i) => (
               <React.Fragment key={step.key}>
-                <div className={`flex items-center gap-1.5 ${i <= currentStep ? 'opacity-100' : 'opacity-30'} transition-opacity duration-500`}>
-                  <div className={`w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-sm border-2 transition-all duration-500 ${
-                    i < currentStep ? 'bg-primary/20 border-primary text-primary' :
-                    i === currentStep && loading ? 'border-terminal-amber animate-pulse text-terminal-amber bg-terminal-amber/10' :
-                    i <= currentStep ? 'bg-primary/20 border-primary text-primary' :
+                <div className={`flex items-center gap-1 ${i <= currentStep ? 'opacity-100' : 'opacity-30'} transition-opacity duration-500`}>
+                  <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center text-xs border-2 transition-all duration-500 ${
+                    i < currentStep || currentStep >= 6 ? 'bg-primary/20 border-primary text-primary' :
+                    i === currentStep && loading ? 'border-[hsl(var(--terminal-amber))] animate-pulse text-[hsl(var(--terminal-amber))] bg-[hsl(var(--terminal-amber)/0.1)]' :
                     'border-border bg-secondary text-muted-foreground'
                   }`}>
-                    {i < currentStep || (currentStep >= 4) ? '✓' : step.icon}
+                    {i < currentStep || currentStep >= 6 ? '✓' : step.icon}
                   </div>
-                  <span className="text-[9px] md:text-[10px] font-semibold text-foreground hidden sm:block">{step.label}</span>
+                  <span className="text-[8px] md:text-[9px] font-semibold text-foreground hidden sm:block whitespace-nowrap">{step.label}</span>
                 </div>
                 {i < AGENT_STEPS.length - 1 && (
-                  <div className={`flex-1 h-px mx-2 transition-colors duration-500 ${i < currentStep ? 'bg-primary' : 'bg-border'}`} />
+                  <div className={`flex-1 h-px mx-1.5 transition-colors duration-500 ${i < currentStep ? 'bg-primary' : 'bg-border'}`} />
                 )}
               </React.Fragment>
             ))}
@@ -180,7 +184,7 @@ export default function TradingAgent() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-black text-foreground font-data">{result.symbol}</h2>
-                    <p className="text-xs text-muted-foreground">Analysis Date: {new Date().toLocaleDateString('en-IN')}</p>
+                    <p className="text-xs text-muted-foreground">TradingAgents Analysis — {new Date().toLocaleDateString('en-IN')}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-foreground font-data">₹{result.stockData.price?.toFixed(2)}</p>
@@ -192,60 +196,66 @@ export default function TradingAgent() {
               </div>
             )}
 
-            {/* Analyst Reports */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {Object.entries(result.agents).map(([key, content]) => {
-                const meta = AGENT_META[key];
-                if (!meta) return null;
-                const isExpanded = expandedAgent === key;
-                return (
-                  <motion.div key={key}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: Object.keys(AGENT_META).indexOf(key) * 0.1 }}
-                    className={`t-card overflow-hidden ${key === 'traderDecision' || key === 'riskAssessment' ? 'md:col-span-2' : ''}`}
-                  >
-                    <button
-                      onClick={() => setExpandedAgent(isExpanded ? null : key)}
-                      className="w-full flex items-center justify-between p-3 hover:bg-secondary/30 transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{meta.icon}</span>
-                        <div>
-                          <h3 className="text-[11px] font-bold text-foreground">{meta.label}</h3>
-                          {!isExpanded && (
-                            <p className="text-[9px] text-muted-foreground line-clamp-1 max-w-[300px]">{content.slice(0, 80)}...</p>
-                          )}
-                        </div>
-                      </div>
-                      <span className={`text-muted-foreground text-xs transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
-                    </button>
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
-                          className="overflow-hidden"
+            {/* Agent Reports grouped by step */}
+            {AGENT_STEPS.map((step) => (
+              <div key={step.key}>
+                <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <span>{step.icon}</span> {step.label}
+                </h3>
+                <div className={`grid gap-2 ${step.agents.length >= 3 && !FULL_SPAN_AGENTS.has(step.agents[0]) ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : step.agents.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                  {step.agents.map((agentKey, idx) => {
+                    const meta = AGENT_META[agentKey];
+                    const content = result.agents[agentKey];
+                    if (!meta || !content) return null;
+                    const expanded = isExpanded(agentKey);
+                    return (
+                      <motion.div key={agentKey}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className={`t-card overflow-hidden ${FULL_SPAN_AGENTS.has(agentKey) ? 'md:col-span-2 lg:col-span-3' : ''}`}
+                      >
+                        <button
+                          onClick={() => setExpandedAgent(expanded ? null : agentKey)}
+                          className="w-full flex items-center justify-between p-3 hover:bg-secondary/30 transition-colors text-left"
                         >
-                          <div className="px-3 pb-3 text-[11px] text-foreground/90 leading-relaxed border-t border-border/30 pt-2 prose prose-sm prose-invert max-w-none [&_p]:text-[11px] [&_p]:leading-relaxed [&_li]:text-[11px] [&_strong]:text-foreground">
-                            <ReactMarkdown>
-                              {content}
-                            </ReactMarkdown>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{meta.icon}</span>
+                            <div>
+                              <h3 className="text-[11px] font-bold text-foreground">{meta.label}</h3>
+                              {!expanded && (
+                                <p className="text-[9px] text-muted-foreground line-clamp-1 max-w-[300px]">{content.slice(0, 80)}...</p>
+                              )}
+                            </div>
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                );
-              })}
-            </div>
+                          <span className={`text-muted-foreground text-xs transition-transform ${expanded ? 'rotate-180' : ''}`}>▼</span>
+                        </button>
+                        <AnimatePresence>
+                          {expanded && (
+                            <motion.div
+                              initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="px-3 pb-3 text-[11px] text-foreground/90 leading-relaxed border-t border-border/30 pt-2 prose prose-sm prose-invert max-w-none [&_p]:text-[11px] [&_p]:leading-relaxed [&_li]:text-[11px] [&_strong]:text-foreground">
+                                <ReactMarkdown>{content}</ReactMarkdown>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
 
-            {/* Expand All button */}
+            {/* Expand / Collapse All */}
             <div className="flex justify-center">
               <button
-                onClick={() => setExpandedAgent(expandedAgent ? null : 'all')}
+                onClick={() => setExpandedAgent(expandedAgent === 'all' ? null : 'all')}
                 className="text-[10px] text-primary hover:underline"
               >
-                {expandedAgent ? 'Collapse All' : 'Expand All Reports'}
+                {expandedAgent === 'all' ? 'Collapse All' : 'Expand All Reports'}
               </button>
             </div>
           </motion.div>
@@ -256,23 +266,26 @@ export default function TradingAgent() {
       {!loading && !result && (
         <div className="t-card p-8 md:p-12 text-center">
           <div className="text-4xl mb-4">🤖</div>
-          <h2 className="text-sm font-bold text-foreground mb-2">Multi-Agent Trading Analysis</h2>
-          <p className="text-[10px] text-muted-foreground max-w-md mx-auto mb-6">
-            Enter a stock symbol above to run a full multi-agent analysis workflow. 
-            4 specialized AI analysts will evaluate the stock, followed by a bull/bear debate, 
-            trading decision, and risk assessment.
+          <h2 className="text-sm font-bold text-foreground mb-2">TradingAgents Multi-Agent Framework</h2>
+          <p className="text-[10px] text-muted-foreground max-w-lg mx-auto mb-6">
+            Enter a stock symbol to run the full TradingAgents pipeline. 
+            4 specialized analysts evaluate the stock, then bull/bear researchers debate, 
+            a research manager judges, a trader makes a decision, 
+            3 risk analysts debate risk, and finally the portfolio manager approves or rejects.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-2xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 max-w-3xl mx-auto">
             {[
-              { icon: '📈', title: 'Fundamentals', desc: 'Financials, PE, ROE, growth' },
-              { icon: '📉', title: 'Technical', desc: 'Price action, indicators' },
-              { icon: '💭', title: 'Sentiment', desc: 'Market mood, FII/DII' },
-              { icon: '📰', title: 'News & Macro', desc: 'Events, sector trends' },
+              { icon: '📈', title: 'Fundamentals', desc: 'PE, ROE, growth' },
+              { icon: '📉', title: 'Technical', desc: 'Price action, MAs' },
+              { icon: '💭', title: 'Sentiment', desc: 'Market mood' },
+              { icon: '📰', title: 'News', desc: 'Events, macro' },
+              { icon: '⚔️', title: 'Debate', desc: 'Bull vs Bear' },
+              { icon: '🏛️', title: 'Portfolio Mgr', desc: 'Final decision' },
             ].map(a => (
-              <div key={a.title} className="bg-secondary/30 border border-border/30 rounded-lg p-3 text-center">
-                <span className="text-2xl">{a.icon}</span>
-                <p className="text-[10px] font-semibold text-foreground mt-1">{a.title}</p>
-                <p className="text-[8px] text-muted-foreground">{a.desc}</p>
+              <div key={a.title} className="bg-secondary/30 border border-border/30 rounded-lg p-2.5 text-center">
+                <span className="text-xl">{a.icon}</span>
+                <p className="text-[9px] font-semibold text-foreground mt-1">{a.title}</p>
+                <p className="text-[7px] text-muted-foreground">{a.desc}</p>
               </div>
             ))}
           </div>
