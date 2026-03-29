@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,54 +6,62 @@
 
 @layer base {
   :root {
-    --background: 220 20% 7%;
-    --foreground: 210 20% 88%;
+    --background: 225 25% 5%;
+    --foreground: 210 25% 92%;
 
-    --card: 220 18% 10%;
-    --card-foreground: 210 20% 88%;
+    --card: 225 22% 8%;
+    --card-foreground: 210 25% 92%;
 
-    --popover: 220 18% 12%;
-    --popover-foreground: 210 20% 88%;
+    --popover: 225 22% 10%;
+    --popover-foreground: 210 25% 92%;
 
-    --primary: 142 70% 45%;
-    --primary-foreground: 220 20% 7%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 225 25% 5%;
 
-    --secondary: 220 15% 15%;
-    --secondary-foreground: 210 20% 75%;
+    --secondary: 225 18% 12%;
+    --secondary-foreground: 210 18% 72%;
 
-    --muted: 220 15% 13%;
-    --muted-foreground: 215 15% 50%;
+    --muted: 225 18% 10%;
+    --muted-foreground: 220 12% 46%;
 
-    --accent: 38 92% 50%;
-    --accent-foreground: 220 20% 7%;
+    --accent: 38 95% 52%;
+    --accent-foreground: 225 25% 5%;
 
-    --destructive: 0 72% 51%;
+    --destructive: 0 76% 54%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
-    --ring: 142 70% 45%;
+    --border: 225 15% 14%;
+    --input: 225 15% 14%;
+    --ring: 160 84% 39%;
 
-    --radius: 0.25rem;
+    --radius: 0.375rem;
 
-    /* Terminal-specific */
-    --terminal-green: 142 70% 45%;
-    --terminal-red: 0 72% 51%;
-    --terminal-amber: 38 92% 50%;
-    --terminal-blue: 210 90% 55%;
-    --terminal-cyan: 185 80% 50%;
-    --terminal-surface: 220 18% 10%;
-    --terminal-surface-hover: 220 16% 14%;
-    --terminal-header: 220 20% 8%;
+    /* Terminal palette */
+    --terminal-green: 160 84% 39%;
+    --terminal-red: 0 76% 54%;
+    --terminal-amber: 38 95% 52%;
+    --terminal-blue: 217 91% 60%;
+    --terminal-cyan: 187 85% 53%;
+    --terminal-purple: 263 70% 58%;
+    --terminal-surface: 225 22% 8%;
+    --terminal-surface-hover: 225 20% 11%;
+    --terminal-header: 225 25% 6%;
 
-    --sidebar-background: 220 20% 6%;
-    --sidebar-foreground: 210 20% 75%;
-    --sidebar-primary: 142 70% 45%;
-    --sidebar-primary-foreground: 220 20% 7%;
-    --sidebar-accent: 220 15% 13%;
-    --sidebar-accent-foreground: 210 20% 88%;
-    --sidebar-border: 220 15% 15%;
-    --sidebar-ring: 142 70% 45%;
+    /* Glassmorphism & depth */
+    --glow-primary: 160 84% 39%;
+    --glow-blue: 217 91% 60%;
+    --shadow-depth: 0 8px 32px -8px hsla(0, 0%, 0%, 0.5);
+    --shadow-card: 0 1px 3px hsla(0, 0%, 0%, 0.2), 0 4px 12px hsla(0, 0%, 0%, 0.15);
+    --shadow-elevated: 0 4px 24px -4px hsla(0, 0%, 0%, 0.4), 0 0 0 1px hsla(225, 15%, 14%, 0.8);
+
+    --sidebar-background: 225 25% 4%;
+    --sidebar-foreground: 210 18% 68%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 225 25% 5%;
+    --sidebar-accent: 225 18% 10%;
+    --sidebar-accent-foreground: 210 25% 92%;
+    --sidebar-border: 225 15% 12%;
+    --sidebar-ring: 160 84% 39%;
   }
 }
 
@@ -63,51 +71,86 @@
   }
 
   body {
-    @apply bg-background text-foreground font-mono antialiased;
-    font-family: 'JetBrains Mono', monospace;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Scrollbar styling */
+  /* Premium scrollbar */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
   ::-webkit-scrollbar-track {
-    background: hsl(var(--background));
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--border));
-    border-radius: 3px;
+    border-radius: 100px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Selection */
+  ::selection {
+    background: hsl(var(--primary) / 0.25);
+    color: hsl(var(--foreground));
   }
 }
 
 @layer components {
+  /* Premium card with subtle glow */
   .t-card {
-    @apply bg-card border border-border/60 rounded p-3 transition-colors;
+    @apply bg-card border border-border/50 rounded-lg transition-all duration-200;
+    box-shadow: var(--shadow-card);
   }
+  .t-card:hover {
+    border-color: hsl(var(--border) / 0.8);
+    box-shadow: var(--shadow-elevated);
+  }
+
   .t-header {
-    @apply text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2;
+    @apply text-[10px] uppercase tracking-[0.12em] text-muted-foreground font-semibold mb-2;
+    font-family: 'Inter', sans-serif;
   }
-  .t-value-up {
-    color: hsl(var(--terminal-green));
-  }
-  .t-value-down {
-    color: hsl(var(--terminal-red));
-  }
-  .t-value-neutral {
-    color: hsl(var(--terminal-amber));
-  }
+
+  .t-value-up { color: hsl(var(--terminal-green)); }
+  .t-value-down { color: hsl(var(--terminal-red)); }
+  .t-value-neutral { color: hsl(var(--terminal-amber)); }
+
   .t-btn {
-    @apply px-3 py-1.5 text-xs border border-border rounded-sm bg-secondary text-secondary-foreground 
-           hover:bg-muted transition-colors cursor-pointer;
+    @apply px-3 py-1.5 text-[11px] border border-border rounded-md bg-secondary text-secondary-foreground
+           hover:bg-muted transition-all duration-150 cursor-pointer font-medium;
   }
   .t-btn-active {
-    @apply bg-primary text-primary-foreground border-primary;
+    @apply bg-primary text-primary-foreground border-primary shadow-sm;
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.15);
   }
+
   .t-ticker {
-    @apply text-xs font-mono tracking-tight;
+    @apply text-xs tracking-tight;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Glass effect */
+  .glass {
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  }
+
+  /* Glow accent on active elements */
+  .glow-primary {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.12), 0 0 6px hsl(var(--primary) / 0.08);
+  }
+  .glow-blue {
+    box-shadow: 0 0 20px hsl(var(--terminal-blue) / 0.12), 0 0 6px hsl(var(--terminal-blue) / 0.08);
+  }
+
+  /* Data mono for numbers */
+  .font-data {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
   }
 }
