@@ -158,11 +158,11 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
                 (item.path !== '/' && location.pathname.startsWith(item.path));
               return (
                 <Link key={item.path} to={item.path}
-                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[11px] transition-all duration-150 group
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[11px] transition-all duration-200 group relative
                     ${isActive
-                      ? 'bg-primary/10 text-primary font-semibold glow-primary'
-                      : 'text-sidebar-foreground hover:text-foreground hover:bg-secondary/50'}`}>
-                  <span className={`w-5 text-center text-[13px] flex-shrink-0 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                      ? 'bg-primary/10 text-primary font-semibold shadow-[inset_3px_0_0_hsl(var(--primary))] shadow-[0_0_15px_hsl(var(--primary)/0.06)]'
+                      : 'text-sidebar-foreground hover:text-foreground hover:bg-secondary/40'}`}>
+                  <span className={`w-5 text-center text-[13px] flex-shrink-0 transition-all duration-200 ${isActive ? 'text-primary scale-110' : 'text-muted-foreground group-hover:text-foreground group-hover:scale-105'}`}>
                     {item.icon}
                   </span>
                   {sidebarOpen && (
