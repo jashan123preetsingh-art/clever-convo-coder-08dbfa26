@@ -22,6 +22,7 @@ const corsHeaders = {
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const QUICK_MODEL = "google/gemini-2.5-flash-lite";
 const DEEP_MODEL = "google/gemini-2.5-flash";
+const VISION_MODEL = "google/gemini-2.5-flash";
 const MAX_DEBATE_ROUNDS = 1;
 const MAX_RISK_ROUNDS = 1;
 
@@ -44,6 +45,45 @@ async function callAI(
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
+      ],
+      stream: false,
+    }),
+  });
+  if (!resp.ok) {
+    if (resp.status === 429) throw new Error("RATE_LIMITED");
+    if (resp.status === 402) throw new Error("CREDITS_EXHAUSTED");
+    const t = await resp.text();
+    throw new Error(`AI error ${resp.status}: ${t}`);
+  }
+  const data = await resp.json();
+  return data.choices?.[0]?.message?.content || "No response";
+}
+
+// Call AI with image (multimodal)
+async function callAIWithImage(
+  apiKey: string,
+  system: string,
+  userText: string,
+  imageUrl: string,
+  model = VISION_MODEL
+): Promise<string> {
+  const resp = await fetch(AI_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: "system", content: system },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userText },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ],
+        },
       ],
       stream: false,
     }),
@@ -113,6 +153,20 @@ const MARKET_ANALYST_SYSTEM = `You are the **Market/Technical Analyst** in a pro
 Your job: analyze price action, support/resistance levels, moving averages (SMA20, SMA50), RSI, MACD patterns, volume profile, and chart patterns.
 Be specific with ₹ price levels. Use the supplied data. Keep under 200 words.`;
 
+const MARKET_ANALYST_CHART_SYSTEM = `You are the **Market/Technical Analyst** in a professional trading firm with expertise in visual chart analysis.
+Your job: analyze the uploaded chart image along with the numerical data.
+Identify:
+- Chart type (candlestick, line, bar) and timeframe
+- Trend direction and strength (uptrend, downtrend, sideways)
+- Key chart patterns (head & shoulders, triangles, flags, wedges, double top/bottom, cup & handle, channels)
+- Candlestick patterns (doji, engulfing, hammer, shooting star, morning/evening star)
+- Support and resistance zones (mark specific ₹ levels)
+- Indicator readings if visible (RSI, MACD, Bollinger Bands, volume bars)
+- Volume analysis and divergences
+- Moving average crossovers or tests
+Combine the visual analysis with the numerical data for a complete picture.
+Be specific with ₹ price levels. Keep under 300 words.`;
+
 const SENTIMENT_ANALYST_SYSTEM = `You are the **Social Media / Sentiment Analyst** in a professional trading firm.
 Your job: gauge retail & institutional sentiment, social media buzz, FII/DII activity trends, options positioning (PCR), and short-term market mood.
 Be specific. Keep under 200 words.`;
@@ -126,11 +180,11 @@ Your job: evaluate company financials — PE ratio, PB, ROE, ROCE, debt-to-equit
 Be specific with numbers. Keep under 200 words.`;
 
 const BULL_RESEARCHER_SYSTEM = `You are the **Bullish Researcher** in an investment debate.
-Given the 4 analyst reports, build the STRONGEST possible bull case. Be specific with upside price targets, catalysts, and growth drivers.
+Given the 4 analyst reports (including any chart analysis), build the STRONGEST possible bull case. Be specific with upside price targets, catalysts, and growth drivers.
 Challenge bear arguments if provided. Keep under 200 words.`;
 
 const BEAR_RESEARCHER_SYSTEM = `You are the **Bearish Researcher** in an investment debate.
-Given the 4 analyst reports, build the STRONGEST possible bear case. Highlight risks, red flags, downside targets, and what could go wrong.
+Given the 4 analyst reports (including any chart analysis), build the STRONGEST possible bear case. Highlight risks, red flags, downside targets, and what could go wrong.
 Challenge bull arguments if provided. Keep under 200 words.`;
 
 const RESEARCH_MANAGER_SYSTEM = `You are the **Research Manager / Investment Judge** at a trading firm.
@@ -171,6 +225,7 @@ Make the FINAL decision:
 - **Final Action**: Strong Buy / Buy / Hold / Sell / Strong Sell
 - **Adjusted Position Size**: if different from trader's suggestion
 - **Risk Score**: 1-10 (10 = highest risk)
+- **Confidence**: percentage
 - **Key Conditions**: any conditions for execution
 - **Summary**: 2-3 sentence rationale
 
@@ -183,7 +238,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const { symbol } = await req.json();
+    const { symbol, chartImage } = await req.json();
     if (!symbol) {
       return new Response(JSON.stringify({ error: "Symbol required" }), {
         status: 400,
@@ -194,7 +249,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    console.log(`TradingAgents pipeline started for ${symbol}`);
+    const hasChart = !!chartImage;
+    console.log(`TradingAgents pipeline started for ${symbol}${hasChart ? ' (with chart image)' : ''}`);
 
     // ── Step 1: Fetch market data ──
     const stockData = await fetchStockData(symbol);
@@ -203,15 +259,26 @@ serve(async (req) => {
       : `Stock: ${symbol} (limited data)`;
 
     // ── Step 2: Analyst Team (parallel) ──
+    const marketReportPromise = hasChart
+      ? callAIWithImage(
+          LOVABLE_API_KEY,
+          MARKET_ANALYST_CHART_SYSTEM,
+          `Analyze this chart for ${symbol} along with the data. ${dataCtx}`,
+          chartImage,
+          VISION_MODEL
+        )
+      : callAI(LOVABLE_API_KEY, MARKET_ANALYST_SYSTEM, `Analyze ${symbol}. ${dataCtx}`);
+
     const [marketReport, sentimentReport, newsReport, fundamentalsReport] =
       await Promise.all([
-        callAI(LOVABLE_API_KEY, MARKET_ANALYST_SYSTEM, `Analyze ${symbol}. ${dataCtx}`),
+        marketReportPromise,
         callAI(LOVABLE_API_KEY, SENTIMENT_ANALYST_SYSTEM, `Sentiment for ${symbol}. ${dataCtx}`),
         callAI(LOVABLE_API_KEY, NEWS_ANALYST_SYSTEM, `News analysis for ${symbol}. ${dataCtx}`),
         callAI(LOVABLE_API_KEY, FUNDAMENTALS_ANALYST_SYSTEM, `Fundamentals for ${symbol}. ${dataCtx}`),
       ]);
 
-    const analystContext = `MARKET/TECHNICAL REPORT:\n${marketReport}\n\nSENTIMENT REPORT:\n${sentimentReport}\n\nNEWS REPORT:\n${newsReport}\n\nFUNDAMENTALS REPORT:\n${fundamentalsReport}`;
+    const chartNote = hasChart ? "\n\n[NOTE: The Market/Technical Analyst had access to a user-uploaded chart image and performed visual chart pattern analysis in addition to numerical data analysis.]" : "";
+    const analystContext = `MARKET/TECHNICAL REPORT${hasChart ? ' (includes visual chart analysis)' : ''}:\n${marketReport}\n\nSENTIMENT REPORT:\n${sentimentReport}\n\nNEWS REPORT:\n${newsReport}\n\nFUNDAMENTALS REPORT:\n${fundamentalsReport}${chartNote}`;
 
     // ── Step 3: Bull vs Bear Researcher Debate ──
     let bullHistory = "";
@@ -250,9 +317,6 @@ serve(async (req) => {
     );
 
     // ── Step 6: Risk Management Debate ──
-    let aggressiveHistory = "";
-    let conservativeHistory = "";
-    let neutralHistory = "";
     let aggressiveView = "";
     let conservativeView = "";
     let neutralView = "";
@@ -265,14 +329,9 @@ serve(async (req) => {
           ? riskCtx
           : `${riskCtx}\n\nPREVIOUS AGGRESSIVE:\n${aggressiveView}\nPREVIOUS CONSERVATIVE:\n${conservativeView}\nPREVIOUS NEUTRAL:\n${neutralView}`;
 
-      // Aggressive → Conservative → Neutral (sequential like TradingAgents)
       aggressiveView = await callAI(LOVABLE_API_KEY, AGGRESSIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}`);
       conservativeView = await callAI(LOVABLE_API_KEY, CONSERVATIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE VIEW:\n${aggressiveView}`);
       neutralView = await callAI(LOVABLE_API_KEY, NEUTRAL_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE:\n${aggressiveView}\nCONSERVATIVE:\n${conservativeView}`);
-
-      aggressiveHistory += `\n[Round ${round + 1}] ${aggressiveView}`;
-      conservativeHistory += `\n[Round ${round + 1}] ${conservativeView}`;
-      neutralHistory += `\n[Round ${round + 1}] ${neutralView}`;
     }
 
     // ── Step 7: Portfolio Manager (final decision) ──
@@ -288,6 +347,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         symbol,
+        hasChartAnalysis: hasChart,
         stockData: stockData
           ? {
               price: stockData.price,
@@ -301,23 +361,17 @@ serve(async (req) => {
             }
           : null,
         agents: {
-          // Analyst Team
           market: marketReport,
           sentiment: sentimentReport,
           news: newsReport,
           fundamentals: fundamentalsReport,
-          // Researcher Debate
           bullCase,
           bearCase,
-          // Research Manager
           researchManager: researchManagerDecision,
-          // Trader
           traderDecision,
-          // Risk Debate
           aggressiveRisk: aggressiveView,
           conservativeRisk: conservativeView,
           neutralRisk: neutralView,
-          // Portfolio Manager
           portfolioManager: portfolioManagerDecision,
         },
       }),
