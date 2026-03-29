@@ -86,7 +86,7 @@
 
 @layer components {
   .t-card {
-    @apply bg-card border border-border rounded-sm p-3;
+    @apply bg-card border border-border/60 rounded p-3 transition-colors;
   }
   .t-header {
     @apply text-xs uppercase tracking-wider text-muted-foreground font-semibold mb-2;
