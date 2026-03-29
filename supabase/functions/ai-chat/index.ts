@@ -373,6 +373,19 @@ serve(async (req) => {
 
     const fullSystem = SYSTEM_PROMPT + liveDataBlock;
 
+    // Process messages — preserve multimodal content (images)
+    const processedMessages = messages.slice(-20).map((m: any) => {
+      if (Array.isArray(m.content)) {
+        // Multimodal message with image — use vision-capable model
+        return { role: m.role, content: m.content };
+      }
+      return { role: m.role, content: m.content };
+    });
+
+    const hasImageMessage = messages.some((m: any) => Array.isArray(m.content) && m.content.some((p: any) => p.type === 'image_url'));
+    // Use vision-capable model when images are present
+    const model = hasImageMessage ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview";
+
     const response = await fetch(AI_URL, {
       method: "POST",
       headers: {
@@ -380,10 +393,10 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages: [
           { role: "system", content: fullSystem },
-          ...messages.slice(-20),
+          ...processedMessages,
         ],
         stream: true,
       }),
