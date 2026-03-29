@@ -279,7 +279,7 @@ export default function StockDetail() {
               className="px-3.5 py-1.5 rounded-md text-[10px] font-semibold bg-[hsl(var(--terminal-cyan)/0.08)] text-[hsl(var(--terminal-cyan))] border border-[hsl(var(--terminal-cyan)/0.15)] hover:bg-[hsl(var(--terminal-cyan)/0.15)] transition-all disabled:opacity-50">
               {aiLoading ? '⏳ Analyzing...' : '🤖 AI Analysis'}
             </button>
-            <button onClick={() => inWatchlist ? removeFromWatchlist(symbol!) : addToWatchlist(symbol!)}
+            <button onClick={() => toggleWatchlist(symbol!, ltp)}
               className={`px-2.5 py-1.5 rounded-md text-sm transition-all border ${inWatchlist ? 'bg-accent/8 text-accent border-accent/20' : 'bg-secondary text-muted-foreground border-border/50 hover:text-foreground'}`}>
               {inWatchlist ? '★' : '☆'}
             </button>
