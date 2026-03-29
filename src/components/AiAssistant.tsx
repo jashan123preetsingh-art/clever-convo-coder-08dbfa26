@@ -2,16 +2,17 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { stockApi, fiiDiiApi } from '@/lib/api';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
 const SUGGESTIONS = [
-  "Analyze Nifty trend for today",
-  "Best options strategy for sideways market?",
-  "Explain PCR ratio significance",
-  "Support/resistance for BankNifty",
-  "What is iron condor strategy?",
-  "How to read option chain data?",
+  "Analyze Nifty trend with current levels",
+  "Best options strategy for current market?",
+  "What does today's FII/DII data indicate?",
+  "Support/resistance for BankNifty today",
+  "Straddle strategy at current Nifty level",
+  "How to hedge my portfolio right now?",
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
@@ -21,14 +22,28 @@ export default function AiAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [liveData, setLiveData] = useState<{ indices: any[]; fiiDii: any[] }>({ indices: [], fiiDii: [] });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
 
+  // Fetch live data when chat opens
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (!open) return;
+    const fetchLive = async () => {
+      try {
+        const [indices, fiiDii] = await Promise.all([
+          stockApi.getIndices().catch(() => []),
+          fiiDiiApi.getData().catch(() => []),
+        ]);
+        setLiveData({ indices: Array.isArray(indices) ? indices : [], fiiDii: Array.isArray(fiiDii) ? fiiDii : [] });
+      } catch { /* silent */ }
+    };
+    fetchLive();
+  }, [open]);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, open]);
 
   useEffect(() => {
@@ -41,6 +56,8 @@ export default function AiAssistant() {
     return {
       currentPage: path,
       currentStock: parts[1] === 'stock' ? parts[2] : undefined,
+      liveIndices: liveData.indices,
+      fiiDii: liveData.fiiDii,
     };
   };
 
@@ -78,7 +95,6 @@ export default function AiAssistant() {
       const decoder = new TextDecoder();
       let buffer = '';
 
-      // Add empty assistant message
       setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
@@ -115,7 +131,10 @@ export default function AiAssistant() {
     } finally {
       setLoading(false);
     }
-  }, [messages, loading, location.pathname]);
+  }, [messages, loading, location.pathname, liveData]);
+
+  // Live data status indicator
+  const hasLiveData = liveData.indices.length > 0;
 
   return (
     <>
@@ -145,7 +164,7 @@ export default function AiAssistant() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-20 right-5 z-50 w-[380px] h-[520px] bg-card border border-border/60 rounded-xl shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-20 right-5 z-50 w-[400px] h-[560px] bg-card border border-border/60 rounded-xl shadow-2xl flex flex-col overflow-hidden"
             style={{ boxShadow: '0 25px 60px -12px rgba(0,0,0,0.5)' }}
           >
             {/* Header */}
@@ -155,19 +174,39 @@ export default function AiAssistant() {
               </div>
               <div className="flex-1">
                 <p className="text-[12px] font-bold text-foreground">StockPulse AI</p>
-                <p className="text-[9px] text-muted-foreground">Options & Chart Analysis</p>
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full ${hasLiveData ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+                  <p className="text-[9px] text-muted-foreground">
+                    {hasLiveData ? 'Live Data Connected' : 'Connecting...'}
+                  </p>
+                </div>
               </div>
-              <button onClick={() => { setMessages([]); }} className="text-[9px] text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-secondary/60 transition-colors" title="Clear chat">
+              <button onClick={() => setMessages([])} className="text-[9px] text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-secondary/60 transition-colors" title="Clear chat">
                 Clear
               </button>
             </div>
+
+            {/* Live ticker strip */}
+            {hasLiveData && (
+              <div className="px-3 py-1.5 bg-secondary/30 border-b border-border/20 flex items-center gap-3 overflow-x-auto">
+                {liveData.indices.slice(0, 3).map((idx: any, i: number) => (
+                  <div key={i} className="flex items-center gap-1.5 text-[9px] font-data whitespace-nowrap">
+                    <span className="text-muted-foreground">{idx.symbol}</span>
+                    <span className="text-foreground font-semibold">₹{Number(idx.ltp).toLocaleString('en-IN')}</span>
+                    <span className={idx.change_pct >= 0 ? 'text-primary' : 'text-destructive'}>
+                      {idx.change_pct >= 0 ? '+' : ''}{idx.change_pct}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
               {messages.length === 0 && (
                 <div className="space-y-3 mt-2">
                   <div className="text-center space-y-1">
-                    <p className="text-[11px] text-muted-foreground">Ask me anything about</p>
+                    <p className="text-[11px] text-muted-foreground">Powered by live market data</p>
                     <p className="text-[13px] font-semibold text-foreground">Stocks, Options & Trading</p>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5 mt-3">

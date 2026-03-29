@@ -5,22 +5,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `You are StockPulse AI — an expert Indian stock market analyst and options strategist. You help traders with:
+const SYSTEM_PROMPT = `You are StockPulse AI — an expert Indian stock market analyst and options strategist with access to REAL-TIME market data.
 
-1. **Chart Analysis**: Reading price action, support/resistance, trend analysis, candlestick patterns, moving averages, RSI, MACD, Bollinger Bands, volume analysis
-2. **Options Strategy**: Option chain analysis, Greeks interpretation, IV analysis, straddle/strangle setups, iron condors, bull/bear spreads, covered calls, protective puts
-3. **Trade Setups**: Entry/exit points, stop-loss placement, position sizing, risk-reward ratios
+You help traders with:
+1. **Chart Analysis**: Price action, support/resistance, trend analysis, candlestick patterns, MAs, RSI, MACD, Bollinger Bands, volume
+2. **Options Strategy**: Option chain analysis, Greeks, IV analysis, straddle/strangle, iron condors, spreads, covered calls, protective puts
+3. **Trade Setups**: Entry/exit points, stop-loss, position sizing, risk-reward
 4. **Market Context**: Nifty/BankNifty levels, FII/DII flows, sector rotation, market breadth
 
-Guidelines:
-- Always mention specific price levels when discussing support/resistance
-- For options, discuss strike selection, expiry choice, and premium decay
-- Use ₹ for Indian rupee prices
-- Be concise but thorough. Use bullet points and clear formatting.
-- When uncertain, say so and suggest what data would help
-- Never give guaranteed returns or absolute predictions
-- Always include risk warnings for trade setups
-- Format responses with markdown for readability`;
+CRITICAL RULES:
+- You have LIVE market data injected below. ALWAYS use these EXACT numbers — never make up or estimate prices.
+- When discussing Nifty/BankNifty, use the exact levels from the live data provided.
+- For FII/DII analysis, use the exact figures provided.
+- Always mention specific price levels with ₹ symbol
+- For options, discuss strike selection, expiry choice, premium decay
+- Be concise but thorough. Use bullet points and markdown.
+- Never give guaranteed returns. Always include risk warnings.
+- If you don't have data for something specific, say so clearly.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -36,19 +37,37 @@ serve(async (req) => {
       });
     }
 
-    // Build context-aware system message
-    let systemContent = SYSTEM_PROMPT;
-    if (context) {
-      systemContent += `\n\nCurrent Context:\n`;
-      if (context.currentPage) systemContent += `- User is on: ${context.currentPage}\n`;
-      if (context.currentStock) systemContent += `- Viewing stock: ${context.currentStock}\n`;
-      if (context.stockData) {
-        const sd = context.stockData;
-        systemContent += `- Stock: ${sd.symbol} @ ₹${sd.ltp} (${sd.change_pct >= 0 ? '+' : ''}${sd.change_pct?.toFixed(2)}%)\n`;
-        if (sd.high) systemContent += `- Day Range: ₹${sd.low} - ₹${sd.high}\n`;
-        if (sd.week_52_high) systemContent += `- 52W Range: ₹${sd.week_52_low} - ₹${sd.week_52_high}\n`;
+    // Build context with live data
+    let liveDataBlock = "";
+
+    if (context?.liveIndices && Array.isArray(context.liveIndices)) {
+      liveDataBlock += "\n\n📊 LIVE MARKET DATA (Real-time):\n";
+      for (const idx of context.liveIndices) {
+        liveDataBlock += `• ${idx.symbol}: ₹${idx.ltp?.toLocaleString()} | Change: ${idx.change >= 0 ? '+' : ''}${idx.change} (${idx.change_pct >= 0 ? '+' : ''}${idx.change_pct}%) | Day: ₹${idx.low} – ₹${idx.high}\n`;
       }
     }
+
+    if (context?.fiiDii && Array.isArray(context.fiiDii)) {
+      liveDataBlock += "\n💰 FII/DII DATA (Latest):\n";
+      for (const fd of context.fiiDii) {
+        const net = parseFloat(fd.netValue);
+        liveDataBlock += `• ${fd.category} (${fd.date}): Buy ₹${fd.buyValue}Cr | Sell ₹${fd.sellValue}Cr | Net: ${net >= 0 ? '+' : ''}₹${fd.netValue}Cr\n`;
+      }
+    }
+
+    if (context?.currentPage) liveDataBlock += `\n📍 User is on: ${context.currentPage}`;
+    if (context?.currentStock) liveDataBlock += `\n🔍 Viewing stock: ${context.currentStock}`;
+
+    if (context?.stockData) {
+      const sd = context.stockData;
+      liveDataBlock += `\n\n📈 STOCK IN FOCUS:\n`;
+      liveDataBlock += `• ${sd.symbol} (${sd.name}): ₹${sd.ltp} | Change: ${sd.change_pct >= 0 ? '+' : ''}${sd.change_pct?.toFixed(2)}%\n`;
+      if (sd.high) liveDataBlock += `• Day Range: ₹${sd.low} – ₹${sd.high}\n`;
+      if (sd.week_52_high) liveDataBlock += `• 52W Range: ₹${sd.week_52_low} – ₹${sd.week_52_high}\n`;
+      if (sd.volume) liveDataBlock += `• Volume: ${Number(sd.volume).toLocaleString()}\n`;
+    }
+
+    const fullSystem = SYSTEM_PROMPT + liveDataBlock;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -59,8 +78,8 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: systemContent },
-          ...messages.slice(-20), // Keep last 20 messages for context
+          { role: "system", content: fullSystem },
+          ...messages.slice(-20),
         ],
         stream: true,
       }),
