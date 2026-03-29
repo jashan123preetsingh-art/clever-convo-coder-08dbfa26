@@ -79,14 +79,14 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       {/* ═══ Top Bar ═══ */}
-      <header className="h-11 bg-card/80 glass border-b border-border/60 flex items-center justify-between px-4 flex-shrink-0 z-30">
+      <header className="h-11 bg-card/80 glass border-b border-border/40 flex items-center justify-between px-4 flex-shrink-0 z-30">
         <div className="flex items-center gap-4">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-primary to-[hsl(var(--terminal-cyan))] flex items-center justify-center shadow-sm glow-primary">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary to-[hsl(var(--terminal-cyan))] flex items-center justify-center shadow-sm glow-primary group-hover:shadow-[0_0_20px_hsl(var(--primary)/0.25)] transition-shadow duration-300">
               <span className="text-[9px] font-black text-primary-foreground tracking-tight">SP</span>
             </div>
-            <span className="text-[13px] font-bold text-foreground tracking-wide group-hover:text-primary transition-colors">StockPulse</span>
+            <span className="text-[13px] font-black text-foreground tracking-wide group-hover:text-gradient-primary transition-colors">StockPulse</span>
           </Link>
 
           <div className="w-px h-5 bg-border/50" />
