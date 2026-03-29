@@ -28,6 +28,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   const navigate = useNavigate();
   const { sidebarOpen, toggleSidebar } = useStore();
   const { user, isAdmin, profile, signOut } = useAuth();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [time, setTime] = useState(new Date());
   const [searchInput, setSearchInput] = useState('');
   const [showSearch, setShowSearch] = useState(false);
