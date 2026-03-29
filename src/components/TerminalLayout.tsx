@@ -342,6 +342,8 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
         <div className="fixed inset-0 z-[85]" onClick={() => setUserMenuOpen(false)} />
       )}
 
+      <CommandPalette />
+
       <Suspense fallback={null}>
         <AiAssistant />
       </Suspense>

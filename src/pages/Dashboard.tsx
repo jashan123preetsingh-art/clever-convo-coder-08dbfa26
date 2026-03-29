@@ -268,6 +268,9 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
+      {/* ═══ Watchlist ═══ */}
+      <WatchlistWidget />
+
       {/* ═══ Main Grid ═══ */}
       <div className="grid grid-cols-12 gap-3">
         {/* Gainers */}
