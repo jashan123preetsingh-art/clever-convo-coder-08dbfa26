@@ -23,7 +23,7 @@ function QuickAction({ icon, title, desc, to }: { icon: string; title: string; d
 // ── Market Metric Widget ──
 function MetricWidget({ label, value, sub, color, icon }: { label: string; value: string; sub?: string; color?: string; icon?: string }) {
   return (
-    <div className="bg-card rounded-lg p-3 border border-border/40">
+    <div className="bg-card rounded-lg p-3 border border-border/30 hover:border-border/60 transition-all group">
       <div className="flex items-center gap-1.5 mb-1">
         {icon && <span className="text-xs">{icon}</span>}
         <p className="text-[8px] text-muted-foreground uppercase tracking-wider font-semibold">{label}</p>
