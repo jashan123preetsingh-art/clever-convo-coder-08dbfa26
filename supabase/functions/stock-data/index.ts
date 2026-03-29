@@ -8,6 +8,23 @@ const corsHeaders = {
 // Yahoo Finance base
 const YF_BASE = "https://query1.finance.yahoo.com";
 
+// Index symbol mapping (these don't use .NS suffix)
+const INDEX_MAP: Record<string, string> = {
+  "NIFTY": "^NSEI",
+  "NIFTY 50": "^NSEI",
+  "BANKNIFTY": "^NSEBANK",
+  "SENSEX": "^BSESN",
+  "NIFTYIT": "^CNXIT",
+  "NIFTYNEXT50": "^NSMIDCP",
+};
+
+function toYahooSymbol(symbol: string): string {
+  const upper = symbol.toUpperCase();
+  if (INDEX_MAP[upper]) return INDEX_MAP[upper];
+  if (symbol.includes(".") || symbol.startsWith("^")) return symbol;
+  return `${symbol}.NS`;
+}
+
 async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
   for (let i = 0; i <= retries; i++) {
     try {
