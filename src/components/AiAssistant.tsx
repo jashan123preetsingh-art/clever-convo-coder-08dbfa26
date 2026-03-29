@@ -23,6 +23,23 @@ const SUGGESTIONS = [
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
 
+const FRIENDLY_RATE_LIMIT_MESSAGE = '⚠️ StockPulse AI is busy right now. Please retry in a moment, or use the Trading Agent page for a full report.';
+
+const normalizeAssistantError = (message?: string) => {
+  const rawMessage = message?.trim() || 'Something went wrong. Please try again.';
+  const normalized = rawMessage.toLowerCase();
+
+  if (normalized.includes('429') || normalized.includes('rate_limited') || normalized.includes('rate limit')) {
+    return FRIENDLY_RATE_LIMIT_MESSAGE;
+  }
+
+  if (normalized.includes('402') || normalized.includes('credits exhausted')) {
+    return '⚠️ AI is temporarily unavailable right now. Please try again later.';
+  }
+
+  return `⚠️ ${rawMessage}`;
+};
+
 export default function AiAssistant() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -151,7 +168,7 @@ export default function AiAssistant() {
     } catch (e: any) {
       setMessages(prev => [
         ...prev.filter(m => !(m.role === 'assistant' && m.content === '')),
-        { role: 'assistant', content: `⚠️ ${e.message || 'Something went wrong. Please try again.'}` },
+        { role: 'assistant', content: normalizeAssistantError(e?.message) },
       ]);
     } finally {
       setLoading(false);

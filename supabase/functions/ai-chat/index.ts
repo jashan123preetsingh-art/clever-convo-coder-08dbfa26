@@ -6,6 +6,140 @@ const corsHeaders = {
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const CHAT_BUSY_MESSAGE = "⚠️ StockPulse AI is busy right now. Please retry in a moment. For full stock reports, you can also use the Trading Agent page.";
+
+function isRateLimitError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return message.includes("rate_limited") || message.includes("rate limit") || message.includes("429");
+}
+
+function isCreditsError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return message.includes("credits_exhausted") || message.includes("credits exhausted") || message.includes("402");
+}
+
+function createSseResponse(content: string) {
+  const encoder = new TextEncoder();
+  const chunks = content.match(/.{1,120}/gs) || [content];
+
+  const stream = new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) {
+        const sseData = JSON.stringify({ choices: [{ delta: { content: chunk } }] });
+        controller.enqueue(encoder.encode(`data: ${sseData}\n\n`));
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+  });
+}
+
+function formatCurrency(value?: number | null) {
+  return typeof value === "number" && Number.isFinite(value) ? `₹${value.toFixed(2)}` : "N/A";
+}
+
+function buildFallbackReport(symbol: string, stockData: Awaited<ReturnType<typeof fetchStockData>>) {
+  if (!stockData) {
+    return `# 🤖 Multi-Agent Analysis: ${symbol}
+
+⚠️ StockPulse AI is busy right now, so this fallback report uses limited live market data only.
+
+## 📊 Analyst Reports
+
+### 📈 Fundamental Analysis
+Detailed financial ratios are unavailable in fallback mode. Re-run shortly for the full AI analyst breakdown.
+
+### 📉 Technical Analysis
+Live chart-derived data is temporarily limited, so specific support and resistance levels are not available in this fallback.
+
+### 💬 Sentiment Analysis
+Current market sentiment cannot be scored reliably without the full AI workflow.
+
+### 📰 News & Macro
+News synthesis is unavailable in fallback mode.
+
+## ⚔️ Bull vs Bear Debate
+
+### 🟢 Bull Case
+Wait for the full AI workflow to evaluate upside catalysts.
+
+### 🔴 Bear Case
+Wait for the full AI workflow to evaluate downside risks.
+
+## 🎯 Trading Decision
+**Action:** Hold off for now.
+
+## ⚠️ Risk Assessment
+**Risk Score:** 7/10 — incomplete context while the AI service is busy.
+
+*Fallback report generated from limited live data. Not financial advice.*`;
+  }
+
+  const distanceFromHigh = stockData.high52 ? (((stockData.high52 - stockData.price) / stockData.high52) * 100) : null;
+  const distanceFromLow = stockData.low52 ? (((stockData.price - stockData.low52) / stockData.low52) * 100) : null;
+  const volumeRatio = stockData.avgVolume ? stockData.volume / stockData.avgVolume : null;
+  const aboveSma20 = stockData.price >= stockData.sma20;
+  const aboveSma50 = stockData.price >= stockData.sma50;
+  const dailyBias = stockData.changePct > 1 ? "bullish" : stockData.changePct < -1 ? "bearish" : "neutral";
+  const support = Math.min(stockData.sma20 || stockData.price, stockData.sma50 || stockData.price);
+  const resistance = Math.max(stockData.sma20 || stockData.price, stockData.sma50 || stockData.price);
+  const tradeAction = aboveSma20 && aboveSma50 && stockData.changePct >= 0 ? "Buy on dips" : stockData.changePct <= -1.5 ? "Hold / avoid fresh longs" : "Wait for confirmation";
+  const target = aboveSma20 ? stockData.high52 : stockData.sma20;
+  const stopLoss = aboveSma50 ? stockData.sma50 : stockData.low52;
+  const riskScore = Math.min(9, Math.max(4, Math.round(Math.abs(stockData.changePct) / 1.5 + (volumeRatio && volumeRatio > 1.2 ? 2 : 1) + (!aboveSma50 ? 2 : 0))));
+
+  return `# 🤖 Multi-Agent Analysis: ${symbol}
+**Current Price:** ${formatCurrency(stockData.price)} (${stockData.changePct >= 0 ? "+" : ""}${stockData.changePct?.toFixed(2)}%)
+
+⚠️ StockPulse AI is busy right now, so this fallback report is generated from live market data instead of the full AI workflow.
+
+---
+
+## 📊 Analyst Reports
+
+### 📈 Fundamental Analysis
+This fallback mode does not have full valuation ratios, but market structure shows the stock trading ${distanceFromHigh !== null ? `**${distanceFromHigh.toFixed(1)}% below**` : "below"} its 52-week high and ${distanceFromLow !== null ? `**${distanceFromLow.toFixed(1)}% above**` : "above"} its 52-week low. That places it in a ${dailyBias} positioning zone rather than a clean long-term breakout.
+
+### 📉 Technical Analysis
+Price is at **${formatCurrency(stockData.price)}**, with SMA20 at **${formatCurrency(stockData.sma20)}** and SMA50 at **${formatCurrency(stockData.sma50)}**. Bias is **${aboveSma20 && aboveSma50 ? "trend-supportive" : "weak-to-neutral"}**. Immediate support sits near **${formatCurrency(support)}**, while resistance is near **${formatCurrency(resistance)}**.
+
+### 💬 Sentiment Analysis
+Intraday sentiment looks **${dailyBias}**, with the stock moving **${stockData.changePct >= 0 ? "+" : ""}${stockData.changePct.toFixed(2)}%**. ${volumeRatio ? `Volume is running at **${volumeRatio.toFixed(2)}x** the recent average, suggesting ${volumeRatio > 1 ? "active participation" : "muted conviction"}.` : "Volume context is limited right now."}
+
+### 📰 News & Macro
+Specific news synthesis is unavailable in fallback mode. Use this report as a live-structure view only, not a full catalyst map.
+
+---
+
+## ⚔️ Bull vs Bear Debate
+
+### 🟢 Bull Case
+If price reclaims and holds above both short-term averages, the setup can stabilize quickly and attempt a move back toward **${formatCurrency(target)}**.
+
+### 🔴 Bear Case
+Failure to hold **${formatCurrency(support)}** keeps downside pressure alive, especially if the stock remains below the 20/50-day trend zone.
+
+---
+
+## 🎯 Trading Decision
+**Action:** ${tradeAction}
+
+**Entry Zone:** ${formatCurrency(stockData.price)} to ${formatCurrency(support)}  
+**Target Zone:** ${formatCurrency(target)}  
+**Stop Loss:** ${formatCurrency(stopLoss)}
+
+---
+
+## ⚠️ Risk Assessment
+**Risk Score:** ${riskScore}/10 — this is a live-data fallback with limited fundamental and news context, so execution risk is higher than the full multi-agent report.
+
+---
+*Fallback report generated from live data. Not financial advice.*`;
+}
 
 async function callAI(apiKey: string, systemPrompt: string, userPrompt: string, model = "google/gemini-3-flash-preview"): Promise<string> {
   const resp = await fetch(AI_URL, {
@@ -21,6 +155,8 @@ async function callAI(apiKey: string, systemPrompt: string, userPrompt: string, 
     }),
   });
   if (!resp.ok) {
+    if (resp.status === 429) throw new Error("RATE_LIMITED");
+    if (resp.status === 402) throw new Error("CREDITS_EXHAUSTED");
     const t = await resp.text();
     throw new Error(`AI error ${resp.status}: ${t}`);
   }
@@ -86,74 +222,40 @@ async function runMultiAgent(apiKey: string, symbol: string): Promise<string> {
     ? `Stock: ${symbol}, Price: ₹${stockData.price?.toFixed(2)}, Change: ${stockData.changePct?.toFixed(2)}%, SMA20: ₹${stockData.sma20?.toFixed(2)}, SMA50: ₹${stockData.sma50?.toFixed(2)}, Volume: ${stockData.volume?.toLocaleString()}, 52W High: ₹${stockData.high52?.toFixed(2)}, 52W Low: ₹${stockData.low52?.toFixed(2)}`
     : `Stock: ${symbol} (limited data)`;
 
-  const [fundamental, technical, sentiment, news] = await Promise.all([
-    callAI(apiKey, "You are a Fundamentals Analyst for Indian stocks. Evaluate financials, PE, debt, growth, promoter holding, ROE/ROCE. Be specific. Under 120 words.", `Fundamental analysis for ${symbol}. ${dataContext}`),
-    callAI(apiKey, "You are a Technical Analyst for Indian stocks. Analyze price action, S/R, MAs, RSI, MACD, volume. Be specific with levels. Under 120 words.", `Technical analysis for ${symbol}. ${dataContext}. Recent closes: ${stockData?.recentCloses?.map((c: number) => c?.toFixed(2))?.join(', ')}`),
-    callAI(apiKey, "You are a Sentiment Analyst for Indian stocks. Analyze market sentiment, social buzz, FII/DII activity. Under 120 words.", `Sentiment analysis for ${symbol}. ${dataContext}`),
-    callAI(apiKey, "You are a News Analyst for Indian stocks. Analyze recent news, regulatory changes, sector trends, macro factors. Under 120 words.", `News analysis for ${symbol}. ${dataContext}`),
-  ]);
-
-  const analysisCtx = `FUNDAMENTAL: ${fundamental}\nTECHNICAL: ${technical}\nSENTIMENT: ${sentiment}\nNEWS: ${news}`;
-
-  const [bullCase, bearCase] = await Promise.all([
-    callAI(apiKey, "You are a Bullish Researcher. Build strongest bull case with price targets. Under 100 words.", `Bull case for ${symbol}.\n${analysisCtx}`),
-    callAI(apiKey, "You are a Bearish Researcher. Build strongest bear case with downside targets. Under 100 words.", `Bear case for ${symbol}.\n${analysisCtx}`),
-  ]);
-
-  const traderDecision = await callAI(apiKey,
-    "You are a senior Trader. Make a CLEAR decision: ACTION (Strong Buy/Buy/Hold/Sell/Strong Sell), ENTRY, TARGET, STOP LOSS, TIME HORIZON. Under 150 words.",
-    `Decision for ${symbol}.\n${analysisCtx}\nBULL: ${bullCase}\nBEAR: ${bearCase}`,
-    "google/gemini-2.5-flash"
-  );
-
-  const riskAssessment = await callAI(apiKey,
-    "You are a Risk Manager. Give RISK SCORE (1-10). Evaluate risk/reward, volatility, liquidity risks. Under 100 words.",
-    `Evaluate trade for ${symbol}: ${traderDecision}\nData: ${dataContext}`,
-    "google/gemini-2.5-flash"
-  );
-
-  // Format as rich markdown report
-  return `# 🤖 Multi-Agent Analysis: ${symbol}
-${stockData ? `**Current Price:** ₹${stockData.price?.toFixed(2)} (${stockData.changePct >= 0 ? '+' : ''}${stockData.changePct?.toFixed(2)}%)` : ''}
-
----
-
+  try {
+    return await callAI(
+      apiKey,
+      `You are StockPulse AI running an internal multi-agent workflow for Indian stocks.
+Return ONE markdown report with these exact sections and headings:
+# 🤖 Multi-Agent Analysis: {SYMBOL}
 ## 📊 Analyst Reports
-
 ### 📈 Fundamental Analysis
-${fundamental}
-
 ### 📉 Technical Analysis
-${technical}
-
 ### 💬 Sentiment Analysis
-${sentiment}
-
 ### 📰 News & Macro
-${news}
-
----
-
 ## ⚔️ Bull vs Bear Debate
-
 ### 🟢 Bull Case
-${bullCase}
-
 ### 🔴 Bear Case
-${bearCase}
-
----
-
 ## 🎯 Trading Decision
-${traderDecision}
-
----
-
 ## ⚠️ Risk Assessment
-${riskAssessment}
 
----
-*Multi-agent analysis powered by StockPulse AI. Not financial advice.*`;
+Requirements:
+- Use only the supplied market data and clearly say when data is limited
+- Be specific with ₹ price levels
+- Keep each section concise
+- Include action, entry zone, target zone, and stop loss in Trading Decision
+- Include a 1-10 risk score in Risk Assessment
+- Output markdown only`,
+      `Generate the full multi-agent report for ${symbol}.\n\n${dataContext}\nRecent closes: ${stockData?.recentCloses?.map((c: number) => c?.toFixed(2)).join(", ") || "N/A"}`,
+      "google/gemini-2.5-flash-lite"
+    );
+  } catch (error) {
+    if (isRateLimitError(error) || isCreditsError(error)) {
+      return buildFallbackReport(symbol, stockData);
+    }
+
+    throw error;
+  }
 }
 
 const SYSTEM_PROMPT = `You are StockPulse AI — an expert Indian stock market analyst and options strategist with access to REAL-TIME market data.
@@ -198,24 +300,7 @@ serve(async (req) => {
       // Run multi-agent pipeline and return as SSE
       console.log(`Multi-agent triggered for: ${agentSymbol}`);
       const report = await runMultiAgent(LOVABLE_API_KEY, agentSymbol);
-
-      // Stream the report as SSE chunks
-      const encoder = new TextEncoder();
-      const chunks = report.match(/.{1,80}/gs) || [report];
-      const stream = new ReadableStream({
-        async start(controller) {
-          for (const chunk of chunks) {
-            const sseData = JSON.stringify({ choices: [{ delta: { content: chunk } }] });
-            controller.enqueue(encoder.encode(`data: ${sseData}\n\n`));
-          }
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
-        },
-      });
-
-      return new Response(stream, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-      });
+      return createSseResponse(report);
     }
 
     // Normal chat — build context with live data
@@ -293,14 +378,10 @@ serve(async (req) => {
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited. Please wait a moment and try again." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return createSseResponse(CHAT_BUSY_MESSAGE);
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return createSseResponse("⚠️ AI is temporarily unavailable right now. Please try again later.");
       }
       const text = await response.text();
       throw new Error(`AI gateway error: ${response.status} ${text}`);
