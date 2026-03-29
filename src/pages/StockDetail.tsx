@@ -78,13 +78,6 @@ function PivotLevel({ label, value, ltp, type }: { label: string; value: number 
 
 // ─── Constants ───
 
-const INTERVALS = [
-  { key: '1d', label: 'D', desc: 'Daily' },
-  { key: '60m', label: '4H', desc: '4 Hour' },
-  { key: '1wk', label: 'W', desc: 'Weekly' },
-  { key: '1mo', label: 'M', desc: 'Monthly' },
-];
-
 const RANGES = [
   { key: '1mo', label: '1M' }, { key: '3mo', label: '3M' }, { key: '6mo', label: '6M' },
   { key: '1y', label: '1Y' }, { key: '2y', label: '2Y' }, { key: '5y', label: '5Y' },
