@@ -11,9 +11,9 @@ function QuickAction({ icon, title, desc, to }: { icon: string; title: string; d
   return (
     <Link to={to}>
       <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
-        className="t-card p-4 flex flex-col items-center text-center gap-2 cursor-pointer group hover:border-primary/30 transition-all">
-        <span className="text-2xl group-hover:scale-110 transition-transform">{icon}</span>
-        <p className="text-[11px] font-bold text-foreground">{title}</p>
+        className="t-card-interactive p-4 flex flex-col items-center text-center gap-2 group">
+        <span className="text-2xl group-hover:scale-110 transition-transform duration-200">{icon}</span>
+        <p className="text-[11px] font-bold text-foreground group-hover:text-primary transition-colors">{title}</p>
         <p className="text-[8px] text-muted-foreground leading-relaxed">{desc}</p>
       </motion.div>
     </Link>
