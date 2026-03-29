@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { INDICES, getTopGainers, getTopLosers, getMostActive, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
 import { useIndices, useMarketBreadth } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
+import MarketBrief from '@/components/MarketBrief';
 
 // ── Quick Action Card ──
 function QuickAction({ icon, title, desc, to }: { icon: string; title: string; desc: string; to: string }) {
@@ -137,6 +138,9 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* ═══ AI Market Brief ═══ */}
+      <MarketBrief />
+
       {/* ═══ Quick Actions ═══ */}
       <div>
         <p className="text-[10px] text-muted-foreground font-semibold mb-2 uppercase tracking-wider">⚡ Quick Actions <span className="text-muted-foreground/50">— Jump to any tool instantly</span></p>
@@ -147,6 +151,7 @@ export default function Dashboard() {
           <QuickAction icon="▦" title="Heatmap" desc="Market overview" to="/heatmap" />
           <QuickAction icon="⇄" title="FII / DII" desc="Institutional flows" to="/fii-dii" />
           <QuickAction icon="◫" title="Sectors" desc="Sector rotation" to="/sectors" />
+          <QuickAction icon="📈" title="OI Analysis" desc="Call/Put OI trends" to="/oi-analysis" />
         </div>
       </div>
 
