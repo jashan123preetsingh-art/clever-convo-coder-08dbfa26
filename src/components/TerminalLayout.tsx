@@ -208,8 +208,8 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
         </div>
       </footer>
 
-      {showSearch && searchInput.length >= 1 && (
-        <div className="fixed inset-0 z-40" onClick={() => setShowSearch(false)} />
+      {showSearch && (
+        <div className="fixed inset-0 z-20" onClick={() => setShowSearch(false)} />
       )}
 
       <Suspense fallback={null}>
