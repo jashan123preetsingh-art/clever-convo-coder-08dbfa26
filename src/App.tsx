@@ -39,7 +39,7 @@ const App = () => (
               <Route path="/heatmap" element={<Heatmap />} />
               <Route path="/scanner" element={<Scanner />} />
               <Route path="/scanner/:key" element={<Scanner />} />
-              <Route path="/screener" element={<Screener />} />
+              <Route path="/screener" element={<Scanner />} />
               <Route path="/options" element={<OptionsChain />} />
               <Route path="/options/:symbol" element={<OptionsChain />} />
               <Route path="/sectors" element={<Sectors />} />
