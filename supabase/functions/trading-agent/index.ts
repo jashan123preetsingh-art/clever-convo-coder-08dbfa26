@@ -214,11 +214,12 @@ Analyze the uploaded chart image along with the numerical data. Apply these tech
 - Harmonic patterns if visible (Gartley, butterfly, bat, crab)
 - Trendlines, channels, and their breaks/retests
 
-**Indicators (if visible):**
-- RSI: overbought/oversold, divergences (regular + hidden)
-- MACD: crossovers, histogram momentum, divergences
-- Bollinger Bands: squeezes, walks, mean reversion
-- Volume: climactic spikes, dry-up zones, volume-price divergence
+**Volume & Volume Profile (PRIMARY — never depend on MACD):**
+- Volume Profile: POC, Value Area High/Low, HVN, LVN zones
+- Climactic volume spikes, dry-up zones, volume-price divergence
+- Effort vs result analysis on volume bars
+- RSI: only on 1H+ TF — overbought/oversold, divergences (regular + hidden)
+- Bollinger Bands: squeezes, walks, mean reversion (if visible)
 
 **Key Levels:** Mark specific ₹ support, resistance, entry, stop-loss, and target levels.
 
