@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const CHAT_BUSY_MESSAGE = "⚠️ StockPulse AI is busy right now. Please retry in a moment. For full stock reports, you can also use the Trading Agent page.";
+const CHAT_BUSY_MESSAGE = "⚠️ Trade Arsenal AI is busy right now. Please retry in a moment. For full stock reports, you can also use the Trading Agent page.";
 
 function isRateLimitError(error: unknown) {
   const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
