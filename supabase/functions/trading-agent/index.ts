@@ -59,14 +59,16 @@ const MAX_RISK_ROUNDS = 1;
 
 async function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
-async function callAIRaw(apiKey: string, system: string, user: string | Array<any>, model: string): Promise<string> {
+async function callAIRaw(apiKey: string, system: string, user: string | Array<any>, model: string, reasoning?: { effort: string }): Promise<string> {
   const messages = [{ role: "system", content: system }, { role: "user", content: user }];
   const MAX_RETRIES = 3;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const body: any = { model, messages, stream: false };
+    if (reasoning) body.reasoning = reasoning;
     const resp = await fetch(AI_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, messages, stream: false }),
+      body: JSON.stringify(body),
     });
     if (resp.ok) {
       const data = await resp.json();
