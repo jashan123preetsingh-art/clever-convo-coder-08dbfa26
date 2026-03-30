@@ -607,7 +607,7 @@ async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: strin
 
   // Step 1: OI Analysis + Greeks/IV in parallel (both use reasoning)
   const [oiReport, greeksReport] = await Promise.all([
-    callAI(apiKey, OPTIONS_OI_SYSTEM, `Full OI analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.oiAnalyst, REASONING_HIGH),
+    callAI(apiKey, OPTIONS_OI_SYSTEM, `Full OI analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.oiAnalyst),
     callAI(apiKey, OPTIONS_GREEKS_SYSTEM, `Greeks and IV analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.greeksAnalyst),
   ]);
 
