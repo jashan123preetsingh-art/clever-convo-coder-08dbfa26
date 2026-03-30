@@ -22,14 +22,14 @@ const corsHeaders = {
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 // ── Model assignments per agent ──
 // Using lighter models to avoid rate limits while keeping quality
-const MODEL_MARKET_ANALYST = "google/gemini-2.5-flash";       // Fast + good for TA
+const MODEL_MARKET_ANALYST = "openai/gpt-5.2";                // Top-tier for TA
 const MODEL_SENTIMENT      = "google/gemini-2.5-flash";       // Fast multimodal
 const MODEL_NEWS            = "google/gemini-3-flash-preview"; // Latest gen balance
 const MODEL_FUNDAMENTALS    = "google/gemini-3-flash-preview"; // Latest gen balance
 const MODEL_BULL            = "google/gemini-2.5-pro";         // Strong reasoning
 const MODEL_BEAR            = "google/gemini-2.5-pro";         // Strong reasoning
 const MODEL_RESEARCH_MGR    = "openai/gpt-5-mini";            // Good reasoning, faster
-const MODEL_TRADER          = "google/gemini-2.5-flash";       // Fast precision
+const MODEL_TRADER          = "openai/gpt-5.2";               // Top-tier for decisions
 const MODEL_RISK_AGGRESSIVE = "google/gemini-3-flash-preview"; // Fast balanced
 const MODEL_RISK_CONSERVATIVE = "google/gemini-3-flash-preview"; // Fast balanced
 const MODEL_RISK_NEUTRAL    = "google/gemini-2.5-flash";       // Fast balanced
