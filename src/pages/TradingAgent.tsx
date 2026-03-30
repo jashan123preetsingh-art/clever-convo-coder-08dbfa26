@@ -639,21 +639,21 @@ export default function TradingAgent() {
       <ModeSelector mode={mode} setMode={setMode} disabled={loading} />
 
       {/* Input */}
-      <div className="rounded-2xl bg-card/50 border border-border/15 p-4 mb-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <label className="block text-[10px] text-muted-foreground font-semibold mb-1.5 uppercase tracking-wider">Symbol</label>
+      <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-border/15 p-3 sm:p-4 mb-4">
+        <div className="flex flex-col gap-2 sm:gap-3">
+          <div>
+            <label className="block text-[9px] sm:text-[10px] text-muted-foreground font-semibold mb-1 sm:mb-1.5 uppercase tracking-wider">Symbol</label>
             <input
               type="text"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && runAgent()}
-              placeholder={mode === 'invest' ? 'e.g. RELIANCE, TCS, INFY' : 'e.g. NIFTY 50 , TF 15MIN'}
-              className="w-full bg-secondary/40 border border-border/30 rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 font-data transition-colors"
+              placeholder={mode === 'invest' ? 'e.g. RELIANCE, TCS' : 'e.g. NIFTY 50'}
+              className="w-full bg-secondary/40 border border-border/30 rounded-xl px-3 py-2 sm:py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 font-data transition-colors"
               disabled={loading}
             />
           </div>
-          <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
             {mode !== 'invest' && (
               <>
                 <input type="file" ref={fileInputRef} accept="image/*" className="hidden"
@@ -661,29 +661,29 @@ export default function TradingAgent() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading}
-                  className={`px-3 py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center gap-2 ${
+                  className={`px-3 py-2 sm:py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center gap-1.5 ${
                     chartImage
                       ? 'bg-[hsl(var(--terminal-cyan))]/10 border-[hsl(var(--terminal-cyan))]/30 text-[hsl(var(--terminal-cyan))]'
                       : 'bg-secondary/30 border-border/30 text-muted-foreground hover:text-foreground hover:border-border/50'
                   } disabled:opacity-50`}
-                  title="Upload chart image (or Ctrl+V to paste)"
                 >
                   <ImageIcon className="w-4 h-4" />
-                  {chartImage ? '📸' : '📷'}
+                  <span className="hidden sm:inline">{chartImage ? 'Chart ✓' : 'Chart'}</span>
                 </button>
               </>
             )}
             <button
               onClick={runAgent}
               disabled={loading || !symbol.trim()}
-              className="px-6 py-2.5 bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))] text-primary-foreground rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 whitespace-nowrap"
+              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))] text-primary-foreground rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 whitespace-nowrap"
             >
               {loading ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  Running...
+                  <span className="hidden sm:inline">Running...</span>
+                  <span className="sm:hidden">...</span>
                 </span>
-              ) : '🚀 Run Agents'}
+              ) : '🚀 Run'}
             </button>
           </div>
         </div>
