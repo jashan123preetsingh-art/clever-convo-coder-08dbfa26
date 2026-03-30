@@ -53,6 +53,14 @@ const MODELS = {
     committee:    "openai/gpt-5",            // Investment committee needs reasoning
     architect:    "openai/gpt-5",            // Final Buffett-style decision with reasoning
   },
+  options: {
+    oiAnalyst:    "openai/gpt-5",            // Deep OI pattern recognition with reasoning
+    greeksAnalyst:"openai/gpt-5.2",          // Precise Greeks & IV analysis
+    technical:    "openai/gpt-5.2",          // Price action for strike selection
+    strategist:   "openai/gpt-5",            // Strategy construction with reasoning
+    riskManager:  "google/gemini-2.5-pro",   // Thorough risk assessment
+    trader:       "openai/gpt-5",            // Final options trade with reasoning
+  },
 };
 
 const MAX_DEBATE_ROUNDS = 1;
