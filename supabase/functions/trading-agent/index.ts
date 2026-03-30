@@ -632,7 +632,7 @@ async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: strin
   // Step 5: Final options trade decision WITH REASONING
   const traderDecision = await callAI(apiKey, OPTIONS_TRADER_SYSTEM,
     `Final options trade decision for ${symbol}.\nRisk:Reward minimum: ${rrFilter}\nTrade type: ${tradeType}\n\nOI ANALYSIS:\n${oiReport}\nGREEKS:\n${greeksReport}\nTECHNICAL:\n${technicalReport}\nSTRATEGIES:\n${strategyReport}\nRISK ASSESSMENT:\n${riskReport}\n${dataCtx}`,
-    M.trader, REASONING_HIGH);
+    M.trader);
 
   return {
     agents: {
