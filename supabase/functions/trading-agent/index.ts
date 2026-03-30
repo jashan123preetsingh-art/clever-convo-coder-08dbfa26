@@ -104,35 +104,11 @@ async function callAIWithImage(
   imageUrl: string,
   model: string
 ): Promise<string> {
-  const resp = await fetch(AI_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: system },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: userText },
-            { type: "image_url", image_url: { url: imageUrl } },
-          ],
-        },
-      ],
-      stream: false,
-    }),
-  });
-  if (!resp.ok) {
-    if (resp.status === 429) throw new Error("RATE_LIMITED");
-    if (resp.status === 402) throw new Error("CREDITS_EXHAUSTED");
-    const t = await resp.text();
-    throw new Error(`AI error ${resp.status}: ${t}`);
-  }
-  const data = await resp.json();
-  return data.choices?.[0]?.message?.content || "No response";
+  return callAIRaw(apiKey, system, [
+    { type: "text", text: userText },
+    { type: "image_url", image_url: { url: imageUrl } },
+  ], model);
+}
 }
 
 async function fetchStockData(symbol: string) {
