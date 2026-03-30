@@ -605,12 +605,20 @@ export default function TradingAgent() {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Chart image preview */}
-        {chartImage && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-            className="mt-3 flex items-start gap-3 p-3 rounded-xl bg-[hsl(var(--terminal-cyan))]/5 border border-[hsl(var(--terminal-cyan))]/15">
-            <div className="relative w-24 h-16 rounded-lg overflow-hidden border border-border/30 flex-shrink-0">
+      {/* Chart Upload Section */}
+      <div className="rounded-2xl bg-card/50 border border-border/15 p-4 mb-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-base">📸</span>
+          <h3 className="text-[11px] font-bold text-foreground uppercase tracking-wider">Upload Chart for Visual Analysis</h3>
+          <span className="text-[8px] px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-semibold border border-[hsl(var(--terminal-cyan))]/20">Optional</span>
+        </div>
+
+        {chartImage ? (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            className="flex items-start gap-4 p-3 rounded-xl bg-[hsl(var(--terminal-cyan))]/5 border border-[hsl(var(--terminal-cyan))]/15">
+            <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-border/30 flex-shrink-0">
               <img src={chartImage} alt="Uploaded chart" className="w-full h-full object-cover" />
               <button onClick={() => setChartImage(null)}
                 className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center text-[10px] font-bold shadow-sm hover:scale-110 transition-transform">
@@ -618,32 +626,79 @@ export default function TradingAgent() {
               </button>
             </div>
             <div className="flex-1">
-              <p className="text-[11px] font-semibold text-foreground">📸 Chart attached for visual analysis</p>
-              <p className="text-[9px] text-muted-foreground mt-0.5">
-                The Market/Technical Analyst will analyze chart patterns, candlesticks, support/resistance, and indicator readings from your screenshot.
+              <p className="text-[11px] font-semibold text-foreground">✅ Chart attached</p>
+              <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">
+                The Market/Technical Analyst (GPT-5.2) will visually analyze chart patterns, candlesticks, support/resistance zones, and indicator readings from your screenshot.
+              </p>
+              <p className="text-[9px] text-[hsl(var(--terminal-amber))] mt-1.5 font-medium">
+                ⚠️ Make sure you've entered the correct stock/index name above
               </p>
             </div>
           </motion.div>
-        )}
+        ) : (
+          <div>
+            {/* Upload area */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="w-full rounded-xl border-2 border-dashed border-border/30 hover:border-primary/30 bg-secondary/20 hover:bg-primary/5 p-5 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-10 h-10 rounded-full bg-secondary/50 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                  <ImageIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <p className="text-[11px] font-semibold text-foreground">Click to upload chart screenshot</p>
+                <p className="text-[9px] text-muted-foreground">
+                  or paste with <kbd className="text-[8px] bg-secondary/60 px-1.5 py-0.5 rounded border border-border/30 font-mono">Ctrl+V</kbd> / drag & drop
+                </p>
+              </div>
+            </button>
 
-        {/* Paste hint */}
-        {!chartImage && !loading && (
-          <p className="text-[9px] text-muted-foreground/50 mt-2 text-center">
-            💡 Tip: Paste a chart screenshot with <kbd className="text-[8px] bg-secondary/60 px-1.5 py-0.5 rounded border border-border/30 font-mono">Ctrl+V</kbd> or drag & drop for visual analysis
-          </p>
-        )}
-
-        {!loading && !result && !chartImage && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'TATAMOTORS', 'ADANIENT'].map(s => (
-              <button key={s} onClick={() => setSymbol(s)}
-                className="px-2 py-1 text-[9px] bg-secondary/40 border border-border/20 rounded-lg text-muted-foreground hover:text-foreground hover:border-primary/20 transition-all">
-                {s}
-              </button>
-            ))}
+            {/* What to mention guide */}
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="rounded-xl bg-secondary/30 border border-border/15 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-xs">📝</span>
+                  <p className="text-[9px] font-bold text-foreground uppercase tracking-wider">Stock / Index Name</p>
+                </div>
+                <p className="text-[9px] text-muted-foreground leading-relaxed">
+                  Enter the exact symbol above — e.g. <span className="text-foreground font-semibold">RELIANCE</span>, <span className="text-foreground font-semibold">NIFTY</span>, <span className="text-foreground font-semibold">BANKNIFTY</span>
+                </p>
+              </div>
+              <div className="rounded-xl bg-secondary/30 border border-border/15 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-xs">⏱️</span>
+                  <p className="text-[9px] font-bold text-foreground uppercase tracking-wider">Timeframe</p>
+                </div>
+                <p className="text-[9px] text-muted-foreground leading-relaxed">
+                  Ensure your chart shows the timeframe clearly — <span className="text-foreground font-semibold">5min</span>, <span className="text-foreground font-semibold">15min</span>, <span className="text-foreground font-semibold">1H</span>, <span className="text-foreground font-semibold">Daily</span>, <span className="text-foreground font-semibold">Weekly</span>
+                </p>
+              </div>
+              <div className="rounded-xl bg-secondary/30 border border-border/15 p-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-xs">📊</span>
+                  <p className="text-[9px] font-bold text-foreground uppercase tracking-wider">Indicators</p>
+                </div>
+                <p className="text-[9px] text-muted-foreground leading-relaxed">
+                  Include visible indicators on chart — <span className="text-foreground font-semibold">RSI</span>, <span className="text-foreground font-semibold">MACD</span>, <span className="text-foreground font-semibold">Volume</span>, <span className="text-foreground font-semibold">Moving Averages</span>
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Quick symbol chips */}
+      {!loading && !result && !chartImage && (
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'TATAMOTORS', 'ADANIENT'].map(s => (
+            <button key={s} onClick={() => setSymbol(s)}
+              className="px-2 py-1 text-[9px] bg-secondary/40 border border-border/20 rounded-lg text-muted-foreground hover:text-foreground hover:border-primary/20 transition-all">
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Flow Timeline */}
       {(loading || result) && (
