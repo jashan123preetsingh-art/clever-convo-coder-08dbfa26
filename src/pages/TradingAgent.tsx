@@ -235,7 +235,7 @@ function VerdictCard({ agents, stockData, symbol, hasChartAnalysis, mode }: { ag
   };
   const ac = actionColors[action] || actionColors.HOLD;
 
-  const modeLabels: Record<TradeMode, string> = { scalp: '⚡ SCALP', swing: '📈 SWING', invest: '🏦 INVEST' };
+  const modeLabels: Record<TradeMode, string> = { scalp: '⚡ SCALP', swing: '📈 SWING', invest: '🏦 INVEST', options: '🎯 OPTIONS' };
 
   const copyVerdict = () => {
     const text = `${symbol} [${config.label}] — ${action}\nRisk: ${riskScore}/10 | Confidence: ${confidence}%${duration ? ` | Duration: ${duration}` : ''}\n${summary}`;
