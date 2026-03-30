@@ -161,7 +161,7 @@ async function fetchStockData(symbol: string) {
 // ── Agent Prompts (TradingAgents-style) ──────────────────
 
 const MARKET_ANALYST_SYSTEM = `You are the **Market/Technical Analyst** in a professional trading firm.
-Your job: analyze price action, support/resistance levels, moving averages (SMA20, SMA50), RSI, MACD patterns, volume profile, and chart patterns.
+Your job: analyze price action, support/resistance levels, supply & demand zones, moving averages (SMA20, SMA50, SMA200), RSI, MACD patterns, volume profile, and chart patterns.
 Be specific with ₹ price levels. Use the supplied data. Keep under 200 words.`;
 
 const MARKET_ANALYST_CHART_SYSTEM = `You are the **Market/Technical Analyst** in a professional trading firm with expertise in visual chart analysis.
