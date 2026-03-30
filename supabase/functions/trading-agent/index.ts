@@ -584,10 +584,10 @@ async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string
 
   await sleep(800);
 
-  // Step 5: Portfolio Architect WITH REASONING (final Buffett decision)
+  // Step 5: Portfolio Architect (final Buffett decision)
   const portfolioArchitect = await callAI(apiKey, INVEST_PORTFOLIO_SYSTEM,
     `Final long-term investment decision for ${symbol}.\n${analystContext}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nINVESTMENT COMMITTEE:\n${investmentManager}`,
-    M.architect, REASONING_HIGH);
+    M.architect);
 
   return {
     agents: {
