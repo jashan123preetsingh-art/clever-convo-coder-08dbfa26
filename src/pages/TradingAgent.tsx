@@ -250,41 +250,45 @@ function VerdictCard({ agents, stockData, symbol, hasChartAnalysis, mode }: { ag
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-      className={`rounded-2xl bg-card/50 p-5 ${ac.border} border ${ac.glow} relative overflow-hidden`}>
+      className={`rounded-xl sm:rounded-2xl bg-card/50 p-3 sm:p-5 ${ac.border} border ${ac.glow} relative overflow-hidden`}>
       <div className="absolute inset-0 opacity-5 pointer-events-none"
         style={{ background: `radial-gradient(ellipse at top right, ${action === 'BUY' || action === 'INVEST' ? 'hsl(var(--primary))' : action === 'SELL' || action === 'PASS' ? 'hsl(var(--destructive))' : 'hsl(var(--terminal-amber))'}, transparent 70%)` }} />
-      <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <h2 className="text-xl font-black text-foreground font-data tracking-tight">{symbol}</h2>
-            <span className={`px-3 py-1 rounded-lg text-sm font-black ${ac.bg} ${ac.text} border ${ac.border}`}>
-              {action}
+      <div className="relative">
+        {/* Top row: symbol + action + mode */}
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <h2 className="text-lg sm:text-xl font-black text-foreground font-data tracking-tight">{symbol}</h2>
+          <span className={`px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-black ${ac.bg} ${ac.text} border ${ac.border}`}>
+            {action}
+          </span>
+          <span className={`text-[7px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
+            {modeLabels[mode]}
+          </span>
+          {hasChartAnalysis && (
+            <span className="text-[7px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-bold border border-[hsl(var(--terminal-cyan))]/20">
+              📸 Chart
             </span>
-            <span className={`text-[8px] px-2 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
-              {modeLabels[mode]}
-            </span>
-            {hasChartAnalysis && (
-              <span className="text-[8px] px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-bold border border-[hsl(var(--terminal-cyan))]/20">
-                📸 Chart Analyzed
-              </span>
-            )}
-          </div>
+          )}
+        </div>
+
+        {/* Price + metrics row */}
+        <div className="flex items-center gap-3 sm:gap-6 mb-2 flex-wrap">
           {stockData && (
-            <div className="flex items-baseline gap-3 mb-2">
-              <span className="text-2xl font-bold text-foreground font-data">₹{stockData.price?.toFixed(2)}</span>
-              <span className={`text-sm font-semibold font-data ${stockData.changePct >= 0 ? 't-value-up' : 't-value-down'}`}>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl sm:text-2xl font-bold text-foreground font-data">₹{stockData.price?.toFixed(2)}</span>
+              <span className={`text-xs sm:text-sm font-semibold font-data ${stockData.changePct >= 0 ? 't-value-up' : 't-value-down'}`}>
                 {stockData.changePct >= 0 ? '+' : ''}{stockData.changePct?.toFixed(2)}%
               </span>
             </div>
           )}
           {duration && (
-            <p className="text-[10px] font-semibold text-[hsl(var(--terminal-cyan))] mb-1">⏱️ Expected Duration: {duration}</p>
+            <span className="text-[9px] sm:text-[10px] font-semibold text-[hsl(var(--terminal-cyan))]">⏱️ {duration}</span>
           )}
-          <p className="text-xs text-muted-foreground leading-relaxed max-w-lg">{summary}</p>
         </div>
-        <RiskGauge score={riskScore} />
-        <div className="flex flex-col items-end gap-3 min-w-[140px]">
-          <div className="w-full">
+
+        {/* Stats row: risk gauge + confidence + actions */}
+        <div className="flex items-center gap-3 sm:gap-4 mt-3">
+          <RiskGauge score={riskScore} />
+          <div className="flex-1 min-w-0">
             <div className="flex justify-between text-[9px] text-muted-foreground mb-1">
               <span>Confidence</span>
               <span className="font-data font-bold text-foreground">{confidence}%</span>
@@ -294,13 +298,14 @@ function VerdictCard({ agents, stockData, symbol, hasChartAnalysis, mode }: { ag
                 transition={{ duration: 1, delay: 0.3 }}
                 className="h-full rounded-full bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))]" />
             </div>
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-relaxed mt-2 line-clamp-2">{summary}</p>
           </div>
-          <div className="flex gap-1.5">
-            <button onClick={copyVerdict} className="t-btn flex items-center gap-1 text-[9px]">
+          <div className="flex flex-col gap-1.5">
+            <button onClick={copyVerdict} className="t-btn flex items-center gap-1 text-[8px] sm:text-[9px]">
               {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? '✓' : 'Copy'}
             </button>
-            <button onClick={downloadReport} className="t-btn flex items-center gap-1 text-[9px]">
+            <button onClick={downloadReport} className="t-btn flex items-center gap-1 text-[8px] sm:text-[9px]">
               <Download className="w-3 h-3" /> Report
             </button>
           </div>
@@ -444,7 +449,7 @@ function AgentReportCard({ agentKey, content, delay, forceExpand }: { agentKey: 
 function ModeSelector({ mode, setMode, disabled }: { mode: TradeMode; setMode: (m: TradeMode) => void; disabled: boolean }) {
   const modes: TradeMode[] = ['scalp', 'swing', 'invest'];
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
       {modes.map(m => {
         const cfg = MODE_CONFIG[m];
         const active = mode === m;
@@ -453,27 +458,25 @@ function ModeSelector({ mode, setMode, disabled }: { mode: TradeMode; setMode: (
             key={m}
             onClick={() => !disabled && setMode(m)}
             disabled={disabled}
-            className={`relative rounded-2xl border-2 p-4 text-left transition-all duration-300 ${
+            className={`relative rounded-xl sm:rounded-2xl border-2 p-2.5 sm:p-4 text-left transition-all duration-300 ${
               active
                 ? `${cfg.borderColor} ${cfg.bgColor} shadow-lg`
                 : 'border-border/20 bg-card/30 hover:bg-card/50 hover:border-border/40'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {active && (
-              <motion.div layoutId="mode-indicator" className="absolute inset-0 rounded-2xl border-2 border-primary/20 pointer-events-none" />
+              <motion.div layoutId="mode-indicator" className="absolute inset-0 rounded-xl sm:rounded-2xl border-2 border-primary/20 pointer-events-none" />
             )}
-            <div className="flex items-center gap-3 mb-2">
-              <div className={`p-2 rounded-xl ${active ? cfg.bgColor : 'bg-secondary/40'} ${active ? cfg.color : 'text-muted-foreground'} transition-colors`}>
+            <div className="flex items-center gap-1.5 sm:gap-3 mb-1 sm:mb-2">
+              <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${active ? cfg.bgColor : 'bg-secondary/40'} ${active ? cfg.color : 'text-muted-foreground'} transition-colors`}>
                 {cfg.icon}
               </div>
-              <div>
-                <h3 className={`text-sm font-bold ${active ? 'text-foreground' : 'text-muted-foreground'} transition-colors`}>{cfg.label}</h3>
-              </div>
+              <h3 className={`text-[10px] sm:text-sm font-bold leading-tight ${active ? 'text-foreground' : 'text-muted-foreground'} transition-colors`}>{cfg.label}</h3>
             </div>
-            <p className="text-[9px] text-muted-foreground leading-relaxed">{cfg.subtitle}</p>
-            <div className="mt-2 flex flex-wrap gap-1">
+            <p className="text-[7px] sm:text-[9px] text-muted-foreground leading-relaxed hidden sm:block">{cfg.subtitle}</p>
+            <div className="mt-1 sm:mt-2 flex flex-wrap gap-0.5 sm:gap-1 hidden sm:flex">
               {cfg.steps.map(s => (
-                <span key={s.key} className="text-[7px] px-1.5 py-0.5 rounded bg-secondary/40 text-muted-foreground">{s.icon} {s.label}</span>
+                <span key={s.key} className="text-[6px] sm:text-[7px] px-1 sm:px-1.5 py-0.5 rounded bg-secondary/40 text-muted-foreground">{s.icon}</span>
               ))}
             </div>
           </button>
@@ -636,21 +639,21 @@ export default function TradingAgent() {
       <ModeSelector mode={mode} setMode={setMode} disabled={loading} />
 
       {/* Input */}
-      <div className="rounded-2xl bg-card/50 border border-border/15 p-4 mb-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="flex-1">
-            <label className="block text-[10px] text-muted-foreground font-semibold mb-1.5 uppercase tracking-wider">Symbol</label>
+      <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-border/15 p-3 sm:p-4 mb-4">
+        <div className="flex flex-col gap-2 sm:gap-3">
+          <div>
+            <label className="block text-[9px] sm:text-[10px] text-muted-foreground font-semibold mb-1 sm:mb-1.5 uppercase tracking-wider">Symbol</label>
             <input
               type="text"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && runAgent()}
-              placeholder={mode === 'invest' ? 'e.g. RELIANCE, TCS, INFY' : 'e.g. NIFTY 50 , TF 15MIN'}
-              className="w-full bg-secondary/40 border border-border/30 rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 font-data transition-colors"
+              placeholder={mode === 'invest' ? 'e.g. RELIANCE, TCS' : 'e.g. NIFTY 50'}
+              className="w-full bg-secondary/40 border border-border/30 rounded-xl px-3 py-2 sm:py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 font-data transition-colors"
               disabled={loading}
             />
           </div>
-          <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
             {mode !== 'invest' && (
               <>
                 <input type="file" ref={fileInputRef} accept="image/*" className="hidden"
@@ -658,29 +661,29 @@ export default function TradingAgent() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading}
-                  className={`px-3 py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center gap-2 ${
+                  className={`px-3 py-2 sm:py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center gap-1.5 ${
                     chartImage
                       ? 'bg-[hsl(var(--terminal-cyan))]/10 border-[hsl(var(--terminal-cyan))]/30 text-[hsl(var(--terminal-cyan))]'
                       : 'bg-secondary/30 border-border/30 text-muted-foreground hover:text-foreground hover:border-border/50'
                   } disabled:opacity-50`}
-                  title="Upload chart image (or Ctrl+V to paste)"
                 >
                   <ImageIcon className="w-4 h-4" />
-                  {chartImage ? '📸' : '📷'}
+                  <span className="hidden sm:inline">{chartImage ? 'Chart ✓' : 'Chart'}</span>
                 </button>
               </>
             )}
             <button
               onClick={runAgent}
               disabled={loading || !symbol.trim()}
-              className="px-6 py-2.5 bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))] text-primary-foreground rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 whitespace-nowrap"
+              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))] text-primary-foreground rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 whitespace-nowrap"
             >
               {loading ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  Running...
+                  <span className="hidden sm:inline">Running...</span>
+                  <span className="sm:hidden">...</span>
                 </span>
-              ) : '🚀 Run Agents'}
+              ) : '🚀 Run'}
             </button>
           </div>
         </div>
@@ -688,11 +691,11 @@ export default function TradingAgent() {
 
       {/* Chart upload section - only for scalp/swing */}
       {mode !== 'invest' && (
-        <div className="rounded-2xl bg-card/50 border border-border/15 p-4 mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-base">📸</span>
-            <h3 className="text-[11px] font-bold text-foreground uppercase tracking-wider">Upload Chart for Visual Analysis</h3>
-            <span className="text-[8px] px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-semibold border border-[hsl(var(--terminal-cyan))]/20">Optional</span>
+        <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-border/15 p-3 sm:p-4 mb-4">
+          <div className="flex items-center gap-2 mb-2 sm:mb-3">
+            <span className="text-sm sm:text-base">📸</span>
+            <h3 className="text-[10px] sm:text-[11px] font-bold text-foreground uppercase tracking-wider">Chart Analysis</h3>
+            <span className="text-[7px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-semibold border border-[hsl(var(--terminal-cyan))]/20">Optional</span>
           </div>
 
           {chartImage ? (
@@ -788,13 +791,13 @@ export default function TradingAgent() {
 
       {/* Quick symbols */}
       {!loading && !result && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-4">
           {(mode === 'invest'
-            ? ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ASIANPAINT', 'NESTLEIND', 'PIDILITIND', 'BAJFINANCE']
-            : ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'TATAMOTORS', 'ADANIENT']
+            ? ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ASIANPAINT', 'NESTLEIND']
+            : ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'TATAMOTORS']
           ).map(s => (
             <button key={s} onClick={() => setSymbol(s)}
-              className="px-2 py-1 text-[9px] bg-secondary/40 border border-border/20 rounded-lg text-muted-foreground hover:text-foreground hover:border-primary/20 transition-all">
+              className="px-2 py-1 text-[8px] sm:text-[9px] bg-secondary/40 border border-border/20 rounded-lg text-muted-foreground hover:text-foreground hover:border-primary/20 transition-all">
               {s}
             </button>
           ))}

@@ -16,33 +16,59 @@ const corsHeaders = {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const MODEL_MARKET_ANALYST = "openai/gpt-5.2";
-const MODEL_SENTIMENT      = "google/gemini-2.5-flash";
-const MODEL_NEWS            = "google/gemini-3-flash-preview";
-const MODEL_FUNDAMENTALS    = "google/gemini-3-flash-preview";
-const MODEL_BULL            = "google/gemini-2.5-pro";
-const MODEL_BEAR            = "google/gemini-2.5-pro";
-const MODEL_RESEARCH_MGR    = "openai/gpt-5-mini";
-const MODEL_TRADER          = "openai/gpt-5.2";
-const MODEL_RISK_AGGRESSIVE = "google/gemini-3-flash-preview";
-const MODEL_RISK_CONSERVATIVE = "google/gemini-3-flash-preview";
-const MODEL_RISK_NEUTRAL    = "google/gemini-2.5-flash";
-const MODEL_PORTFOLIO_MGR   = "openai/gpt-5-mini";
-const MODEL_BUFFETT         = "openai/gpt-5.2";
+// ── Mode-Optimized Model Selection ──────────────────────────
+// SCALP: Speed + technical precision. Flash models for low latency, GPT-5.2 for price action.
+// SWING: Balanced mix. Pro models for debate depth, GPT-5 for final decisions.
+// INVEST: Deep research. GPT-5 with reasoning for DCF/moat, Pro for thorough debate.
+
+const MODELS = {
+  scalp: {
+    technical:    "openai/gpt-5.2",          // Best at price action, SMC, order flow
+    sentiment:    "google/gemini-2.5-flash-lite", // Fast sentiment scan
+    trader:       "openai/gpt-5.2",          // Decisive quick calls
+    risk:         "google/gemini-3-flash-preview", // Fast risk check
+  },
+  swing: {
+    technical:    "openai/gpt-5.2",          // Strong technical analysis
+    sentiment:    "google/gemini-2.5-flash",  // Balanced sentiment
+    news:         "google/gemini-3-flash-preview", // Fast news digest
+    fundamentals: "google/gemini-2.5-flash",  // Balanced fundamentals
+    bull:         "google/gemini-2.5-pro",    // Deep bull arguments
+    bear:         "google/gemini-2.5-pro",    // Deep bear arguments
+    manager:      "openai/gpt-5",            // Strong judgment
+    trader:       "openai/gpt-5.2",          // Decisive trader
+    riskAggr:     "google/gemini-3-flash-preview",
+    riskCons:     "google/gemini-3-flash-preview",
+    riskNeut:     "google/gemini-2.5-flash",
+    portfolio:    "openai/gpt-5",            // Final decision needs depth
+  },
+  invest: {
+    fundamentals: "openai/gpt-5",            // Deep value analysis with reasoning
+    moat:         "openai/gpt-5",            // Moat needs deep thinking
+    technical:    "google/gemini-2.5-flash",  // Light technical for entry timing
+    news:         "google/gemini-2.5-flash",  // Macro outlook
+    bull:         "google/gemini-2.5-pro",    // Thorough bull case
+    bear:         "google/gemini-2.5-pro",    // Thorough bear case
+    committee:    "openai/gpt-5",            // Investment committee needs reasoning
+    architect:    "openai/gpt-5",            // Final Buffett-style decision with reasoning
+  },
+};
 
 const MAX_DEBATE_ROUNDS = 1;
 const MAX_RISK_ROUNDS = 1;
 
 async function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
-async function callAIRaw(apiKey: string, system: string, user: string | Array<any>, model: string): Promise<string> {
+async function callAIRaw(apiKey: string, system: string, user: string | Array<any>, model: string, reasoning?: { effort: string }): Promise<string> {
   const messages = [{ role: "system", content: system }, { role: "user", content: user }];
   const MAX_RETRIES = 3;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const body: any = { model, messages, stream: false };
+    if (reasoning) body.reasoning = reasoning;
     const resp = await fetch(AI_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, messages, stream: false }),
+      body: JSON.stringify(body),
     });
     if (resp.ok) {
       const data = await resp.json();
@@ -60,8 +86,8 @@ async function callAIRaw(apiKey: string, system: string, user: string | Array<an
   throw new Error("Max retries exceeded");
 }
 
-async function callAI(apiKey: string, system: string, user: string, model: string): Promise<string> {
-  return callAIRaw(apiKey, system, user, model);
+async function callAI(apiKey: string, system: string, user: string, model: string, reasoning?: { effort: string }): Promise<string> {
+  return callAIRaw(apiKey, system, user, model, reasoning);
 }
 
 async function callAIWithImage(apiKey: string, system: string, userText: string, imageUrl: string, model: string): Promise<string> {
@@ -307,54 +333,50 @@ const PORTFOLIO_MANAGER_SYSTEM = `You are the **Portfolio Manager** — FINAL de
 // ── Pipeline runners by mode ─────────────────────────────
 
 async function runScalpPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any, chartImage?: string) {
+  const M = MODELS.scalp;
   const hasChart = !!chartImage;
 
-  // Step 1: Technical analysis only (no fundamentals needed)
+  // Step 1: Technical analysis (speed-optimized, no fundamentals)
   const marketReport = hasChart
-    ? await callAIWithImage(apiKey, SCALP_MARKET_CHART_SYSTEM, `Scalp/intraday analysis for ${symbol}. ${dataCtx}`, chartImage, MODEL_MARKET_ANALYST)
-    : await callAI(apiKey, SCALP_MARKET_SYSTEM, `Scalp/intraday analysis for ${symbol}. ${dataCtx}`, MODEL_MARKET_ANALYST);
+    ? await callAIWithImage(apiKey, SCALP_MARKET_CHART_SYSTEM, `Scalp/intraday analysis for ${symbol}. ${dataCtx}`, chartImage, M.technical)
+    : await callAI(apiKey, SCALP_MARKET_SYSTEM, `Scalp/intraday analysis for ${symbol}. ${dataCtx}`, M.technical);
 
-  const sentimentReport = await callAI(apiKey, SENTIMENT_ANALYST_SYSTEM, `Quick sentiment check for ${symbol} (intraday context). ${dataCtx}`, MODEL_SENTIMENT);
+  const sentimentReport = await callAI(apiKey, SENTIMENT_ANALYST_SYSTEM, `Quick sentiment check for ${symbol} (intraday context). ${dataCtx}`, M.sentiment);
 
-  await sleep(800);
+  await sleep(600);
 
-  // Step 2: Direct to trader (no debate, no research manager for scalp)
+  // Step 2: Direct to trader (no debate for scalp — speed matters)
   const analystContext = `TECHNICAL ANALYSIS${hasChart ? ' (with chart)' : ''}:\n${marketReport}\n\nSENTIMENT:\n${sentimentReport}`;
+  const traderDecision = await callAI(apiKey, SCALP_TRADER_SYSTEM, `Make scalp/intraday call for ${symbol}.\n${analystContext}`, M.trader);
 
-  const traderDecision = await callAI(apiKey, SCALP_TRADER_SYSTEM, `Make scalp/intraday call for ${symbol}.\n${analystContext}`, MODEL_TRADER);
+  await sleep(600);
 
-  await sleep(800);
-
-  // Step 3: Quick risk check (single pass, no debate)
-  const riskCheck = await callAI(apiKey, SCALP_RISK_SYSTEM, `Evaluate this scalp trade for ${symbol}.\nTRADER CALL:\n${traderDecision}\n\n${analystContext}\n\nDATA: ${dataCtx}`, MODEL_RISK_NEUTRAL);
+  // Step 3: Quick risk check
+  const riskCheck = await callAI(apiKey, SCALP_RISK_SYSTEM, `Evaluate this scalp trade for ${symbol}.\nTRADER CALL:\n${traderDecision}\n\n${analystContext}\n\nDATA: ${dataCtx}`, M.risk);
 
   return {
-    agents: {
-      market: marketReport,
-      sentiment: sentimentReport,
-      traderDecision,
-      riskCheck,
-    },
+    agents: { market: marketReport, sentiment: sentimentReport, traderDecision, riskCheck },
   };
 }
 
 async function runSwingPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any, chartImage?: string) {
+  const M = MODELS.swing;
   const hasChart = !!chartImage;
 
-  // Step 1: Full analyst team
+  // Step 1: Full analyst team (parallel batch)
   const marketPromise = hasChart
-    ? callAIWithImage(apiKey, MARKET_ANALYST_CHART_SYSTEM, `Analyze for ${symbol}. ${dataCtx}`, chartImage, MODEL_MARKET_ANALYST)
-    : callAI(apiKey, MARKET_ANALYST_SYSTEM, `Analyze ${symbol}. ${dataCtx}`, MODEL_MARKET_ANALYST);
+    ? callAIWithImage(apiKey, MARKET_ANALYST_CHART_SYSTEM, `Analyze for ${symbol}. ${dataCtx}`, chartImage, M.technical)
+    : callAI(apiKey, MARKET_ANALYST_SYSTEM, `Analyze ${symbol}. ${dataCtx}`, M.technical);
 
   const [marketReport, sentimentReport] = await Promise.all([
     marketPromise,
-    callAI(apiKey, SENTIMENT_ANALYST_SYSTEM, `Sentiment for ${symbol}. ${dataCtx}`, MODEL_SENTIMENT),
+    callAI(apiKey, SENTIMENT_ANALYST_SYSTEM, `Sentiment for ${symbol}. ${dataCtx}`, M.sentiment),
   ]);
-  await sleep(1000);
+  await sleep(800);
 
   const [newsReport, fundamentalsReport] = await Promise.all([
-    callAI(apiKey, NEWS_ANALYST_SYSTEM, `News for ${symbol}. ${dataCtx}`, MODEL_NEWS),
-    callAI(apiKey, FUNDAMENTALS_ANALYST_SYSTEM, `Fundamentals for ${symbol}. ${dataCtx}`, MODEL_FUNDAMENTALS),
+    callAI(apiKey, NEWS_ANALYST_SYSTEM, `News for ${symbol}. ${dataCtx}`, M.news),
+    callAI(apiKey, FUNDAMENTALS_ANALYST_SYSTEM, `Fundamentals for ${symbol}. ${dataCtx}`, M.fundamentals),
   ]);
 
   const chartNote = hasChart ? "\n[Chart analysis included]" : "";
@@ -365,33 +387,33 @@ async function runSwingPipeline(apiKey: string, symbol: string, dataCtx: string,
   for (let round = 0; round <= MAX_DEBATE_ROUNDS; round++) {
     const ctx = round === 0 ? analystContext : `${analystContext}\nPREV BULL:\n${bullCase}\nPREV BEAR:\n${bearCase}`;
     [bullCase, bearCase] = await Promise.all([
-      callAI(apiKey, BULL_RESEARCHER_SYSTEM, `Round ${round + 1} bull for ${symbol}.\n${ctx}`, MODEL_BULL),
-      callAI(apiKey, BEAR_RESEARCHER_SYSTEM, `Round ${round + 1} bear for ${symbol}.\n${ctx}`, MODEL_BEAR),
+      callAI(apiKey, BULL_RESEARCHER_SYSTEM, `Round ${round + 1} bull for ${symbol}.\n${ctx}`, M.bull),
+      callAI(apiKey, BEAR_RESEARCHER_SYSTEM, `Round ${round + 1} bear for ${symbol}.\n${ctx}`, M.bear),
     ]);
   }
 
-  // Step 3: Research Manager
+  // Step 3: Research Manager (GPT-5 for strong judgment)
   const researchManager = await callAI(apiKey, RESEARCH_MANAGER_SYSTEM,
-    `Judge debate for ${symbol}.\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\n${analystContext}`, MODEL_RESEARCH_MGR);
+    `Judge debate for ${symbol}.\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\n${analystContext}`, M.manager);
 
-  // Step 4: Swing Trader (with holding duration emphasis)
+  // Step 4: Swing Trader
   const traderDecision = await callAI(apiKey, SWING_TRADER_SYSTEM,
-    `Swing/Position trade for ${symbol}.\nRESEARCH MANAGER:\n${researchManager}\n${analystContext}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}`, MODEL_TRADER);
+    `Swing/Position trade for ${symbol}.\nRESEARCH MANAGER:\n${researchManager}\n${analystContext}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}`, M.trader);
 
   // Step 5: Risk debate
   let aggressiveView = "", conservativeView = "", neutralView = "";
   const riskCtx = `TRADER PROPOSAL:\n${traderDecision}\nDATA:\n${dataCtx}\nRESEARCH:\n${researchManager}`;
   for (let round = 0; round <= MAX_RISK_ROUNDS; round++) {
     const prev = round === 0 ? riskCtx : `${riskCtx}\nAGGR:\n${aggressiveView}\nCONS:\n${conservativeView}\nNEUT:\n${neutralView}`;
-    aggressiveView = await callAI(apiKey, AGGRESSIVE_RISK_SYSTEM, `Round ${round + 1} risk for ${symbol}.\n${prev}`, MODEL_RISK_AGGRESSIVE);
-    conservativeView = await callAI(apiKey, CONSERVATIVE_RISK_SYSTEM, `Round ${round + 1} risk for ${symbol}.\n${prev}\nAGGR:\n${aggressiveView}`, MODEL_RISK_CONSERVATIVE);
-    neutralView = await callAI(apiKey, NEUTRAL_RISK_SYSTEM, `Round ${round + 1} risk for ${symbol}.\n${prev}\nAGGR:\n${aggressiveView}\nCONS:\n${conservativeView}`, MODEL_RISK_NEUTRAL);
+    aggressiveView = await callAI(apiKey, AGGRESSIVE_RISK_SYSTEM, `Round ${round + 1} risk for ${symbol}.\n${prev}`, M.riskAggr);
+    conservativeView = await callAI(apiKey, CONSERVATIVE_RISK_SYSTEM, `Round ${round + 1} risk for ${symbol}.\n${prev}\nAGGR:\n${aggressiveView}`, M.riskCons);
+    neutralView = await callAI(apiKey, NEUTRAL_RISK_SYSTEM, `Round ${round + 1} risk for ${symbol}.\n${prev}\nAGGR:\n${aggressiveView}\nCONS:\n${conservativeView}`, M.riskNeut);
   }
 
-  // Step 6: Portfolio Manager (swing-specific)
+  // Step 6: Portfolio Manager (GPT-5 for depth)
   const portfolioManager = await callAI(apiKey, SWING_PORTFOLIO_SYSTEM,
     `Final swing/position decision for ${symbol}.\n${analystContext}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nRESEARCH:\n${researchManager}\nTRADER:\n${traderDecision}\nRISK: Aggr: ${aggressiveView}\nCons: ${conservativeView}\nNeut: ${neutralView}`,
-    MODEL_PORTFOLIO_MGR);
+    M.portfolio);
 
   return {
     agents: {
@@ -404,18 +426,22 @@ async function runSwingPipeline(apiKey: string, symbol: string, dataCtx: string,
 }
 
 async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any) {
-  // Step 1: Deep fundamentals (Warren Buffett style) + Moat analysis
+  const M = MODELS.invest;
+  const REASONING_HIGH = { effort: "high" };
+  const REASONING_MEDIUM = { effort: "medium" };
+
+  // Step 1: Deep fundamentals WITH REASONING (Buffett style) + Moat analysis WITH REASONING
   const [fundamentalsReport, moatReport] = await Promise.all([
-    callAI(apiKey, INVEST_FUNDAMENTALS_SYSTEM, `Deep fundamental analysis of ${symbol} for long-term investment (1-10 years). ${dataCtx}`, MODEL_BUFFETT),
-    callAI(apiKey, INVEST_MOAT_SYSTEM, `Analyze competitive moat of ${symbol}. ${dataCtx}`, MODEL_FUNDAMENTALS),
+    callAI(apiKey, INVEST_FUNDAMENTALS_SYSTEM, `Deep fundamental analysis of ${symbol} for long-term investment (1-10 years). ${dataCtx}`, M.fundamentals, REASONING_HIGH),
+    callAI(apiKey, INVEST_MOAT_SYSTEM, `Analyze competitive moat of ${symbol}. ${dataCtx}`, M.moat, REASONING_MEDIUM),
   ]);
 
   await sleep(1000);
 
-  // Step 2: Technical overview (weekly/monthly perspective) + News
+  // Step 2: Technical (light, for entry timing) + News/Macro
   const [marketReport, newsReport] = await Promise.all([
-    callAI(apiKey, MARKET_ANALYST_SYSTEM, `Long-term technical perspective for ${symbol} (focus on weekly/monthly structure, major S/R, long-term trend). ${dataCtx}`, MODEL_MARKET_ANALYST),
-    callAI(apiKey, NEWS_ANALYST_SYSTEM, `Long-term news & macro outlook for ${symbol}. ${dataCtx}`, MODEL_NEWS),
+    callAI(apiKey, MARKET_ANALYST_SYSTEM, `Long-term technical perspective for ${symbol} (focus on weekly/monthly structure, major S/R, long-term trend). ${dataCtx}`, M.technical),
+    callAI(apiKey, NEWS_ANALYST_SYSTEM, `Long-term news & macro outlook for ${symbol}. ${dataCtx}`, M.news),
   ]);
 
   const analystContext = `BUFFETT FUNDAMENTALS:\n${fundamentalsReport}\n\nMOAT ANALYSIS:\n${moatReport}\n\nTECHNICAL (long-term):\n${marketReport}\n\nNEWS & MACRO:\n${newsReport}`;
@@ -427,33 +453,28 @@ async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string
   for (let round = 0; round <= MAX_DEBATE_ROUNDS; round++) {
     const ctx = round === 0 ? analystContext : `${analystContext}\nPREV BULL:\n${bullCase}\nPREV BEAR:\n${bearCase}`;
     [bullCase, bearCase] = await Promise.all([
-      callAI(apiKey, INVEST_BULL_SYSTEM, `Round ${round + 1} long-term bull case for ${symbol}.\n${ctx}`, MODEL_BULL),
-      callAI(apiKey, INVEST_BEAR_SYSTEM, `Round ${round + 1} long-term bear risks for ${symbol}.\n${ctx}`, MODEL_BEAR),
+      callAI(apiKey, INVEST_BULL_SYSTEM, `Round ${round + 1} long-term bull case for ${symbol}.\n${ctx}`, M.bull),
+      callAI(apiKey, INVEST_BEAR_SYSTEM, `Round ${round + 1} long-term bear risks for ${symbol}.\n${ctx}`, M.bear),
     ]);
   }
 
-  // Step 4: Investment Committee
+  // Step 4: Investment Committee WITH REASONING
   const investmentManager = await callAI(apiKey, INVEST_MANAGER_SYSTEM,
     `Investment committee review for ${symbol} (1-10yr horizon).\nFUNDAMENTALS:\n${fundamentalsReport}\nMOAT:\n${moatReport}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nTECHNICAL:\n${marketReport}\nNEWS:\n${newsReport}`,
-    MODEL_RESEARCH_MGR);
+    M.committee, REASONING_MEDIUM);
 
   await sleep(800);
 
-  // Step 5: Long-term Portfolio Architect (final)
+  // Step 5: Portfolio Architect WITH REASONING (final Buffett decision)
   const portfolioArchitect = await callAI(apiKey, INVEST_PORTFOLIO_SYSTEM,
     `Final long-term investment decision for ${symbol}.\n${analystContext}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nINVESTMENT COMMITTEE:\n${investmentManager}`,
-    MODEL_BUFFETT);
+    M.architect, REASONING_HIGH);
 
   return {
     agents: {
-      fundamentals: fundamentalsReport,
-      moat: moatReport,
-      market: marketReport,
-      news: newsReport,
-      bullCase,
-      bearCase,
-      investmentManager,
-      portfolioArchitect,
+      fundamentals: fundamentalsReport, moat: moatReport,
+      market: marketReport, news: newsReport,
+      bullCase, bearCase, investmentManager, portfolioArchitect,
     },
   };
 }
