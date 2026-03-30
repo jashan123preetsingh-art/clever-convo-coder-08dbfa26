@@ -687,7 +687,7 @@ export default function TradingAgent() {
             />
           </div>
           <div className="flex items-center gap-2">
-            {mode !== 'invest' && (
+            {mode !== 'invest' && mode !== 'options' && (
               <>
                 <input type="file" ref={fileInputRef} accept="image/*" className="hidden"
                   onChange={async (e) => { const f = e.target.files?.[0]; if (f) await handleImageFile(f); if (fileInputRef.current) fileInputRef.current.value = ''; }} />
