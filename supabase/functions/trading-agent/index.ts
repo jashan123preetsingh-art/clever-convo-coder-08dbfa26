@@ -601,6 +601,56 @@ async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string
   };
 }
 
+async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any, optionsConfig?: { riskReward?: string; tradeType?: string }) {
+  const M = MODELS.options;
+  const REASONING_HIGH = { effort: "high" };
+  const REASONING_MEDIUM = { effort: "medium" };
+  const rrFilter = optionsConfig?.riskReward || "1:2";
+  const tradeType = optionsConfig?.tradeType || "all"; // intraday, swing, expiry, all
+
+  const configCtx = `\nUser's Risk:Reward preference: minimum ${rrFilter}\nTrade type preference: ${tradeType === 'all' ? 'Show Intraday, Swing (2-5 days), and Till Expiry options' : tradeType}\nToday's date: ${new Date().toISOString().split('T')[0]}`;
+
+  // Step 1: OI Analysis + Greeks/IV in parallel (both use reasoning)
+  const [oiReport, greeksReport] = await Promise.all([
+    callAI(apiKey, OPTIONS_OI_SYSTEM, `Full OI analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.oiAnalyst, REASONING_HIGH),
+    callAI(apiKey, OPTIONS_GREEKS_SYSTEM, `Greeks and IV analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.greeksAnalyst),
+  ]);
+
+  await sleep(1000);
+
+  // Step 2: Technical for strike selection
+  const technicalReport = await callAI(apiKey, OPTIONS_TECHNICAL_SYSTEM, `Technical analysis for options strike selection on ${symbol}.\n${dataCtx}`, M.technical);
+
+  await sleep(800);
+
+  // Step 3: Strategy construction WITH REASONING
+  const analystContext = `OI ANALYSIS:\n${oiReport}\n\nGREEKS & IV:\n${greeksReport}\n\nTECHNICAL (for strikes):\n${technicalReport}`;
+  const strategyReport = await callAI(apiKey, OPTIONS_STRATEGY_SYSTEM, `Construct optimal options strategies for ${symbol}.\nRisk:Reward filter: minimum ${rrFilter}\nTrade types needed: ${tradeType}\n${analystContext}\n${dataCtx}${configCtx}`, M.strategist, REASONING_HIGH);
+
+  await sleep(800);
+
+  // Step 4: Risk assessment
+  const riskReport = await callAI(apiKey, OPTIONS_RISK_SYSTEM, `Evaluate options strategies for ${symbol}.\nSTRATEGIES:\n${strategyReport}\n${analystContext}\n${dataCtx}${configCtx}`, M.riskManager);
+
+  await sleep(800);
+
+  // Step 5: Final options trade decision WITH REASONING
+  const traderDecision = await callAI(apiKey, OPTIONS_TRADER_SYSTEM,
+    `Final options trade decision for ${symbol}.\nRisk:Reward minimum: ${rrFilter}\nTrade type: ${tradeType}\n\nOI ANALYSIS:\n${oiReport}\nGREEKS:\n${greeksReport}\nTECHNICAL:\n${technicalReport}\nSTRATEGIES:\n${strategyReport}\nRISK ASSESSMENT:\n${riskReport}\n${dataCtx}`,
+    M.trader, REASONING_HIGH);
+
+  return {
+    agents: {
+      oiAnalysis: oiReport,
+      greeksIV: greeksReport,
+      technical: technicalReport,
+      strategy: strategyReport,
+      riskAssessment: riskReport,
+      optionsTrader: traderDecision,
+    },
+  };
+}
+
 // ── Main Handler ─────────────────────────────────────────
 
 serve(async (req) => {
@@ -608,7 +658,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const { symbol, chartImage, mode = "swing" } = await req.json();
+    const { symbol, chartImage, mode = "swing", optionsConfig } = await req.json();
     if (!symbol) {
       return new Response(JSON.stringify({ error: "Symbol required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -632,6 +682,8 @@ serve(async (req) => {
       result = await runScalpPipeline(LOVABLE_API_KEY, symbol, dataCtx, stockData, chartImage);
     } else if (mode === "invest") {
       result = await runInvestPipeline(LOVABLE_API_KEY, symbol, dataCtx, stockData);
+    } else if (mode === "options") {
+      result = await runOptionsPipeline(LOVABLE_API_KEY, symbol, dataCtx, stockData, optionsConfig);
     } else {
       result = await runSwingPipeline(LOVABLE_API_KEY, symbol, dataCtx, stockData, chartImage);
     }
