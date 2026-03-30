@@ -300,7 +300,7 @@ function DashboardTab({ stats, onNavigate }: { stats: any; onNavigate: (tab: Adm
               <h4 className="text-xs font-bold text-foreground">{item.title}</h4>
             </div>
             <p className="text-[10px] text-muted-foreground leading-relaxed">{item.desc}</p>
-          </div>
+          </button>
         ))}
       </div>
     </div>
