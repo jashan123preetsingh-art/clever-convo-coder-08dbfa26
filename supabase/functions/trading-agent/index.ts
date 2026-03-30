@@ -16,19 +16,43 @@ const corsHeaders = {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const MODEL_MARKET_ANALYST = "openai/gpt-5.2";
-const MODEL_SENTIMENT      = "google/gemini-2.5-flash";
-const MODEL_NEWS            = "google/gemini-3-flash-preview";
-const MODEL_FUNDAMENTALS    = "google/gemini-3-flash-preview";
-const MODEL_BULL            = "google/gemini-2.5-pro";
-const MODEL_BEAR            = "google/gemini-2.5-pro";
-const MODEL_RESEARCH_MGR    = "openai/gpt-5-mini";
-const MODEL_TRADER          = "openai/gpt-5.2";
-const MODEL_RISK_AGGRESSIVE = "google/gemini-3-flash-preview";
-const MODEL_RISK_CONSERVATIVE = "google/gemini-3-flash-preview";
-const MODEL_RISK_NEUTRAL    = "google/gemini-2.5-flash";
-const MODEL_PORTFOLIO_MGR   = "openai/gpt-5-mini";
-const MODEL_BUFFETT         = "openai/gpt-5.2";
+// ── Mode-Optimized Model Selection ──────────────────────────
+// SCALP: Speed + technical precision. Flash models for low latency, GPT-5.2 for price action.
+// SWING: Balanced mix. Pro models for debate depth, GPT-5 for final decisions.
+// INVEST: Deep research. GPT-5 with reasoning for DCF/moat, Pro for thorough debate.
+
+const MODELS = {
+  scalp: {
+    technical:    "openai/gpt-5.2",          // Best at price action, SMC, order flow
+    sentiment:    "google/gemini-2.5-flash-lite", // Fast sentiment scan
+    trader:       "openai/gpt-5.2",          // Decisive quick calls
+    risk:         "google/gemini-3-flash-preview", // Fast risk check
+  },
+  swing: {
+    technical:    "openai/gpt-5.2",          // Strong technical analysis
+    sentiment:    "google/gemini-2.5-flash",  // Balanced sentiment
+    news:         "google/gemini-3-flash-preview", // Fast news digest
+    fundamentals: "google/gemini-2.5-flash",  // Balanced fundamentals
+    bull:         "google/gemini-2.5-pro",    // Deep bull arguments
+    bear:         "google/gemini-2.5-pro",    // Deep bear arguments
+    manager:      "openai/gpt-5",            // Strong judgment
+    trader:       "openai/gpt-5.2",          // Decisive trader
+    riskAggr:     "google/gemini-3-flash-preview",
+    riskCons:     "google/gemini-3-flash-preview",
+    riskNeut:     "google/gemini-2.5-flash",
+    portfolio:    "openai/gpt-5",            // Final decision needs depth
+  },
+  invest: {
+    fundamentals: "openai/gpt-5",            // Deep value analysis with reasoning
+    moat:         "openai/gpt-5",            // Moat needs deep thinking
+    technical:    "google/gemini-2.5-flash",  // Light technical for entry timing
+    news:         "google/gemini-2.5-flash",  // Macro outlook
+    bull:         "google/gemini-2.5-pro",    // Thorough bull case
+    bear:         "google/gemini-2.5-pro",    // Thorough bear case
+    committee:    "openai/gpt-5",            // Investment committee needs reasoning
+    architect:    "openai/gpt-5",            // Final Buffett-style decision with reasoning
+  },
+};
 
 const MAX_DEBATE_ROUNDS = 1;
 const MAX_RISK_ROUNDS = 1;
