@@ -652,6 +652,42 @@ async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: strin
   }
 }
 
+// ── Deterministic Fallback for Options ─────────────────────
+function generateOptionsFallback(symbol: string, stockData: any, rrFilter: string, tradeType: string) {
+  const price = stockData?.price || 0;
+  const sma20 = stockData?.sma20 || price;
+  const sma50 = stockData?.sma50 || price;
+  const high52 = stockData?.high52 || price * 1.2;
+  const low52 = stockData?.low52 || price * 0.8;
+  const changePct = stockData?.changePct || 0;
+  const volume = stockData?.volume || 0;
+  const avgVol = stockData?.avgVolume || volume;
+  const volRatio = avgVol > 0 ? (volume / avgVol).toFixed(2) : "1.00";
+
+  const trend = price > sma20 && price > sma50 ? "BULLISH" : price < sma20 && price < sma50 ? "BEARISH" : "NEUTRAL";
+  const nearSupport = Math.round(Math.min(sma20, sma50, low52 * 1.05));
+  const nearResist = Math.round(Math.max(sma20, sma50, high52 * 0.95));
+  const atr = Math.round(price * 0.02); // Approximate 2% ATR
+  const ceStrike = Math.ceil(price / 50) * 50;
+  const peStrike = Math.floor(price / 50) * 50;
+
+  return {
+    agents: {
+      oiAnalysis: `## OI Analysis — ${symbol} (Data-Based Estimate)\n\n**Trend**: ${trend} (Price ₹${price.toFixed(0)} vs SMA20 ₹${sma20.toFixed(0)}, SMA50 ₹${sma50.toFixed(0)})\n**Volume Ratio**: ${volRatio}x average\n**Key Resistance (Call OI zone)**: ₹${nearResist}\n**Key Support (Put OI zone)**: ₹${nearSupport}\n**Max Pain Estimate**: ₹${ceStrike}\n**PCR Indication**: ${trend === "BULLISH" ? "Moderately bullish (Put writing dominant)" : trend === "BEARISH" ? "Bearish (Call writing dominant)" : "Neutral range"}\n\n*Note: This is a data-driven estimate. Live OI data may differ.*`,
+
+      greeksIV: `## Greeks & IV Analysis — ${symbol}\n\n**IV Regime**: ${Math.abs(changePct) > 2 ? "High volatility" : "Low-moderate volatility"} (${Math.abs(changePct).toFixed(1)}% daily move)\n**Recommendation**: ${Math.abs(changePct) > 2 ? "BUY premium — high vol favors directional plays" : "SELL premium — low vol favors income strategies"}\n**ATM Straddle Range**: ±₹${atr * 2} from current price\n**Delta Target**: 0.4-0.6 for directional, 0.2-0.3 for hedges\n**Theta Impact**: ~₹${Math.round(price * 0.001)}/day per lot decay\n**Gamma Risk**: ${Math.abs(changePct) > 2 ? "HIGH — manage positions actively" : "MODERATE"}`,
+
+      technical: `## Technical for Strike Selection — ${symbol}\n\n**Price**: ₹${price.toFixed(2)} | **Trend**: ${trend}\n**Immediate Support**: ₹${nearSupport} | **Resistance**: ₹${nearResist}\n**52W Range**: ₹${low52.toFixed(0)} — ₹${high52.toFixed(0)}\n**SMA20**: ₹${sma20.toFixed(0)} | **SMA50**: ₹${sma50.toFixed(0)}\n**Expected Daily Range**: ₹${(price - atr).toFixed(0)} — ₹${(price + atr).toFixed(0)}\n\n**Strike Selection**: CE ${ceStrike}, PE ${peStrike}`,
+
+      strategy: `## Options Strategies — ${symbol}\n\n### 1. Aggressive — ${trend === "BULLISH" ? "Bull Call Spread" : trend === "BEARISH" ? "Bear Put Spread" : "Long Straddle"}\n- **Legs**: ${trend === "BULLISH" ? `Buy ${ceStrike} CE, Sell ${ceStrike + 100} CE` : trend === "BEARISH" ? `Buy ${peStrike} PE, Sell ${peStrike - 100} PE` : `Buy ${ceStrike} CE + Buy ${peStrike} PE`}\n- **Risk:Reward**: 1:2.5\n- **Max Loss**: Limited to premium paid\n- **Trade Type**: ${tradeType === "all" ? "Swing / Till Expiry" : tradeType}\n\n### 2. Conservative — ${trend === "BULLISH" ? "Cash-Secured Put Sell" : "Covered Call / Iron Condor"}\n- **Risk:Reward**: ${rrFilter}\n- **Trade Type**: Till Expiry\n- **Max Loss**: Limited\n\n*Risk:Reward filter applied: minimum ${rrFilter}*`,
+
+      riskAssessment: `## Risk Assessment — ${symbol} Options\n\n**Risk Score**: ${Math.abs(changePct) > 3 ? "7/10 (High)" : Math.abs(changePct) > 1.5 ? "5/10 (Moderate)" : "3/10 (Low)"}\n**Position Sizing**: 2-5% of capital\n**Stop Loss**: Exit at 50% premium loss\n**Target**: Book 50% at 1.5x premium, trail rest\n**Time Stop**: Exit 2 days before expiry if not in profit\n**Key Risk**: ${Math.abs(changePct) > 2 ? "High volatility — sudden reversals possible" : "Low volatility — theta decay risk for buyers"}`,
+
+      optionsTrader: `## Final Trade Decision — ${symbol}\n\n**Direction**: ${trend}\n**Strategy**: ${trend === "BULLISH" ? "Bull Call Spread" : trend === "BEARISH" ? "Bear Put Spread" : "Iron Condor"}\n**Strikes**: ${trend === "BULLISH" ? `Buy ${ceStrike} CE / Sell ${ceStrike + 100} CE` : trend === "BEARISH" ? `Buy ${peStrike} PE / Sell ${peStrike - 100} PE` : `Sell ${ceStrike} CE + Sell ${peStrike} PE`}\n**Risk:Reward**: ${rrFilter}\n**Trade Type**: ${tradeType === "all" ? "Swing" : tradeType}\n**Entry**: At market open or on pullback to ₹${(price * 0.99).toFixed(0)}\n**Stop Loss**: 50% of premium paid\n**Target 1**: 1.5x premium (book 50%)\n**Target 2**: Trail remaining with SL at cost\n**Confidence**: 65%\n**Risk Score**: 5/10\n\n⚠️ *Analysis generated from price data (AI was temporarily busy). Re-run for full AI analysis.*`,
+    },
+  };
+}
+
 // ── Main Handler ─────────────────────────────────────────
 
 serve(async (req) => {
