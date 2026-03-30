@@ -225,7 +225,7 @@ async function runMultiAgent(apiKey: string, symbol: string): Promise<string> {
   try {
     return await callAI(
       apiKey,
-      `You are StockPulse AI running an internal multi-agent workflow for Indian stocks.
+      `You are Trade Arsenal AI running an internal multi-agent workflow for Indian stocks.
 Return ONE markdown report with these exact sections and headings:
 # 🤖 Multi-Agent Analysis: {SYMBOL}
 ## 📊 Analyst Reports
