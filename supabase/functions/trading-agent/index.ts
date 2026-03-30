@@ -20,9 +20,20 @@ const corsHeaders = {
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const QUICK_MODEL = "google/gemini-3-flash-preview";
-const DEEP_MODEL = "google/gemini-2.5-pro";
-const VISION_MODEL = "google/gemini-2.5-pro";
+// ── Model assignments per agent ──
+const MODEL_MARKET_ANALYST = "google/gemini-2.5-pro";        // Vision + complex TA
+const MODEL_SENTIMENT      = "google/gemini-2.5-flash";      // Fast multimodal
+const MODEL_NEWS            = "google/gemini-3-flash-preview"; // Latest gen balance
+const MODEL_FUNDAMENTALS    = "google/gemini-3.1-pro-preview"; // Latest reasoning
+const MODEL_BULL            = "openai/gpt-5";                 // Best reasoning
+const MODEL_BEAR            = "openai/gpt-5.2";               // Enhanced reasoning
+const MODEL_RESEARCH_MGR    = "google/gemini-2.5-pro";        // Top-tier judge
+const MODEL_TRADER          = "google/gemini-2.5-flash";      // Fast precision
+const MODEL_RISK_AGGRESSIVE = "openai/gpt-5";                 // Best reasoning
+const MODEL_RISK_CONSERVATIVE = "openai/gpt-5.2";            // Enhanced reasoning
+const MODEL_RISK_NEUTRAL    = "google/gemini-3-flash-preview"; // Balanced
+const MODEL_PORTFOLIO_MGR   = "openai/gpt-5";                 // Final decision
+
 const MAX_DEBATE_ROUNDS = 1;
 const MAX_RISK_ROUNDS = 1;
 
@@ -32,7 +43,7 @@ async function callAI(
   apiKey: string,
   system: string,
   user: string,
-  model = QUICK_MODEL
+  model: string
 ): Promise<string> {
   const resp = await fetch(AI_URL, {
     method: "POST",
@@ -65,7 +76,7 @@ async function callAIWithImage(
   system: string,
   userText: string,
   imageUrl: string,
-  model = VISION_MODEL
+  model: string
 ): Promise<string> {
   const resp = await fetch(AI_URL, {
     method: "POST",
@@ -150,7 +161,7 @@ async function fetchStockData(symbol: string) {
 // ── Agent Prompts (TradingAgents-style) ──────────────────
 
 const MARKET_ANALYST_SYSTEM = `You are the **Market/Technical Analyst** in a professional trading firm.
-Your job: analyze price action, support/resistance levels, moving averages (SMA20, SMA50), RSI, MACD patterns, volume profile, and chart patterns.
+Your job: analyze price action, support/resistance levels, supply & demand zones, moving averages (SMA20, SMA50, SMA200), RSI, MACD patterns, volume profile, and chart patterns.
 Be specific with ₹ price levels. Use the supplied data. Keep under 200 words.`;
 
 const MARKET_ANALYST_CHART_SYSTEM = `You are the **Market/Technical Analyst** in a professional trading firm with expertise in visual chart analysis.
@@ -160,10 +171,10 @@ Identify:
 - Trend direction and strength (uptrend, downtrend, sideways)
 - Key chart patterns (head & shoulders, triangles, flags, wedges, double top/bottom, cup & handle, channels)
 - Candlestick patterns (doji, engulfing, hammer, shooting star, morning/evening star)
-- Support and resistance zones (mark specific ₹ levels)
+- Support and resistance zones, supply & demand zones (mark specific ₹ levels)
 - Indicator readings if visible (RSI, MACD, Bollinger Bands, volume bars)
 - Volume analysis and divergences
-- Moving average crossovers or tests
+- Moving average crossovers or tests (SMA20, SMA50, SMA200)
 Combine the visual analysis with the numerical data for a complete picture.
 Be specific with ₹ price levels. Keep under 300 words.`;
 
@@ -265,16 +276,16 @@ serve(async (req) => {
           MARKET_ANALYST_CHART_SYSTEM,
           `Analyze this chart for ${symbol} along with the data. ${dataCtx}`,
           chartImage,
-          VISION_MODEL
+          MODEL_MARKET_ANALYST
         )
-      : callAI(LOVABLE_API_KEY, MARKET_ANALYST_SYSTEM, `Analyze ${symbol}. ${dataCtx}`);
+      : callAI(LOVABLE_API_KEY, MARKET_ANALYST_SYSTEM, `Analyze ${symbol}. ${dataCtx}`, MODEL_MARKET_ANALYST);
 
     const [marketReport, sentimentReport, newsReport, fundamentalsReport] =
       await Promise.all([
         marketReportPromise,
-        callAI(LOVABLE_API_KEY, SENTIMENT_ANALYST_SYSTEM, `Sentiment for ${symbol}. ${dataCtx}`),
-        callAI(LOVABLE_API_KEY, NEWS_ANALYST_SYSTEM, `News analysis for ${symbol}. ${dataCtx}`),
-        callAI(LOVABLE_API_KEY, FUNDAMENTALS_ANALYST_SYSTEM, `Fundamentals for ${symbol}. ${dataCtx}`),
+        callAI(LOVABLE_API_KEY, SENTIMENT_ANALYST_SYSTEM, `Sentiment for ${symbol}. ${dataCtx}`, MODEL_SENTIMENT),
+        callAI(LOVABLE_API_KEY, NEWS_ANALYST_SYSTEM, `News analysis for ${symbol}. ${dataCtx}`, MODEL_NEWS),
+        callAI(LOVABLE_API_KEY, FUNDAMENTALS_ANALYST_SYSTEM, `Fundamentals for ${symbol}. ${dataCtx}`, MODEL_FUNDAMENTALS),
       ]);
 
     const chartNote = hasChart ? "\n\n[NOTE: The Market/Technical Analyst had access to a user-uploaded chart image and performed visual chart pattern analysis in addition to numerical data analysis.]" : "";
@@ -293,8 +304,8 @@ serve(async (req) => {
           : `${analystContext}\n\nPREVIOUS BULL ARGUMENT:\n${bullCase}\n\nPREVIOUS BEAR ARGUMENT:\n${bearCase}`;
 
       [bullCase, bearCase] = await Promise.all([
-        callAI(LOVABLE_API_KEY, BULL_RESEARCHER_SYSTEM, `Round ${round + 1} bull case for ${symbol}.\n${debateCtx}`),
-        callAI(LOVABLE_API_KEY, BEAR_RESEARCHER_SYSTEM, `Round ${round + 1} bear case for ${symbol}.\n${debateCtx}`),
+        callAI(LOVABLE_API_KEY, BULL_RESEARCHER_SYSTEM, `Round ${round + 1} bull case for ${symbol}.\n${debateCtx}`, MODEL_BULL),
+        callAI(LOVABLE_API_KEY, BEAR_RESEARCHER_SYSTEM, `Round ${round + 1} bear case for ${symbol}.\n${debateCtx}`, MODEL_BEAR),
       ]);
       bullHistory += `\n[Round ${round + 1}] ${bullCase}`;
       bearHistory += `\n[Round ${round + 1}] ${bearCase}`;
@@ -305,7 +316,7 @@ serve(async (req) => {
       LOVABLE_API_KEY,
       RESEARCH_MANAGER_SYSTEM,
       `Judge the investment debate for ${symbol}.\n\nBULL ARGUMENTS:\n${bullHistory}\n\nBEAR ARGUMENTS:\n${bearHistory}\n\nANALYST REPORTS:\n${analystContext}`,
-      DEEP_MODEL
+      MODEL_RESEARCH_MGR
     );
 
     // ── Step 5: Trader Agent ──
@@ -313,7 +324,7 @@ serve(async (req) => {
       LOVABLE_API_KEY,
       TRADER_SYSTEM,
       `Make trading decision for ${symbol}.\n\nRESEARCH MANAGER PLAN:\n${researchManagerDecision}\n\n${analystContext}\n\nBULL CASE:\n${bullCase}\n\nBEAR CASE:\n${bearCase}`,
-      DEEP_MODEL
+      MODEL_TRADER
     );
 
     // ── Step 6: Risk Management Debate ──
@@ -329,9 +340,9 @@ serve(async (req) => {
           ? riskCtx
           : `${riskCtx}\n\nPREVIOUS AGGRESSIVE:\n${aggressiveView}\nPREVIOUS CONSERVATIVE:\n${conservativeView}\nPREVIOUS NEUTRAL:\n${neutralView}`;
 
-      aggressiveView = await callAI(LOVABLE_API_KEY, AGGRESSIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}`);
-      conservativeView = await callAI(LOVABLE_API_KEY, CONSERVATIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE VIEW:\n${aggressiveView}`);
-      neutralView = await callAI(LOVABLE_API_KEY, NEUTRAL_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE:\n${aggressiveView}\nCONSERVATIVE:\n${conservativeView}`);
+      aggressiveView = await callAI(LOVABLE_API_KEY, AGGRESSIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}`, MODEL_RISK_AGGRESSIVE);
+      conservativeView = await callAI(LOVABLE_API_KEY, CONSERVATIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE VIEW:\n${aggressiveView}`, MODEL_RISK_CONSERVATIVE);
+      neutralView = await callAI(LOVABLE_API_KEY, NEUTRAL_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE:\n${aggressiveView}\nCONSERVATIVE:\n${conservativeView}`, MODEL_RISK_NEUTRAL);
     }
 
     // ── Step 7: Portfolio Manager (final decision) ──
@@ -339,7 +350,7 @@ serve(async (req) => {
       LOVABLE_API_KEY,
       PORTFOLIO_MANAGER_SYSTEM,
       `Final decision for ${symbol}.\n\n${analystContext}\n\nBULL CASE:\n${bullCase}\n\nBEAR CASE:\n${bearCase}\n\nRESEARCH MANAGER:\n${researchManagerDecision}\n\nTRADER PROPOSAL:\n${traderDecision}\n\nRISK DEBATE:\nAggressive: ${aggressiveView}\nConservative: ${conservativeView}\nNeutral: ${neutralView}`,
-      DEEP_MODEL
+      MODEL_PORTFOLIO_MGR
     );
 
     console.log(`TradingAgents pipeline complete for ${symbol}`);
