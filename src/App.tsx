@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import TerminalLayout from "@/components/TerminalLayout";
 import { useAuth } from "@/hooks/useAuth";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const Auth = lazy(() => import("./pages/Auth"));
 const Landing = lazy(() => import("./pages/Index"));
