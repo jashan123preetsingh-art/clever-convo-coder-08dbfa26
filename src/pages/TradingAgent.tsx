@@ -250,41 +250,45 @@ function VerdictCard({ agents, stockData, symbol, hasChartAnalysis, mode }: { ag
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-      className={`rounded-2xl bg-card/50 p-5 ${ac.border} border ${ac.glow} relative overflow-hidden`}>
+      className={`rounded-xl sm:rounded-2xl bg-card/50 p-3 sm:p-5 ${ac.border} border ${ac.glow} relative overflow-hidden`}>
       <div className="absolute inset-0 opacity-5 pointer-events-none"
         style={{ background: `radial-gradient(ellipse at top right, ${action === 'BUY' || action === 'INVEST' ? 'hsl(var(--primary))' : action === 'SELL' || action === 'PASS' ? 'hsl(var(--destructive))' : 'hsl(var(--terminal-amber))'}, transparent 70%)` }} />
-      <div className="relative flex flex-col md:flex-row items-start md:items-center gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <h2 className="text-xl font-black text-foreground font-data tracking-tight">{symbol}</h2>
-            <span className={`px-3 py-1 rounded-lg text-sm font-black ${ac.bg} ${ac.text} border ${ac.border}`}>
-              {action}
+      <div className="relative">
+        {/* Top row: symbol + action + mode */}
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
+          <h2 className="text-lg sm:text-xl font-black text-foreground font-data tracking-tight">{symbol}</h2>
+          <span className={`px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-black ${ac.bg} ${ac.text} border ${ac.border}`}>
+            {action}
+          </span>
+          <span className={`text-[7px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
+            {modeLabels[mode]}
+          </span>
+          {hasChartAnalysis && (
+            <span className="text-[7px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-bold border border-[hsl(var(--terminal-cyan))]/20">
+              📸 Chart
             </span>
-            <span className={`text-[8px] px-2 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
-              {modeLabels[mode]}
-            </span>
-            {hasChartAnalysis && (
-              <span className="text-[8px] px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-bold border border-[hsl(var(--terminal-cyan))]/20">
-                📸 Chart Analyzed
-              </span>
-            )}
-          </div>
+          )}
+        </div>
+
+        {/* Price + metrics row */}
+        <div className="flex items-center gap-3 sm:gap-6 mb-2 flex-wrap">
           {stockData && (
-            <div className="flex items-baseline gap-3 mb-2">
-              <span className="text-2xl font-bold text-foreground font-data">₹{stockData.price?.toFixed(2)}</span>
-              <span className={`text-sm font-semibold font-data ${stockData.changePct >= 0 ? 't-value-up' : 't-value-down'}`}>
+            <div className="flex items-baseline gap-2">
+              <span className="text-xl sm:text-2xl font-bold text-foreground font-data">₹{stockData.price?.toFixed(2)}</span>
+              <span className={`text-xs sm:text-sm font-semibold font-data ${stockData.changePct >= 0 ? 't-value-up' : 't-value-down'}`}>
                 {stockData.changePct >= 0 ? '+' : ''}{stockData.changePct?.toFixed(2)}%
               </span>
             </div>
           )}
           {duration && (
-            <p className="text-[10px] font-semibold text-[hsl(var(--terminal-cyan))] mb-1">⏱️ Expected Duration: {duration}</p>
+            <span className="text-[9px] sm:text-[10px] font-semibold text-[hsl(var(--terminal-cyan))]">⏱️ {duration}</span>
           )}
-          <p className="text-xs text-muted-foreground leading-relaxed max-w-lg">{summary}</p>
         </div>
-        <RiskGauge score={riskScore} />
-        <div className="flex flex-col items-end gap-3 min-w-[140px]">
-          <div className="w-full">
+
+        {/* Stats row: risk gauge + confidence + actions */}
+        <div className="flex items-center gap-3 sm:gap-4 mt-3">
+          <RiskGauge score={riskScore} />
+          <div className="flex-1 min-w-0">
             <div className="flex justify-between text-[9px] text-muted-foreground mb-1">
               <span>Confidence</span>
               <span className="font-data font-bold text-foreground">{confidence}%</span>
@@ -294,13 +298,14 @@ function VerdictCard({ agents, stockData, symbol, hasChartAnalysis, mode }: { ag
                 transition={{ duration: 1, delay: 0.3 }}
                 className="h-full rounded-full bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))]" />
             </div>
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-relaxed mt-2 line-clamp-2">{summary}</p>
           </div>
-          <div className="flex gap-1.5">
-            <button onClick={copyVerdict} className="t-btn flex items-center gap-1 text-[9px]">
+          <div className="flex flex-col gap-1.5">
+            <button onClick={copyVerdict} className="t-btn flex items-center gap-1 text-[8px] sm:text-[9px]">
               {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied ? '✓' : 'Copy'}
             </button>
-            <button onClick={downloadReport} className="t-btn flex items-center gap-1 text-[9px]">
+            <button onClick={downloadReport} className="t-btn flex items-center gap-1 text-[8px] sm:text-[9px]">
               <Download className="w-3 h-3" /> Report
             </button>
           </div>
