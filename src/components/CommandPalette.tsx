@@ -69,11 +69,7 @@ export default function CommandPalette() {
       ).slice(0, 8)
     : [];
 
-  const apiStocks = Array.isArray(apiResults) ? apiResults : [];
-  const mergedMap = new Map<string, any>();
-  for (const s of localStocks) mergedMap.set(s.symbol, s);
-  for (const s of apiStocks) { if (!mergedMap.has(s.symbol)) mergedMap.set(s.symbol, s); }
-  const stockResults = Array.from(mergedMap.values()).slice(0, 6);
+  const stockResults = localStocks.slice(0, 6);
 
   const filteredActions = ACTIONS.filter(a =>
     a.label.toLowerCase().includes(query.toLowerCase())
