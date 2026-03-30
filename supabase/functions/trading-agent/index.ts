@@ -109,7 +109,6 @@ async function callAIWithImage(
     { type: "image_url", image_url: { url: imageUrl } },
   ], model);
 }
-}
 
 async function fetchStockData(symbol: string) {
   const ySymbol = symbol.includes(".") ? symbol : `${symbol}.NS`;
