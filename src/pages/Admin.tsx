@@ -251,7 +251,7 @@ function StatCard({ icon: Icon, label, value, sub, accent = false }: {
 }
 
 /* ─── DASHBOARD TAB ─── */
-function DashboardTab({ stats }: { stats: any }) {
+function DashboardTab({ stats, onNavigate }: { stats: any; onNavigate: (tab: AdminTab) => void }) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
