@@ -112,7 +112,7 @@ const AGENT_META: Record<string, { label: string; icon: string }> = {
   technical: { label: 'Technical (Strikes)', icon: '🎯' },
 };
 
-const FULL_SPAN_AGENTS = new Set(['researchManager', 'traderDecision', 'portfolioManager', 'riskCheck', 'investmentManager', 'portfolioArchitect']);
+const FULL_SPAN_AGENTS = new Set(['researchManager', 'traderDecision', 'portfolioManager', 'riskCheck', 'investmentManager', 'portfolioArchitect', 'strategy', 'riskAssessment', 'optionsTrader']);
 
 /* ── Image compression ─────────────────────────── */
 function compressImage(file: File, maxSize = 800): Promise<string> {
