@@ -577,10 +577,10 @@ async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string
     ]);
   }
 
-  // Step 4: Investment Committee WITH REASONING
+  // Step 4: Investment Committee
   const investmentManager = await callAI(apiKey, INVEST_MANAGER_SYSTEM,
     `Investment committee review for ${symbol} (1-10yr horizon).\nFUNDAMENTALS:\n${fundamentalsReport}\nMOAT:\n${moatReport}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nTECHNICAL:\n${marketReport}\nNEWS:\n${newsReport}`,
-    M.committee, REASONING_MEDIUM);
+    M.committee);
 
   await sleep(800);
 
