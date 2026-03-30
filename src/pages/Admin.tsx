@@ -294,7 +294,7 @@ function DashboardTab({ stats, onNavigate }: { stats: any; onNavigate: (tab: Adm
           { icon: Users, title: 'User Management', desc: 'View, search and manage user subscriptions', tab: 'users' },
           { icon: CreditCard, title: 'Pricing Config', desc: 'Configure plan tiers, features and pricing', tab: 'pricing' },
         ].map(item => (
-          <div key={item.tab} className="rounded-xl border border-border/60 bg-card p-4 hover:border-primary/30 transition-all cursor-default group">
+          <button key={item.tab} onClick={() => onNavigate(item.tab as AdminTab)} className="rounded-xl border border-border/60 bg-card p-4 hover:border-primary/30 transition-all cursor-pointer group text-left">
             <div className="flex items-center gap-2 mb-1.5">
               <item.icon className="w-4 h-4 text-primary" />
               <h4 className="text-xs font-bold text-foreground">{item.title}</h4>
