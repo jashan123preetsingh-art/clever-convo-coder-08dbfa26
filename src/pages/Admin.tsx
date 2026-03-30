@@ -308,29 +308,82 @@ function DashboardTab({ stats }: { stats: any }) {
 }
 
 /* ─── FEATURES TAB ─── */
-function FeaturesTab({ features, toggleFeature }: { features: any[]; toggleFeature: any }) {
+function FeaturesTab({ features, toggleFeature, createFeature, updateFeature, deleteFeature }: {
+  features: any[]; toggleFeature: any; createFeature: any; updateFeature: any; deleteFeature: any;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ feature_key: '', feature_name: '', description: '', required_plan: 'pro' });
+
   const locked = features.filter((f: any) => f.is_locked);
   const unlocked = features.filter((f: any) => !f.is_locked);
+
+  const resetForm = () => { setForm({ feature_key: '', feature_name: '', description: '', required_plan: 'pro' }); setShowForm(false); setEditingId(null); };
+
+  const startEdit = (f: any) => {
+    setForm({ feature_key: f.feature_key, feature_name: f.feature_name, description: f.description || '', required_plan: f.required_plan || 'pro' });
+    setEditingId(f.id);
+    setShowForm(true);
+  };
+
+  const handleSubmit = () => {
+    if (!form.feature_key || !form.feature_name) return toast.error('Key and name are required');
+    if (editingId) {
+      updateFeature.mutate({ id: editingId, ...form }, { onSuccess: resetForm });
+    } else {
+      createFeature.mutate(form, { onSuccess: resetForm });
+    }
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-foreground">Feature Access Control</h2>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">{unlocked.length} active</span>
           <span className="text-[9px] bg-destructive/10 text-destructive px-2 py-0.5 rounded-full font-semibold">{locked.length} locked</span>
+          <button onClick={() => { resetForm(); setShowForm(true); }} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all">
+            <Plus className="w-3 h-3" /> Add Feature
+          </button>
         </div>
       </div>
 
+      {/* Create / Edit Form */}
+      <AnimatePresence>
+        {showForm && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+            <div className="rounded-xl border border-primary/30 bg-primary/[0.03] p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold text-foreground">{editingId ? 'Edit Feature' : 'New Feature'}</h3>
+                <button onClick={resetForm} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input placeholder="Feature Key (e.g. ai_scanner)" value={form.feature_key} onChange={e => setForm(p => ({ ...p, feature_key: e.target.value }))}
+                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50" />
+                <input placeholder="Display Name" value={form.feature_name} onChange={e => setForm(p => ({ ...p, feature_name: e.target.value }))}
+                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50" />
+              </div>
+              <input placeholder="Description" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50" />
+              <div className="flex items-center justify-between">
+                <select value={form.required_plan} onChange={e => setForm(p => ({ ...p, required_plan: e.target.value }))}
+                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30">
+                  <option value="free">Free</option>
+                  <option value="pro">Pro</option>
+                  <option value="premium">Premium</option>
+                </select>
+                <button onClick={handleSubmit} className="flex items-center gap-1 px-4 py-2 rounded-lg text-[10px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all">
+                  <Save className="w-3 h-3" /> {editingId ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {features.map((f: any) => (
-          <motion.div
-            key={f.id}
-            layout
-            className={`rounded-xl border p-4 transition-all ${
-              f.is_locked ? 'bg-card border-border/60' : 'bg-primary/[0.03] border-primary/20'
-            }`}
-          >
+          <motion.div key={f.id} layout className={`rounded-xl border p-4 transition-all ${f.is_locked ? 'bg-card border-border/60' : 'bg-primary/[0.03] border-primary/20'}`}>
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -338,6 +391,16 @@ function FeaturesTab({ features, toggleFeature }: { features: any[]; toggleFeatu
                   <h3 className="text-xs font-bold text-foreground truncate">{f.feature_name}</h3>
                 </div>
                 <p className="text-[10px] text-muted-foreground leading-relaxed ml-5.5">{f.description}</p>
+                <p className="text-[8px] text-muted-foreground/60 ml-5.5 mt-0.5 font-mono">{f.feature_key}</p>
+              </div>
+              <div className="flex gap-1 ml-2 flex-shrink-0">
+                <button onClick={() => startEdit(f)} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-all">
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button onClick={() => { if (confirm(`Delete "${f.feature_name}"?`)) deleteFeature.mutate(f.id); }}
+                  className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all">
+                  <Trash2 className="w-3 h-3" />
+                </button>
               </div>
             </div>
             <div className="flex items-center justify-between mt-3">
@@ -345,17 +408,11 @@ function FeaturesTab({ features, toggleFeature }: { features: any[]; toggleFeatu
                 f.required_plan === 'premium' ? 'bg-terminal-amber/10 text-terminal-amber border border-terminal-amber/20' :
                 f.required_plan === 'pro' ? 'bg-primary/10 text-primary border border-primary/20' :
                 'bg-muted text-muted-foreground border border-border'
-              }`}>
-                {f.required_plan || 'free'}
-              </span>
-              <button
-                onClick={() => toggleFeature.mutate({ id: f.id, is_locked: f.is_locked })}
+              }`}>{f.required_plan || 'free'}</span>
+              <button onClick={() => toggleFeature.mutate({ id: f.id, is_locked: f.is_locked })}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                  f.is_locked
-                    ? 'bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20'
-                    : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20'
-                }`}
-              >
+                  f.is_locked ? 'bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20' : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20'
+                }`}>
                 {f.is_locked ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                 {f.is_locked ? 'LOCKED' : 'ACTIVE'}
               </button>
