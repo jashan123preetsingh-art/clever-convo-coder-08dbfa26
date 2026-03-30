@@ -212,7 +212,7 @@ export default function Admin() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2 }}
         >
-          {activeTab === 'dashboard' && <DashboardTab stats={stats} />}
+          {activeTab === 'dashboard' && <DashboardTab stats={stats} onNavigate={setActiveTab} />}
           {activeTab === 'features' && <FeaturesTab features={features} toggleFeature={toggleFeature} createFeature={createFeature} updateFeature={updateFeature} deleteFeature={deleteFeature} />}
           {activeTab === 'users' && (
             <UsersTab
@@ -251,7 +251,7 @@ function StatCard({ icon: Icon, label, value, sub, accent = false }: {
 }
 
 /* ─── DASHBOARD TAB ─── */
-function DashboardTab({ stats }: { stats: any }) {
+function DashboardTab({ stats, onNavigate }: { stats: any; onNavigate: (tab: AdminTab) => void }) {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -294,13 +294,13 @@ function DashboardTab({ stats }: { stats: any }) {
           { icon: Users, title: 'User Management', desc: 'View, search and manage user subscriptions', tab: 'users' },
           { icon: CreditCard, title: 'Pricing Config', desc: 'Configure plan tiers, features and pricing', tab: 'pricing' },
         ].map(item => (
-          <div key={item.tab} className="rounded-xl border border-border/60 bg-card p-4 hover:border-primary/30 transition-all cursor-default group">
+          <button key={item.tab} onClick={() => onNavigate(item.tab as AdminTab)} className="rounded-xl border border-border/60 bg-card p-4 hover:border-primary/30 transition-all cursor-pointer group text-left">
             <div className="flex items-center gap-2 mb-1.5">
               <item.icon className="w-4 h-4 text-primary" />
               <h4 className="text-xs font-bold text-foreground">{item.title}</h4>
             </div>
             <p className="text-[10px] text-muted-foreground leading-relaxed">{item.desc}</p>
-          </div>
+          </button>
         ))}
       </div>
     </div>
