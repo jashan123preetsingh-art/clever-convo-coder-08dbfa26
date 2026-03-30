@@ -656,16 +656,6 @@ export default function TradingAgent() {
 
             {/* Upload + TF guide side by side */}
             <div className="mt-3 flex flex-col sm:flex-row gap-3">
-              {/* Indicators note */}
-              <div className="rounded-xl bg-secondary/30 border border-border/15 p-3 sm:max-w-[180px]">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className="text-xs">📊</span>
-                  <p className="text-[9px] font-bold text-foreground uppercase tracking-wider">Indicators</p>
-                </div>
-                <p className="text-[9px] text-muted-foreground leading-relaxed">
-                  Include visible indicators — <span className="text-foreground font-semibold">RSI</span>, <span className="text-foreground font-semibold">MACD</span>, <span className="text-foreground font-semibold">Volume</span>, <span className="text-foreground font-semibold">MAs</span>
-                </p>
-              </div>
 
               {/* Recommended TF by trade type - side panel */}
               <div className="flex-1 rounded-xl bg-secondary/30 border border-border/15 p-3">
