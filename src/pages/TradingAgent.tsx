@@ -626,15 +626,31 @@ export default function TradingAgent() {
         } catch {
           errMsg = `API Error ${resp.status}`;
         }
+        if (resp.status === 429) {
+          toast.error('AI is busy right now. Please wait 30 seconds and try again.', { duration: 6000 });
+        } else if (resp.status === 402) {
+          toast.error('AI credits temporarily unavailable. The system will retry with data-based analysis.', { duration: 6000 });
+        } else {
+          toast.error(errMsg);
+        }
         throw new Error(errMsg);
       }
 
       const data = await resp.json();
       setResult(data);
       setCurrentStep(steps.length);
-      toast.success(`${config.label} analysis complete for ${data.symbol}`);
+      
+      // Check if it was a fallback response
+      const isFallback = data.agents?.optionsTrader?.includes('AI was temporarily busy');
+      if (isFallback) {
+        toast.success(`${config.label} data-based analysis ready for ${data.symbol}. Re-run later for full AI analysis.`, { duration: 5000 });
+      } else {
+        toast.success(`${config.label} analysis complete for ${data.symbol}`);
+      }
     } catch (err: any) {
-      toast.error(err.message || 'Agent failed');
+      if (!err.message?.includes('AI is busy') && !err.message?.includes('credits')) {
+        toast.error(err.message || 'Agent failed');
+      }
       setCurrentStep(-1);
     } finally {
       setLoading(false);
