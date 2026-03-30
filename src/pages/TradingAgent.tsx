@@ -800,6 +800,51 @@ export default function TradingAgent() {
         </div>
       )}
 
+      {/* Options mode config */}
+      {mode === 'options' && !loading && !result && (
+        <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-[hsl(var(--terminal-purple))]/15 p-3 sm:p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🎯</span>
+            <div className="flex-1">
+              <h3 className="text-sm font-bold text-foreground mb-1">Options & F&O Agent</h3>
+              <p className="text-[10px] text-muted-foreground leading-relaxed mb-3">
+                Full options analysis: OI patterns, Greeks & IV, strategy construction with risk-reward filtering. No chart needed — pure data-driven F&O analysis.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mb-1 block">Min Risk:Reward</label>
+                  <div className="flex gap-1.5">
+                    {['1:1.5', '1:2', '1:3', '1:4'].map(rr => (
+                      <button key={rr} onClick={() => setRiskReward(rr)}
+                        className={`px-2.5 py-1.5 text-[9px] font-bold rounded-lg border transition-all ${riskReward === rr ? 'bg-[hsl(var(--terminal-purple))]/15 border-[hsl(var(--terminal-purple))]/40 text-[hsl(var(--terminal-purple))]' : 'bg-secondary/30 border-border/20 text-muted-foreground hover:text-foreground'}`}>
+                        {rr}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mb-1 block">Trade Type</label>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[{ k: 'all', l: 'All' }, { k: 'intraday', l: 'Intraday' }, { k: 'swing', l: 'Swing' }, { k: 'expiry', l: 'Till Expiry' }].map(t => (
+                      <button key={t.k} onClick={() => setOptionsTradeType(t.k)}
+                        className={`px-2.5 py-1.5 text-[9px] font-bold rounded-lg border transition-all ${optionsTradeType === t.k ? 'bg-[hsl(var(--terminal-purple))]/15 border-[hsl(var(--terminal-purple))]/40 text-[hsl(var(--terminal-purple))]' : 'bg-secondary/30 border-border/20 text-muted-foreground hover:text-foreground'}`}>
+                        {t.l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-[8px] px-2 py-1 rounded-lg bg-[hsl(var(--terminal-purple))]/10 text-[hsl(var(--terminal-purple))] border border-[hsl(var(--terminal-purple))]/20 font-semibold">📊 OI Analysis</span>
+                <span className="text-[8px] px-2 py-1 rounded-lg bg-[hsl(var(--terminal-purple))]/10 text-[hsl(var(--terminal-purple))] border border-[hsl(var(--terminal-purple))]/20 font-semibold">🔬 Greeks & IV</span>
+                <span className="text-[8px] px-2 py-1 rounded-lg bg-[hsl(var(--terminal-purple))]/10 text-[hsl(var(--terminal-purple))] border border-[hsl(var(--terminal-purple))]/20 font-semibold">🏗️ Strategy Builder</span>
+                <span className="text-[8px] px-2 py-1 rounded-lg bg-[hsl(var(--terminal-purple))]/10 text-[hsl(var(--terminal-purple))] border border-[hsl(var(--terminal-purple))]/20 font-semibold">🛡️ Risk-Reward Filter</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Invest mode info */}
       {mode === 'invest' && !loading && !result && (
         <div className="rounded-2xl bg-card/50 border border-primary/15 p-4 mb-4">
