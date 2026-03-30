@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAllStocks } from '@/data/mockData';
-import { useStockSearch } from '@/hooks/useStockData';
+
 
 const ACTIONS = [
   { id: 'dashboard', label: 'Dashboard', icon: '⌂', path: '/', category: 'Navigation' },
