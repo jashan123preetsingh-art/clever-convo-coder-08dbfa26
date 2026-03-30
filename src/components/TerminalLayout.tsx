@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useStore from '@/store/useStore';
 import { INDICES as MOCK_INDICES, getAllStocks } from '@/data/mockData';
 import { formatPercent } from '@/utils/format';
-import { useStockSearch, useIndices } from '@/hooks/useStockData';
+import { useIndices } from '@/hooks/useStockData';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertBell } from '@/components/PriceAlerts';
 import { useTheme } from '@/hooks/useTheme';
@@ -36,7 +36,6 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const { data: searchResults } = useStockSearch(searchInput);
   const { data: liveIndices } = useIndices();
   const INDICES = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : MOCK_INDICES;
 
@@ -76,14 +75,9 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
     setShowSearch(false);
   };
 
-  const localStockResults = searchInput.length >= 1
-    ? getAllStocks().filter(s => s.symbol.toLowerCase().includes(searchInput.toLowerCase()) || s.name.toLowerCase().includes(searchInput.toLowerCase())).slice(0, 12)
+  const combinedResults = searchInput.length >= 1
+    ? getAllStocks().filter(s => s.symbol.toLowerCase().includes(searchInput.toLowerCase()) || s.name.toLowerCase().includes(searchInput.toLowerCase())).slice(0, 10)
     : [];
-  const apiResults = Array.isArray(searchResults) ? searchResults : [];
-  const mergedMap = new Map<string, any>();
-  for (const s of localStockResults) mergedMap.set(s.symbol, s);
-  for (const s of apiResults) { if (!mergedMap.has(s.symbol)) mergedMap.set(s.symbol, s); }
-  const combinedResults = Array.from(mergedMap.values()).slice(0, 10);
   const marketOpen = isMarketOpen();
 
   return (

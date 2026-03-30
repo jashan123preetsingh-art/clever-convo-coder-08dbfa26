@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAllStocks } from '@/data/mockData';
-import { useStockSearch } from '@/hooks/useStockData';
+
 
 const ACTIONS = [
   { id: 'dashboard', label: 'Dashboard', icon: '⌂', path: '/', category: 'Navigation' },
@@ -35,7 +35,7 @@ export default function CommandPalette() {
   const [query, setQuery] = useState('');
   const [showShortcuts, setShowShortcuts] = useState(false);
   const navigate = useNavigate();
-  const { data: apiResults } = useStockSearch(query);
+  
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -69,11 +69,7 @@ export default function CommandPalette() {
       ).slice(0, 8)
     : [];
 
-  const apiStocks = Array.isArray(apiResults) ? apiResults : [];
-  const mergedMap = new Map<string, any>();
-  for (const s of localStocks) mergedMap.set(s.symbol, s);
-  for (const s of apiStocks) { if (!mergedMap.has(s.symbol)) mergedMap.set(s.symbol, s); }
-  const stockResults = Array.from(mergedMap.values()).slice(0, 6);
+  const stockResults = localStocks.slice(0, 6);
 
   const filteredActions = ACTIONS.filter(a =>
     a.label.toLowerCase().includes(query.toLowerCase())
