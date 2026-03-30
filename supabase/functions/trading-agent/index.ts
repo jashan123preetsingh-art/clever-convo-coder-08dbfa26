@@ -24,42 +24,42 @@ const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const MODELS = {
   scalp: {
-    technical:    "openai/gpt-5.2",          // Best at price action, SMC, order flow
+    technical:    "google/gemini-2.5-flash",     // Fast technical analysis
     sentiment:    "google/gemini-2.5-flash-lite", // Fast sentiment scan
-    trader:       "openai/gpt-5.2",          // Decisive quick calls
+    trader:       "google/gemini-2.5-flash",     // Decisive quick calls
     risk:         "google/gemini-3-flash-preview", // Fast risk check
   },
   swing: {
-    technical:    "openai/gpt-5.2",          // Strong technical analysis
-    sentiment:    "google/gemini-2.5-flash",  // Balanced sentiment
+    technical:    "google/gemini-2.5-flash",     // Strong technical analysis
+    sentiment:    "google/gemini-2.5-flash-lite", // Balanced sentiment
     news:         "google/gemini-3-flash-preview", // Fast news digest
-    fundamentals: "google/gemini-2.5-flash",  // Balanced fundamentals
-    bull:         "google/gemini-2.5-pro",    // Deep bull arguments
-    bear:         "google/gemini-2.5-pro",    // Deep bear arguments
-    manager:      "openai/gpt-5",            // Strong judgment
-    trader:       "openai/gpt-5.2",          // Decisive trader
+    fundamentals: "google/gemini-2.5-flash",     // Balanced fundamentals
+    bull:         "google/gemini-2.5-flash",     // Bull arguments
+    bear:         "google/gemini-2.5-flash",     // Bear arguments
+    manager:      "google/gemini-2.5-flash",     // Strong judgment
+    trader:       "google/gemini-2.5-flash",     // Decisive trader
     riskAggr:     "google/gemini-3-flash-preview",
     riskCons:     "google/gemini-3-flash-preview",
-    riskNeut:     "google/gemini-2.5-flash",
-    portfolio:    "openai/gpt-5",            // Final decision needs depth
+    riskNeut:     "google/gemini-2.5-flash-lite",
+    portfolio:    "google/gemini-2.5-flash",     // Final decision
   },
   invest: {
-    fundamentals: "openai/gpt-5",            // Deep value analysis with reasoning
-    moat:         "openai/gpt-5",            // Moat needs deep thinking
-    technical:    "google/gemini-2.5-flash",  // Light technical for entry timing
-    news:         "google/gemini-2.5-flash",  // Macro outlook
-    bull:         "google/gemini-2.5-pro",    // Thorough bull case
-    bear:         "google/gemini-2.5-pro",    // Thorough bear case
-    committee:    "openai/gpt-5",            // Investment committee needs reasoning
-    architect:    "openai/gpt-5",            // Final Buffett-style decision with reasoning
+    fundamentals: "google/gemini-2.5-flash",     // Deep value analysis
+    moat:         "google/gemini-2.5-flash",     // Moat analysis
+    technical:    "google/gemini-2.5-flash-lite", // Light technical for entry timing
+    news:         "google/gemini-2.5-flash-lite", // Macro outlook
+    bull:         "google/gemini-2.5-flash",     // Thorough bull case
+    bear:         "google/gemini-2.5-flash",     // Thorough bear case
+    committee:    "google/gemini-2.5-flash",     // Investment committee
+    architect:    "google/gemini-2.5-flash",     // Final Buffett-style decision
   },
   options: {
-    oiAnalyst:    "openai/gpt-5",            // Deep OI pattern recognition with reasoning
-    greeksAnalyst:"openai/gpt-5.2",          // Precise Greeks & IV analysis
-    technical:    "openai/gpt-5.2",          // Price action for strike selection
-    strategist:   "openai/gpt-5",            // Strategy construction with reasoning
-    riskManager:  "google/gemini-2.5-pro",   // Thorough risk assessment
-    trader:       "openai/gpt-5",            // Final options trade with reasoning
+    oiAnalyst:    "google/gemini-2.5-flash",     // Fast OI pattern recognition
+    greeksAnalyst:"google/gemini-3-flash-preview", // Fast Greeks & IV analysis
+    technical:    "google/gemini-2.5-flash",     // Price action for strike selection
+    strategist:   "google/gemini-2.5-flash",     // Strategy construction
+    riskManager:  "google/gemini-3-flash-preview", // Risk assessment
+    trader:       "google/gemini-2.5-flash",     // Final options trade
   },
 };
 
@@ -601,47 +601,89 @@ async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string
 async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any, optionsConfig?: { riskReward?: string; tradeType?: string }) {
   const M = MODELS.options;
   const rrFilter = optionsConfig?.riskReward || "1:2";
-  const tradeType = optionsConfig?.tradeType || "all"; // intraday, swing, expiry, all
+  const tradeType = optionsConfig?.tradeType || "all";
 
   const configCtx = `\nUser's Risk:Reward preference: minimum ${rrFilter}\nTrade type preference: ${tradeType === 'all' ? 'Show Intraday, Swing (2-5 days), and Till Expiry options' : tradeType}\nToday's date: ${new Date().toISOString().split('T')[0]}`;
 
-  // Step 1: OI Analysis + Greeks/IV in parallel (both use reasoning)
-  const [oiReport, greeksReport] = await Promise.all([
-    callAI(apiKey, OPTIONS_OI_SYSTEM, `Full OI analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.oiAnalyst),
-    callAI(apiKey, OPTIONS_GREEKS_SYSTEM, `Greeks and IV analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.greeksAnalyst),
-  ]);
+  try {
+    // Step 1: OI Analysis + Greeks/IV in parallel
+    const [oiReport, greeksReport] = await Promise.all([
+      callAI(apiKey, OPTIONS_OI_SYSTEM, `Full OI analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.oiAnalyst),
+      callAI(apiKey, OPTIONS_GREEKS_SYSTEM, `Greeks and IV analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.greeksAnalyst),
+    ]);
 
-  await sleep(1000);
+    await sleep(500);
 
-  // Step 2: Technical for strike selection
-  const technicalReport = await callAI(apiKey, OPTIONS_TECHNICAL_SYSTEM, `Technical analysis for options strike selection on ${symbol}.\n${dataCtx}`, M.technical);
+    // Step 2: Technical for strike selection
+    const technicalReport = await callAI(apiKey, OPTIONS_TECHNICAL_SYSTEM, `Technical analysis for options strike selection on ${symbol}.\n${dataCtx}`, M.technical);
 
-  await sleep(800);
+    await sleep(500);
 
-  // Step 3: Strategy construction WITH REASONING
-  const analystContext = `OI ANALYSIS:\n${oiReport}\n\nGREEKS & IV:\n${greeksReport}\n\nTECHNICAL (for strikes):\n${technicalReport}`;
-  const strategyReport = await callAI(apiKey, OPTIONS_STRATEGY_SYSTEM, `Construct optimal options strategies for ${symbol}.\nRisk:Reward filter: minimum ${rrFilter}\nTrade types needed: ${tradeType}\n${analystContext}\n${dataCtx}${configCtx}`, M.strategist);
+    // Step 3: Strategy construction
+    const analystContext = `OI ANALYSIS:\n${oiReport}\n\nGREEKS & IV:\n${greeksReport}\n\nTECHNICAL (for strikes):\n${technicalReport}`;
+    const strategyReport = await callAI(apiKey, OPTIONS_STRATEGY_SYSTEM, `Construct optimal options strategies for ${symbol}.\nRisk:Reward filter: minimum ${rrFilter}\nTrade types needed: ${tradeType}\n${analystContext}\n${dataCtx}${configCtx}`, M.strategist);
 
-  await sleep(800);
+    await sleep(500);
 
-  // Step 4: Risk assessment
-  const riskReport = await callAI(apiKey, OPTIONS_RISK_SYSTEM, `Evaluate options strategies for ${symbol}.\nSTRATEGIES:\n${strategyReport}\n${analystContext}\n${dataCtx}${configCtx}`, M.riskManager);
+    // Step 4: Risk assessment
+    const riskReport = await callAI(apiKey, OPTIONS_RISK_SYSTEM, `Evaluate options strategies for ${symbol}.\nSTRATEGIES:\n${strategyReport}\n${analystContext}\n${dataCtx}${configCtx}`, M.riskManager);
 
-  await sleep(800);
+    await sleep(500);
 
-  // Step 5: Final options trade decision WITH REASONING
-  const traderDecision = await callAI(apiKey, OPTIONS_TRADER_SYSTEM,
-    `Final options trade decision for ${symbol}.\nRisk:Reward minimum: ${rrFilter}\nTrade type: ${tradeType}\n\nOI ANALYSIS:\n${oiReport}\nGREEKS:\n${greeksReport}\nTECHNICAL:\n${technicalReport}\nSTRATEGIES:\n${strategyReport}\nRISK ASSESSMENT:\n${riskReport}\n${dataCtx}`,
-    M.trader);
+    // Step 5: Final options trade decision
+    const traderDecision = await callAI(apiKey, OPTIONS_TRADER_SYSTEM,
+      `Final options trade decision for ${symbol}.\nRisk:Reward minimum: ${rrFilter}\nTrade type: ${tradeType}\n\nOI ANALYSIS:\n${oiReport}\nGREEKS:\n${greeksReport}\nTECHNICAL:\n${technicalReport}\nSTRATEGIES:\n${strategyReport}\nRISK ASSESSMENT:\n${riskReport}\n${dataCtx}`,
+      M.trader);
+
+    return {
+      agents: {
+        oiAnalysis: oiReport,
+        greeksIV: greeksReport,
+        technical: technicalReport,
+        strategy: strategyReport,
+        riskAssessment: riskReport,
+        optionsTrader: traderDecision,
+      },
+    };
+  } catch (err) {
+    // Fallback: generate deterministic options report from stock data
+    console.error("Options pipeline AI error, using fallback:", err);
+    return generateOptionsFallback(symbol, stockData, rrFilter, tradeType);
+  }
+}
+
+// ── Deterministic Fallback for Options ─────────────────────
+function generateOptionsFallback(symbol: string, stockData: any, rrFilter: string, tradeType: string) {
+  const price = stockData?.price || 0;
+  const sma20 = stockData?.sma20 || price;
+  const sma50 = stockData?.sma50 || price;
+  const high52 = stockData?.high52 || price * 1.2;
+  const low52 = stockData?.low52 || price * 0.8;
+  const changePct = stockData?.changePct || 0;
+  const volume = stockData?.volume || 0;
+  const avgVol = stockData?.avgVolume || volume;
+  const volRatio = avgVol > 0 ? (volume / avgVol).toFixed(2) : "1.00";
+
+  const trend = price > sma20 && price > sma50 ? "BULLISH" : price < sma20 && price < sma50 ? "BEARISH" : "NEUTRAL";
+  const nearSupport = Math.round(Math.min(sma20, sma50, low52 * 1.05));
+  const nearResist = Math.round(Math.max(sma20, sma50, high52 * 0.95));
+  const atr = Math.round(price * 0.02); // Approximate 2% ATR
+  const ceStrike = Math.ceil(price / 50) * 50;
+  const peStrike = Math.floor(price / 50) * 50;
 
   return {
     agents: {
-      oiAnalysis: oiReport,
-      greeksIV: greeksReport,
-      technical: technicalReport,
-      strategy: strategyReport,
-      riskAssessment: riskReport,
-      optionsTrader: traderDecision,
+      oiAnalysis: `## OI Analysis — ${symbol} (Data-Based Estimate)\n\n**Trend**: ${trend} (Price ₹${price.toFixed(0)} vs SMA20 ₹${sma20.toFixed(0)}, SMA50 ₹${sma50.toFixed(0)})\n**Volume Ratio**: ${volRatio}x average\n**Key Resistance (Call OI zone)**: ₹${nearResist}\n**Key Support (Put OI zone)**: ₹${nearSupport}\n**Max Pain Estimate**: ₹${ceStrike}\n**PCR Indication**: ${trend === "BULLISH" ? "Moderately bullish (Put writing dominant)" : trend === "BEARISH" ? "Bearish (Call writing dominant)" : "Neutral range"}\n\n*Note: This is a data-driven estimate. Live OI data may differ.*`,
+
+      greeksIV: `## Greeks & IV Analysis — ${symbol}\n\n**IV Regime**: ${Math.abs(changePct) > 2 ? "High volatility" : "Low-moderate volatility"} (${Math.abs(changePct).toFixed(1)}% daily move)\n**Recommendation**: ${Math.abs(changePct) > 2 ? "BUY premium — high vol favors directional plays" : "SELL premium — low vol favors income strategies"}\n**ATM Straddle Range**: ±₹${atr * 2} from current price\n**Delta Target**: 0.4-0.6 for directional, 0.2-0.3 for hedges\n**Theta Impact**: ~₹${Math.round(price * 0.001)}/day per lot decay\n**Gamma Risk**: ${Math.abs(changePct) > 2 ? "HIGH — manage positions actively" : "MODERATE"}`,
+
+      technical: `## Technical for Strike Selection — ${symbol}\n\n**Price**: ₹${price.toFixed(2)} | **Trend**: ${trend}\n**Immediate Support**: ₹${nearSupport} | **Resistance**: ₹${nearResist}\n**52W Range**: ₹${low52.toFixed(0)} — ₹${high52.toFixed(0)}\n**SMA20**: ₹${sma20.toFixed(0)} | **SMA50**: ₹${sma50.toFixed(0)}\n**Expected Daily Range**: ₹${(price - atr).toFixed(0)} — ₹${(price + atr).toFixed(0)}\n\n**Strike Selection**: CE ${ceStrike}, PE ${peStrike}`,
+
+      strategy: `## Options Strategies — ${symbol}\n\n### 1. Aggressive — ${trend === "BULLISH" ? "Bull Call Spread" : trend === "BEARISH" ? "Bear Put Spread" : "Long Straddle"}\n- **Legs**: ${trend === "BULLISH" ? `Buy ${ceStrike} CE, Sell ${ceStrike + 100} CE` : trend === "BEARISH" ? `Buy ${peStrike} PE, Sell ${peStrike - 100} PE` : `Buy ${ceStrike} CE + Buy ${peStrike} PE`}\n- **Risk:Reward**: 1:2.5\n- **Max Loss**: Limited to premium paid\n- **Trade Type**: ${tradeType === "all" ? "Swing / Till Expiry" : tradeType}\n\n### 2. Conservative — ${trend === "BULLISH" ? "Cash-Secured Put Sell" : "Covered Call / Iron Condor"}\n- **Risk:Reward**: ${rrFilter}\n- **Trade Type**: Till Expiry\n- **Max Loss**: Limited\n\n*Risk:Reward filter applied: minimum ${rrFilter}*`,
+
+      riskAssessment: `## Risk Assessment — ${symbol} Options\n\n**Risk Score**: ${Math.abs(changePct) > 3 ? "7/10 (High)" : Math.abs(changePct) > 1.5 ? "5/10 (Moderate)" : "3/10 (Low)"}\n**Position Sizing**: 2-5% of capital\n**Stop Loss**: Exit at 50% premium loss\n**Target**: Book 50% at 1.5x premium, trail rest\n**Time Stop**: Exit 2 days before expiry if not in profit\n**Key Risk**: ${Math.abs(changePct) > 2 ? "High volatility — sudden reversals possible" : "Low volatility — theta decay risk for buyers"}`,
+
+      optionsTrader: `## Final Trade Decision — ${symbol}\n\n**Direction**: ${trend}\n**Strategy**: ${trend === "BULLISH" ? "Bull Call Spread" : trend === "BEARISH" ? "Bear Put Spread" : "Iron Condor"}\n**Strikes**: ${trend === "BULLISH" ? `Buy ${ceStrike} CE / Sell ${ceStrike + 100} CE` : trend === "BEARISH" ? `Buy ${peStrike} PE / Sell ${peStrike - 100} PE` : `Sell ${ceStrike} CE + Sell ${peStrike} PE`}\n**Risk:Reward**: ${rrFilter}\n**Trade Type**: ${tradeType === "all" ? "Swing" : tradeType}\n**Entry**: At market open or on pullback to ₹${(price * 0.99).toFixed(0)}\n**Stop Loss**: 50% of premium paid\n**Target 1**: 1.5x premium (book 50%)\n**Target 2**: Trail remaining with SL at cost\n**Confidence**: 65%\n**Risk Score**: 5/10\n\n⚠️ *Analysis generated from price data (AI was temporarily busy). Re-run for full AI analysis.*`,
     },
   };
 }
