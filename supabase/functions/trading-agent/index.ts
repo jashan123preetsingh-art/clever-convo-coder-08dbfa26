@@ -94,8 +94,8 @@ async function callAIRaw(apiKey: string, system: string, user: string | Array<an
   throw new Error("Max retries exceeded");
 }
 
-async function callAI(apiKey: string, system: string, user: string, model: string, reasoning?: { effort: string }): Promise<string> {
-  return callAIRaw(apiKey, system, user, model, reasoning);
+async function callAI(apiKey: string, system: string, user: string, model: string): Promise<string> {
+  return callAIRaw(apiKey, system, user, model);
 }
 
 async function callAIWithImage(apiKey: string, system: string, userText: string, imageUrl: string, model: string): Promise<string> {
