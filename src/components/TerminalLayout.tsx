@@ -37,6 +37,8 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const { data: searchResults } = useStockSearch(searchInput);
+  const { data: liveIndices } = useIndices();
+  const INDICES = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : MOCK_INDICES;
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
