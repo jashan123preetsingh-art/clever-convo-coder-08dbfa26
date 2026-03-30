@@ -20,9 +20,9 @@ const corsHeaders = {
 };
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const QUICK_MODEL = "google/gemini-2.5-flash-lite";
-const DEEP_MODEL = "google/gemini-2.5-flash";
-const VISION_MODEL = "google/gemini-2.5-flash";
+const QUICK_MODEL = "google/gemini-3-flash-preview";
+const DEEP_MODEL = "google/gemini-2.5-pro";
+const VISION_MODEL = "google/gemini-2.5-pro";
 const MAX_DEBATE_ROUNDS = 1;
 const MAX_RISK_ROUNDS = 1;
 
