@@ -340,9 +340,9 @@ serve(async (req) => {
           ? riskCtx
           : `${riskCtx}\n\nPREVIOUS AGGRESSIVE:\n${aggressiveView}\nPREVIOUS CONSERVATIVE:\n${conservativeView}\nPREVIOUS NEUTRAL:\n${neutralView}`;
 
-      aggressiveView = await callAI(LOVABLE_API_KEY, AGGRESSIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}`);
-      conservativeView = await callAI(LOVABLE_API_KEY, CONSERVATIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE VIEW:\n${aggressiveView}`);
-      neutralView = await callAI(LOVABLE_API_KEY, NEUTRAL_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE:\n${aggressiveView}\nCONSERVATIVE:\n${conservativeView}`);
+      aggressiveView = await callAI(LOVABLE_API_KEY, AGGRESSIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}`, MODEL_RISK_AGGRESSIVE);
+      conservativeView = await callAI(LOVABLE_API_KEY, CONSERVATIVE_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE VIEW:\n${aggressiveView}`, MODEL_RISK_CONSERVATIVE);
+      neutralView = await callAI(LOVABLE_API_KEY, NEUTRAL_RISK_SYSTEM, `Round ${round + 1} risk assessment for ${symbol}.\n${prevRiskCtx}\n\nAGGRESSIVE:\n${aggressiveView}\nCONSERVATIVE:\n${conservativeView}`, MODEL_RISK_NEUTRAL);
     }
 
     // ── Step 7: Portfolio Manager (final decision) ──
