@@ -508,14 +508,6 @@ function ModeSelector({ mode, setMode, disabled }: { mode: TradeMode; setMode: (
     </div>
   );
 }
-              ))}
-            </div>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function EmptyState({ onSelectSymbol }: { onSelectSymbol: (s: string) => void }) {
   return (
