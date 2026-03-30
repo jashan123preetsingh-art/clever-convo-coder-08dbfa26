@@ -620,7 +620,7 @@ async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: strin
 
   // Step 3: Strategy construction WITH REASONING
   const analystContext = `OI ANALYSIS:\n${oiReport}\n\nGREEKS & IV:\n${greeksReport}\n\nTECHNICAL (for strikes):\n${technicalReport}`;
-  const strategyReport = await callAI(apiKey, OPTIONS_STRATEGY_SYSTEM, `Construct optimal options strategies for ${symbol}.\nRisk:Reward filter: minimum ${rrFilter}\nTrade types needed: ${tradeType}\n${analystContext}\n${dataCtx}${configCtx}`, M.strategist, REASONING_HIGH);
+  const strategyReport = await callAI(apiKey, OPTIONS_STRATEGY_SYSTEM, `Construct optimal options strategies for ${symbol}.\nRisk:Reward filter: minimum ${rrFilter}\nTrade types needed: ${tradeType}\n${analystContext}\n${dataCtx}${configCtx}`, M.strategist);
 
   await sleep(800);
 
