@@ -68,12 +68,11 @@ const MAX_RISK_ROUNDS = 1;
 
 async function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
-async function callAIRaw(apiKey: string, system: string, user: string | Array<any>, model: string, reasoning?: { effort: string }): Promise<string> {
+async function callAIRaw(apiKey: string, system: string, user: string | Array<any>, model: string): Promise<string> {
   const messages = [{ role: "system", content: system }, { role: "user", content: user }];
   const MAX_RETRIES = 3;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const body: any = { model, messages, stream: false };
-    if (reasoning) body.reasoning = reasoning;
     const resp = await fetch(AI_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -95,8 +94,8 @@ async function callAIRaw(apiKey: string, system: string, user: string | Array<an
   throw new Error("Max retries exceeded");
 }
 
-async function callAI(apiKey: string, system: string, user: string, model: string, reasoning?: { effort: string }): Promise<string> {
-  return callAIRaw(apiKey, system, user, model, reasoning);
+async function callAI(apiKey: string, system: string, user: string, model: string): Promise<string> {
+  return callAIRaw(apiKey, system, user, model);
 }
 
 async function callAIWithImage(apiKey: string, system: string, userText: string, imageUrl: string, model: string): Promise<string> {
@@ -549,13 +548,11 @@ async function runSwingPipeline(apiKey: string, symbol: string, dataCtx: string,
 
 async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any) {
   const M = MODELS.invest;
-  const REASONING_HIGH = { effort: "high" };
-  const REASONING_MEDIUM = { effort: "medium" };
 
-  // Step 1: Deep fundamentals WITH REASONING (Buffett style) + Moat analysis WITH REASONING
+  // Step 1: Deep fundamentals (Buffett style) + Moat analysis
   const [fundamentalsReport, moatReport] = await Promise.all([
-    callAI(apiKey, INVEST_FUNDAMENTALS_SYSTEM, `Deep fundamental analysis of ${symbol} for long-term investment (1-10 years). ${dataCtx}`, M.fundamentals, REASONING_HIGH),
-    callAI(apiKey, INVEST_MOAT_SYSTEM, `Analyze competitive moat of ${symbol}. ${dataCtx}`, M.moat, REASONING_MEDIUM),
+    callAI(apiKey, INVEST_FUNDAMENTALS_SYSTEM, `Deep fundamental analysis of ${symbol} for long-term investment (1-10 years). ${dataCtx}`, M.fundamentals),
+    callAI(apiKey, INVEST_MOAT_SYSTEM, `Analyze competitive moat of ${symbol}. ${dataCtx}`, M.moat),
   ]);
 
   await sleep(1000);
@@ -580,17 +577,17 @@ async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string
     ]);
   }
 
-  // Step 4: Investment Committee WITH REASONING
+  // Step 4: Investment Committee
   const investmentManager = await callAI(apiKey, INVEST_MANAGER_SYSTEM,
     `Investment committee review for ${symbol} (1-10yr horizon).\nFUNDAMENTALS:\n${fundamentalsReport}\nMOAT:\n${moatReport}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nTECHNICAL:\n${marketReport}\nNEWS:\n${newsReport}`,
-    M.committee, REASONING_MEDIUM);
+    M.committee);
 
   await sleep(800);
 
-  // Step 5: Portfolio Architect WITH REASONING (final Buffett decision)
+  // Step 5: Portfolio Architect (final Buffett decision)
   const portfolioArchitect = await callAI(apiKey, INVEST_PORTFOLIO_SYSTEM,
     `Final long-term investment decision for ${symbol}.\n${analystContext}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nINVESTMENT COMMITTEE:\n${investmentManager}`,
-    M.architect, REASONING_HIGH);
+    M.architect);
 
   return {
     agents: {
@@ -603,8 +600,6 @@ async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string
 
 async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any, optionsConfig?: { riskReward?: string; tradeType?: string }) {
   const M = MODELS.options;
-  const REASONING_HIGH = { effort: "high" };
-  const REASONING_MEDIUM = { effort: "medium" };
   const rrFilter = optionsConfig?.riskReward || "1:2";
   const tradeType = optionsConfig?.tradeType || "all"; // intraday, swing, expiry, all
 
@@ -612,7 +607,7 @@ async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: strin
 
   // Step 1: OI Analysis + Greeks/IV in parallel (both use reasoning)
   const [oiReport, greeksReport] = await Promise.all([
-    callAI(apiKey, OPTIONS_OI_SYSTEM, `Full OI analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.oiAnalyst, REASONING_HIGH),
+    callAI(apiKey, OPTIONS_OI_SYSTEM, `Full OI analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.oiAnalyst),
     callAI(apiKey, OPTIONS_GREEKS_SYSTEM, `Greeks and IV analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.greeksAnalyst),
   ]);
 
@@ -625,7 +620,7 @@ async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: strin
 
   // Step 3: Strategy construction WITH REASONING
   const analystContext = `OI ANALYSIS:\n${oiReport}\n\nGREEKS & IV:\n${greeksReport}\n\nTECHNICAL (for strikes):\n${technicalReport}`;
-  const strategyReport = await callAI(apiKey, OPTIONS_STRATEGY_SYSTEM, `Construct optimal options strategies for ${symbol}.\nRisk:Reward filter: minimum ${rrFilter}\nTrade types needed: ${tradeType}\n${analystContext}\n${dataCtx}${configCtx}`, M.strategist, REASONING_HIGH);
+  const strategyReport = await callAI(apiKey, OPTIONS_STRATEGY_SYSTEM, `Construct optimal options strategies for ${symbol}.\nRisk:Reward filter: minimum ${rrFilter}\nTrade types needed: ${tradeType}\n${analystContext}\n${dataCtx}${configCtx}`, M.strategist);
 
   await sleep(800);
 
@@ -637,7 +632,7 @@ async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: strin
   // Step 5: Final options trade decision WITH REASONING
   const traderDecision = await callAI(apiKey, OPTIONS_TRADER_SYSTEM,
     `Final options trade decision for ${symbol}.\nRisk:Reward minimum: ${rrFilter}\nTrade type: ${tradeType}\n\nOI ANALYSIS:\n${oiReport}\nGREEKS:\n${greeksReport}\nTECHNICAL:\n${technicalReport}\nSTRATEGIES:\n${strategyReport}\nRISK ASSESSMENT:\n${riskReport}\n${dataCtx}`,
-    M.trader, REASONING_HIGH);
+    M.trader);
 
   return {
     agents: {
