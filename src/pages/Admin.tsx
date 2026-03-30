@@ -212,7 +212,7 @@ export default function Admin() {
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.2 }}
         >
-          {activeTab === 'dashboard' && <DashboardTab stats={stats} />}
+          {activeTab === 'dashboard' && <DashboardTab stats={stats} onNavigate={setActiveTab} />}
           {activeTab === 'features' && <FeaturesTab features={features} toggleFeature={toggleFeature} createFeature={createFeature} updateFeature={updateFeature} deleteFeature={deleteFeature} />}
           {activeTab === 'users' && (
             <UsersTab
