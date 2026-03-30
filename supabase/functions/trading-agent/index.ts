@@ -43,7 +43,7 @@ async function callAI(
   apiKey: string,
   system: string,
   user: string,
-  model = QUICK_MODEL
+  model: string
 ): Promise<string> {
   const resp = await fetch(AI_URL, {
     method: "POST",
