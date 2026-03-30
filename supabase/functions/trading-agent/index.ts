@@ -276,9 +276,9 @@ serve(async (req) => {
           MARKET_ANALYST_CHART_SYSTEM,
           `Analyze this chart for ${symbol} along with the data. ${dataCtx}`,
           chartImage,
-          VISION_MODEL
+          MODEL_MARKET_ANALYST
         )
-      : callAI(LOVABLE_API_KEY, MARKET_ANALYST_SYSTEM, `Analyze ${symbol}. ${dataCtx}`);
+      : callAI(LOVABLE_API_KEY, MARKET_ANALYST_SYSTEM, `Analyze ${symbol}. ${dataCtx}`, MODEL_MARKET_ANALYST);
 
     const [marketReport, sentimentReport, newsReport, fundamentalsReport] =
       await Promise.all([
