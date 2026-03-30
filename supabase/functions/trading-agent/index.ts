@@ -316,7 +316,7 @@ serve(async (req) => {
       LOVABLE_API_KEY,
       RESEARCH_MANAGER_SYSTEM,
       `Judge the investment debate for ${symbol}.\n\nBULL ARGUMENTS:\n${bullHistory}\n\nBEAR ARGUMENTS:\n${bearHistory}\n\nANALYST REPORTS:\n${analystContext}`,
-      DEEP_MODEL
+      MODEL_RESEARCH_MGR
     );
 
     // ── Step 5: Trader Agent ──
