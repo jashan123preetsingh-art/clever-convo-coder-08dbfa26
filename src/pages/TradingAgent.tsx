@@ -587,11 +587,13 @@ export default function TradingAgent() {
     setCurrentStep(0);
     setExpandAll(false);
 
+    let stepTimer: ReturnType<typeof setInterval> | null = null;
+
     try {
-      const stepTimer = setInterval(() => {
+      stepTimer = setInterval(() => {
         setCurrentStep(prev => {
           if (prev < steps.length - 1) return prev + 1;
-          clearInterval(stepTimer);
+          if (stepTimer) clearInterval(stepTimer);
           return prev;
         });
       }, mode === 'scalp' ? 4000 : mode === 'options' ? 6000 : 5000);
@@ -616,7 +618,8 @@ export default function TradingAgent() {
         body: JSON.stringify(bodyPayload),
       });
 
-      clearInterval(stepTimer);
+      if (stepTimer) clearInterval(stepTimer);
+      stepTimer = null;
 
       if (!resp.ok) {
         let errMsg = 'Agent failed';
@@ -629,18 +632,26 @@ export default function TradingAgent() {
         if (resp.status === 429) {
           toast.error('AI is busy right now. Please wait 30 seconds and try again.', { duration: 6000 });
         } else if (resp.status === 402) {
-          toast.error('AI credits temporarily unavailable. The system will retry with data-based analysis.', { duration: 6000 });
+          toast.error('AI credits temporarily unavailable. Please try again later.', { duration: 6000 });
         } else {
           toast.error(errMsg);
         }
-        throw new Error(errMsg);
+        setCurrentStep(-1);
+        return; // Don't throw — just return to avoid double error
       }
 
-      const data = await resp.json();
+      let data: any;
+      try {
+        data = await resp.json();
+      } catch {
+        toast.error('Failed to parse response from AI agent');
+        setCurrentStep(-1);
+        return;
+      }
+
       setResult(data);
       setCurrentStep(steps.length);
       
-      // Check if it was a fallback response
       const isFallback = data.agents?.optionsTrader?.includes('AI was temporarily busy');
       if (isFallback) {
         toast.success(`${config.label} data-based analysis ready for ${data.symbol}. Re-run later for full AI analysis.`, { duration: 5000 });
@@ -648,9 +659,8 @@ export default function TradingAgent() {
         toast.success(`${config.label} analysis complete for ${data.symbol}`);
       }
     } catch (err: any) {
-      if (!err.message?.includes('AI is busy') && !err.message?.includes('credits')) {
-        toast.error(err.message || 'Agent failed');
-      }
+      if (stepTimer) clearInterval(stepTimer);
+      toast.error(err.message || 'Something went wrong. Please try again.');
       setCurrentStep(-1);
     } finally {
       setLoading(false);
