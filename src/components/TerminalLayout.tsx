@@ -2,9 +2,9 @@ import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useStore from '@/store/useStore';
-import { INDICES, getAllStocks } from '@/data/mockData';
+import { INDICES as MOCK_INDICES, getAllStocks } from '@/data/mockData';
 import { formatPercent } from '@/utils/format';
-import { useStockSearch } from '@/hooks/useStockData';
+import { useStockSearch, useIndices } from '@/hooks/useStockData';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertBell } from '@/components/PriceAlerts';
 import { useTheme } from '@/hooks/useTheme';
@@ -37,6 +37,8 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const { data: searchResults } = useStockSearch(searchInput);
+  const { data: liveIndices } = useIndices();
+  const INDICES = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : MOCK_INDICES;
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
