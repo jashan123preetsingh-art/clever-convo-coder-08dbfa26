@@ -145,7 +145,7 @@ function compressImage(file: File, maxSize = 800): Promise<string> {
 /* ── Helpers ─────────────────────────── */
 function extractVerdict(agents: Record<string, string>, mode: TradeMode) {
   // Pick the final agent based on mode
-  const finalKey = mode === 'scalp' ? 'traderDecision' : mode === 'invest' ? 'portfolioArchitect' : 'portfolioManager';
+  const finalKey = mode === 'scalp' ? 'traderDecision' : mode === 'invest' ? 'portfolioArchitect' : mode === 'options' ? 'optionsTrader' : 'portfolioManager';
   const pm = agents[finalKey] || '';
   let action: 'BUY' | 'SELL' | 'HOLD' | 'INVEST' | 'PASS' = 'HOLD';
   const upper = pm.toUpperCase();
@@ -154,6 +154,10 @@ function extractVerdict(agents: Record<string, string>, mode: TradeMode) {
     if (upper.includes('INVEST') && !upper.includes('DON\'T INVEST')) action = 'INVEST';
     else if (upper.includes('PASS') || upper.includes('AVOID')) action = 'PASS';
     else if (upper.includes('BUY') || upper.includes('ACCUMULATE')) action = 'BUY';
+  } else if (mode === 'options') {
+    if (upper.includes('BUY') || upper.includes('BULL') || upper.includes('CALL')) action = 'BUY';
+    else if (upper.includes('SELL') || upper.includes('BEAR') || upper.includes('PUT') || upper.includes('SHORT')) action = 'SELL';
+    else if (upper.includes('NEUTRAL') || upper.includes('IRON CONDOR') || upper.includes('STRANGLE')) action = 'HOLD';
   } else {
     if (upper.includes('STRONG BUY') || (upper.includes('BUY') && !upper.includes('DON\'T BUY'))) action = 'BUY';
     else if (upper.includes('SELL') || upper.includes('SHORT')) action = 'SELL';
@@ -167,13 +171,19 @@ function extractVerdict(agents: Record<string, string>, mode: TradeMode) {
   const confMatch = pm.match(/confidence[:\s]*(\d+)\s*%?/i);
   if (confMatch) confidence = Math.min(100, Math.max(0, parseInt(confMatch[1])));
 
-  // Extract holding duration
   let duration = '';
-  const durMatch = pm.match(/(?:hold(?:ing)?|duration|horizon|time)[:\s]*([^\n,]+)/i);
+  const durMatch = pm.match(/(?:hold(?:ing)?|duration|horizon|time|type)[:\s]*([^\n,]+)/i);
   if (durMatch) duration = durMatch[1].trim();
 
+  // Extract strategy name for options mode
+  let strategy = '';
+  if (mode === 'options') {
+    const stratMatch = pm.match(/(?:strategy|primary)[:\s]*\**([^\n*]+)/i);
+    if (stratMatch) strategy = stratMatch[1].trim();
+  }
+
   const summary = pm.split(/[.\n]/)[0]?.trim() || 'Analysis complete.';
-  return { action, riskScore, confidence, summary, duration };
+  return { action, riskScore, confidence, summary, duration, strategy };
 }
 
 function detectSentiment(content: string): 'bullish' | 'bearish' | 'neutral' {
