@@ -691,11 +691,11 @@ export default function TradingAgent() {
 
       {/* Chart upload section - only for scalp/swing */}
       {mode !== 'invest' && (
-        <div className="rounded-2xl bg-card/50 border border-border/15 p-4 mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-base">📸</span>
-            <h3 className="text-[11px] font-bold text-foreground uppercase tracking-wider">Upload Chart for Visual Analysis</h3>
-            <span className="text-[8px] px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-semibold border border-[hsl(var(--terminal-cyan))]/20">Optional</span>
+        <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-border/15 p-3 sm:p-4 mb-4">
+          <div className="flex items-center gap-2 mb-2 sm:mb-3">
+            <span className="text-sm sm:text-base">📸</span>
+            <h3 className="text-[10px] sm:text-[11px] font-bold text-foreground uppercase tracking-wider">Chart Analysis</h3>
+            <span className="text-[7px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-semibold border border-[hsl(var(--terminal-cyan))]/20">Optional</span>
           </div>
 
           {chartImage ? (
