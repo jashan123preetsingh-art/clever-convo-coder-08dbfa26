@@ -175,7 +175,7 @@ export default function Index() {
             Trade Smarter.<br /><span className="text-gradient-primary">Starting Now.</span>
           </h2>
           <p className="text-sm text-muted-foreground max-w-md mx-auto mb-10 leading-relaxed">
-            Join thousands of traders using StockPulse to analyze markets, spot opportunities, and execute with confidence.
+            Join thousands of traders using Trade Arsenal to analyze markets, spot opportunities, and execute with confidence.
           </p>
           <Link to="/auth"
             className="inline-flex items-center gap-2 px-10 py-4 rounded-2xl text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-xl shadow-primary/25">
