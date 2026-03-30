@@ -54,12 +54,12 @@ const MODELS = {
     architect:    "openai/gpt-5",            // Final Buffett-style decision with reasoning
   },
   options: {
-    oiAnalyst:    "openai/gpt-5",            // Deep OI pattern recognition with reasoning
-    greeksAnalyst:"openai/gpt-5.2",          // Precise Greeks & IV analysis
-    technical:    "openai/gpt-5.2",          // Price action for strike selection
-    strategist:   "openai/gpt-5",            // Strategy construction with reasoning
-    riskManager:  "google/gemini-2.5-pro",   // Thorough risk assessment
-    trader:       "openai/gpt-5",            // Final options trade with reasoning
+    oiAnalyst:    "google/gemini-2.5-flash",     // Fast OI pattern recognition
+    greeksAnalyst:"google/gemini-3-flash-preview", // Fast Greeks & IV analysis
+    technical:    "google/gemini-2.5-flash",     // Price action for strike selection
+    strategist:   "google/gemini-2.5-flash",     // Strategy construction
+    riskManager:  "google/gemini-3-flash-preview", // Risk assessment
+    trader:       "google/gemini-2.5-flash",     // Final options trade
   },
 };
 
