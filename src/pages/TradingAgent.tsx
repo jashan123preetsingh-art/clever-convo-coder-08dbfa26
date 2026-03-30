@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Copy, Download, ChevronDown, Check, Image as ImageIcon, X, Zap, TrendingUp, Landmark } from 'lucide-react';
+import { Copy, Download, ChevronDown, Check, Image as ImageIcon, X, Zap, TrendingUp, Landmark, Target } from 'lucide-react';
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-type TradeMode = 'scalp' | 'swing' | 'invest';
+type TradeMode = 'scalp' | 'swing' | 'invest' | 'options';
 
 interface AgentResult {
   symbol: string;
