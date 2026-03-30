@@ -304,8 +304,8 @@ serve(async (req) => {
           : `${analystContext}\n\nPREVIOUS BULL ARGUMENT:\n${bullCase}\n\nPREVIOUS BEAR ARGUMENT:\n${bearCase}`;
 
       [bullCase, bearCase] = await Promise.all([
-        callAI(LOVABLE_API_KEY, BULL_RESEARCHER_SYSTEM, `Round ${round + 1} bull case for ${symbol}.\n${debateCtx}`),
-        callAI(LOVABLE_API_KEY, BEAR_RESEARCHER_SYSTEM, `Round ${round + 1} bear case for ${symbol}.\n${debateCtx}`),
+        callAI(LOVABLE_API_KEY, BULL_RESEARCHER_SYSTEM, `Round ${round + 1} bull case for ${symbol}.\n${debateCtx}`, MODEL_BULL),
+        callAI(LOVABLE_API_KEY, BEAR_RESEARCHER_SYSTEM, `Round ${round + 1} bear case for ${symbol}.\n${debateCtx}`, MODEL_BEAR),
       ]);
       bullHistory += `\n[Round ${round + 1}] ${bullCase}`;
       bearHistory += `\n[Round ${round + 1}] ${bearCase}`;
