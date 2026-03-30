@@ -171,10 +171,10 @@ Identify:
 - Trend direction and strength (uptrend, downtrend, sideways)
 - Key chart patterns (head & shoulders, triangles, flags, wedges, double top/bottom, cup & handle, channels)
 - Candlestick patterns (doji, engulfing, hammer, shooting star, morning/evening star)
-- Support and resistance zones (mark specific ₹ levels)
+- Support and resistance zones, supply & demand zones (mark specific ₹ levels)
 - Indicator readings if visible (RSI, MACD, Bollinger Bands, volume bars)
 - Volume analysis and divergences
-- Moving average crossovers or tests
+- Moving average crossovers or tests (SMA20, SMA50, SMA200)
 Combine the visual analysis with the numerical data for a complete picture.
 Be specific with ₹ price levels. Keep under 300 words.`;
 
