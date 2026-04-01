@@ -281,10 +281,10 @@ export default function Heatmap() {
                           <rect
                             x={x + 0.5} y={y + 0.5}
                             width={Math.max(w - 1, 1)} height={Math.max(h - 1, 1)}
-                            fill={getHeatColor(node.change_pct)}
+                          fill={getHeatColor(node.change_pct, isDark)}
                             rx="2" ry="2"
                             className="cursor-pointer transition-opacity hover:opacity-80"
-                            stroke="hsl(225, 25%, 8%)" strokeWidth="0.5"
+                            stroke={isDark ? 'hsl(225, 25%, 8%)' : 'hsl(225, 15%, 92%)'} strokeWidth="0.5"
                           />
                           {isLarge && (
                             <>
