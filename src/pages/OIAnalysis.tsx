@@ -185,7 +185,7 @@ export default function OIAnalysis() {
       </div>
 
       {/* Market Interpretation */}
-      <div}
+      <div
         className="t-card p-4">
         <div className="flex items-center gap-3 mb-2">
           <span className="text-sm">🧠</span>
@@ -224,7 +224,7 @@ export default function OIAnalysis() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Call vs Put OI Distribution */}
-        <div}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put OI Distribution</p>
           <p className="text-[8px] text-muted-foreground mb-3">Strikewise open interest comparison</p>
@@ -244,7 +244,7 @@ export default function OIAnalysis() {
         </div>
 
         {/* OI Change Chart */}
-        <div}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">OI Change by Strike</p>
           <p className="text-[8px] text-muted-foreground mb-3">Today's OI additions/reductions per strike</p>
@@ -275,7 +275,7 @@ export default function OIAnalysis() {
       {/* PCR Trend + Net OI */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* PCR Trend */}
-        <div}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">PCR Trend (10 Sessions)</p>
           <p className="text-[8px] text-muted-foreground mb-3">Put-Call Ratio over recent sessions</p>
@@ -298,7 +298,7 @@ export default function OIAnalysis() {
         </div>
 
         {/* Call vs Put OI Trend */}
-        <div}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put OI Trend</p>
           <p className="text-[8px] text-muted-foreground mb-3">Total Call & Put OI over sessions</p>
@@ -320,7 +320,7 @@ export default function OIAnalysis() {
       <OIChangeHeatmap chain={chain} symbol={activeSymbol} />
 
       {/* Net OI Chart */}
-      <div}
+      <div
         className="t-card p-4">
         <p className="text-[11px] font-bold text-foreground mb-1">Net OI (Put - Call) by Strike</p>
         <p className="text-[8px] text-muted-foreground mb-3">Positive = Bullish bias, Negative = Bearish bias</p>
@@ -343,7 +343,7 @@ export default function OIAnalysis() {
 
       {/* ═══ IV Surface ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">IV Smile — {activeSymbol}</p>
           <p className="text-[8px] text-muted-foreground mb-3">Implied Volatility across strikes (Call IV vs Put IV)</p>
@@ -367,7 +367,7 @@ export default function OIAnalysis() {
         </div>
 
         {/* IV Skew */}
-        <div}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">IV Skew (Put IV - Call IV)</p>
           <p className="text-[8px] text-muted-foreground mb-3">Positive = Put premium {'>'} Call premium (fear) • Negative = Calls richer</p>
@@ -393,7 +393,7 @@ export default function OIAnalysis() {
 
       {/* ═══ Straddle & Strangle Premium ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">Straddle Premium by Strike</p>
           <p className="text-[8px] text-muted-foreground mb-3">CE + PE premium at each strike — ATM straddle shows expected move</p>
@@ -432,7 +432,7 @@ export default function OIAnalysis() {
         </div>
 
         {/* Strangle Premium */}
-        <div}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put Premium</p>
           <p className="text-[8px] text-muted-foreground mb-3">Individual CE and PE premium across strikes</p>
@@ -456,7 +456,7 @@ export default function OIAnalysis() {
       </div>
 
       {/* IV Surface 3D-like Heatmap */}
-      <div}
+      <div
         className="t-card p-4">
         <p className="text-[11px] font-bold text-foreground mb-1">IV Surface — {activeSymbol}</p>
         <p className="text-[8px] text-muted-foreground mb-3">Implied Volatility heatmap across strikes — darker = higher IV</p>
