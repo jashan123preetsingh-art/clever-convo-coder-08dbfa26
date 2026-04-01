@@ -8,7 +8,7 @@ import { getAllStocks } from '@/data/mockData';
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-type TradeMode = 'scalp' | 'swing' | 'invest' | 'options';
+type TradeMode = 'scalp' | 'swing' | 'invest';
 
 interface AgentResult {
   symbol: string;
