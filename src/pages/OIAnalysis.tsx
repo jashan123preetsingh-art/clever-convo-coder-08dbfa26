@@ -101,10 +101,12 @@ export default function OIAnalysis() {
   // Fetch live OI from NSE, fallback to mock
   const { data: liveOI, isLoading: oiLoading } = useOptionsChain(activeSymbol);
   const data = useMemo(() => {
-    if (liveOI?.chain?.length > 0 && liveOI.live) return liveOI;
+    // Accept both live Yahoo data AND VIX-estimated data (live: false but valid chain)
+    if (liveOI?.chain?.length > 0) return liveOI;
     return generateOptionsChain(activeSymbol);
   }, [activeSymbol, liveOI, tick]);
-  const isLive = liveOI?.live === true && liveOI?.chain?.length > 0;
+  const isLive = liveOI?.chain?.length > 0;
+  const dataSource = liveOI?.source || 'mock';
   const { chain, underlyingValue, analytics } = data;
 
   // Build OI distribution chart data
@@ -148,8 +150,9 @@ export default function OIAnalysis() {
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-bold text-foreground tracking-wide">OI ANALYSIS</h1>
               {isLive && (
-                <span className="text-[7px] text-primary font-bold flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)] animate-pulse" /> LIVE · NSE
+                <span className={`text-[7px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-full ${dataSource === 'yahoo' ? 'text-primary bg-primary/10' : 'text-accent bg-accent/10'}`}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)] animate-pulse" /> 
+                  {dataSource === 'yahoo' ? 'LIVE · Yahoo' : dataSource === 'vix-estimate' ? 'VIX EST.' : 'LIVE'}
                 </span>
               )}
               {oiLoading && (
@@ -157,7 +160,7 @@ export default function OIAnalysis() {
               )}
             </div>
             <p className="text-[9px] text-muted-foreground">
-              {isLive ? `Live OI from NSE • Auto-refreshes every 60s • ${liveOI?.timestamp || ''}` : 'Open Interest trends, OI Change Heatmap & PCR Charts for Index F&O'}
+              {isLive ? `${activeSymbol} OI Data • Auto-refreshes every 60s • ${liveOI?.timestamp || ''}` : 'Open Interest trends, OI Change Heatmap & PCR Charts for Index F&O'}
             </p>
           </div>
           <div className="flex items-center gap-1.5">
