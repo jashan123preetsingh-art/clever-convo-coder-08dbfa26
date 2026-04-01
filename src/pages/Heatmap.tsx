@@ -289,11 +289,11 @@ export default function Heatmap() {
                           {isLarge && (
                             <>
                               <text x={x + w / 2} y={y + h / 2 - 6} textAnchor="middle"
-                                fill={getTextColor(node.change_pct)} fontSize="12" fontWeight="700" fontFamily="Inter, sans-serif">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="12" fontWeight="700" fontFamily="Inter, sans-serif">
                                 {node.symbol}
                               </text>
                               <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
-                                fill={getTextColor(node.change_pct)} fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">
                                 {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(2)}%
                               </text>
                             </>
