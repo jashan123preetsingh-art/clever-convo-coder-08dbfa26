@@ -569,6 +569,7 @@ serve(async (req) => {
       case "batch": result = await getBatchQuotes(symbols); break;
       case "search": result = await searchStocks(query); break;
       case "indices": result = await getIndices(); break;
+      case "options-chain": result = await fetchNSEOptionsChain(symbol || "NIFTY"); break;
       default: result = { error: "Unknown action" };
     }
 
