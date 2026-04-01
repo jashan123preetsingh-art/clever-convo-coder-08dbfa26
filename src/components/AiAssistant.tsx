@@ -40,32 +40,6 @@ function getDisplayContent(content: MessageContent): string {
   return textPart && 'text' in textPart ? textPart.text : '';
 }
 
-function compressImage(file: File, maxSize = 800): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-        if (width > maxSize || height > maxSize) {
-          const ratio = Math.min(maxSize / width, maxSize / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-      img.onerror = reject;
-      img.src = reader.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function AiAssistant() {
   const [open, setOpen] = useState(false);
