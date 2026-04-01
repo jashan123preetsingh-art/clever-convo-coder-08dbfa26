@@ -33,7 +33,7 @@ async function fetchLiveNews() {
   return data.news as { title: string; source: string; category: string; published_at: string; url: string }[];
 }
 
-const fadeUp = { hidden: { opacity: 0, y: 6 }, visible: { opacity: 1, y: 0 } };
+
 
 export default function Dashboard() {
   const { indices, hasLiveData, isUsingMockData, isError } = useIndicesWithFallback();
