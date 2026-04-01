@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Sparkles, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { usePortfolio, PortfolioPosition } from '@/hooks/usePortfolio';
 import { useBatchQuotes, useStockSearch } from '@/hooks/useStockData';
