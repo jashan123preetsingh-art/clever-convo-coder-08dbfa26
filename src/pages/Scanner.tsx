@@ -209,43 +209,46 @@ const DEFAULT_SCANS: ScanPreset[] = [
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 2 },
     ] },
 
-  // ─── EMA ───
-  { id: 'ema1', name: 'Golden Crossover', description: 'Price > 50 EMA crossing above 200 EMA zone', icon: '✨', category: 'ema',
+  // ─── EMA (real EMA data) ───
+  { id: 'ema1', name: 'Golden Crossover', description: 'EMA 50 crossing above EMA 200 — bullish', icon: '✨', category: 'ema',
     conditions: [
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.0 },
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0.5', compareMeasure: '', multiplier: 1 },
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'week_52_low', multiplier: 1.3 },
+      { measure: 'ema50', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
     ] },
-  { id: 'ema2', name: 'Death Crossover', description: 'Price below key EMAs – bearish signal', icon: '💀', category: 'ema',
+  { id: 'ema2', name: 'Death Crossover', description: 'EMA 50 below EMA 200 — bearish', icon: '💀', category: 'ema',
     conditions: [
-      { measure: 'change_pct', operator: '<', compareType: 'number', value: '-0.5', compareMeasure: '', multiplier: 1 },
-      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'week_52_high', multiplier: 0.8 },
+      { measure: 'ema50', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
+      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
     ] },
   { id: 'ema3', name: 'EMA 20 > EMA 50 Crossover', description: 'Short-term trend turning bullish', icon: '📊', category: 'ema',
     conditions: [
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0.3', compareMeasure: '', multiplier: 1 },
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.003 },
+      { measure: 'ema20', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.0 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.2 },
     ] },
-  { id: 'ema4', name: 'Price Above All EMAs', description: 'Above 20, 50, 100, 200 EMA – strong uptrend', icon: '🟢', category: 'ema',
+  { id: 'ema4', name: 'Price Above All EMAs', description: 'Above EMA 20, 50, 100, 200 — strong uptrend', icon: '🟢', category: 'ema',
     conditions: [
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'week_52_low', multiplier: 1.5 },
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
     ] },
-  { id: 'ema5', name: 'Price Below All EMAs', description: 'Below all key EMAs – strong downtrend', icon: '🔴', category: 'ema',
+  { id: 'ema5', name: 'Price Below All EMAs', description: 'Below all key EMAs — strong downtrend', icon: '🔴', category: 'ema',
     conditions: [
-      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'week_52_high', multiplier: 0.7 },
+      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.0 },
+      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
+      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
     ] },
-  { id: 'ema6', name: 'EMA Bounce (20 EMA Support)', description: 'Price bouncing off 20 EMA support', icon: '↗️', category: 'ema',
+  { id: 'ema6', name: 'EMA 20 Bounce', description: 'Price bouncing off EMA 20 support with volume', icon: '↗️', category: 'ema',
     conditions: [
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '1', compareMeasure: '', multiplier: 1 },
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'low', multiplier: 1.01 },
-      { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.2 },
+      { measure: 'low', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.01 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.0 },
+      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0.5', compareMeasure: '', multiplier: 1 },
     ] },
-  { id: 'ema7', name: 'Bullish EMA Stack', description: '20>50>100>200 EMA alignment – momentum', icon: '📈', category: 'ema',
+  { id: 'ema7', name: 'Bullish EMA Stack', description: 'EMA 20 > 50 > 100 > 200 alignment — momentum', icon: '📈', category: 'ema',
     conditions: [
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'week_52_low', multiplier: 1.4 },
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0', compareMeasure: '', multiplier: 1 },
+      { measure: 'ema20', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
+      { measure: 'ema50', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema100', multiplier: 1.0 },
+      { measure: 'ema100', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
     ] },
 
   // ─── MOMENTUM ───
