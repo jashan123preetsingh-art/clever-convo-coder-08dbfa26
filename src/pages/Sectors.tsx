@@ -44,8 +44,32 @@ export default function Sectors() {
 
   if (paramSector) {
     const decoded = decodeURIComponent(paramSector);
-    const stocks = getStocksBySector(decoded);
+    const rawStocks = getStocksBySector(decoded);
     const sectorData = sectors.find(s => s.sector === decoded);
+
+    // Fetch live prices for all stocks in this sector
+    const symbols = rawStocks.map(s => s.symbol);
+    const { data: liveQuotes } = useBatchQuotes(symbols);
+
+    const stocks = useMemo(() => {
+      const quoteMap: Record<string, any> = {};
+      if (Array.isArray(liveQuotes)) {
+        liveQuotes.forEach((q: any) => {
+          if (q?.data && q.symbol) quoteMap[q.symbol] = q.data;
+        });
+      }
+      return rawStocks.map(s => {
+        const live = quoteMap[s.symbol];
+        if (!live) return s;
+        return {
+          ...s,
+          ltp: live.ltp ?? s.ltp,
+          change: live.change ?? s.change,
+          change_pct: live.change_pct ?? s.change_pct,
+          volume: live.volume ?? s.volume,
+        };
+      });
+    }, [rawStocks, liveQuotes]);
 
     return (
       <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
