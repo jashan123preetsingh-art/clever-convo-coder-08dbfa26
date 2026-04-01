@@ -51,6 +51,7 @@ function AddPositionForm({ onSubmit }: { onSubmit: (data: { symbol: string; entr
 }
 
 function PositionRow({ pos, ltp, onClose, onDelete }: { pos: PortfolioPosition; ltp?: number; onClose: (id: string, price: number) => void; onDelete: (id: string) => void }) {
+  const hasLivePrice = pos.status === 'closed' || ltp != null;
   const currentPrice = pos.status === 'closed' ? pos.exit_price! : (ltp ?? pos.entry_price);
   const pnl = (currentPrice - pos.entry_price) * pos.quantity * (pos.trade_type === 'sell' ? -1 : 1);
   const pnlPct = ((currentPrice - pos.entry_price) / pos.entry_price) * 100 * (pos.trade_type === 'sell' ? -1 : 1);
