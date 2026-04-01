@@ -706,23 +706,74 @@ export default function Scanner() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
+  const [emaData, setEmaData] = useState<Record<string, any>>({});
+  const [emaLoading, setEmaLoading] = useState(false);
+
+  // Fetch EMA data once for EMA scans (cached for 5 min via react-query in hook, but here we do it imperatively)
+  const fetchEMAData = useCallback(async () => {
+    if (Object.keys(emaData).length > 0) return emaData; // already loaded
+    setEmaLoading(true);
+    try {
+      const stocks = getAllStocks();
+      // Fetch in batches of 30
+      const allSymbols = stocks.map(s => s.symbol);
+      const batches: string[][] = [];
+      for (let i = 0; i < allSymbols.length; i += 30) batches.push(allSymbols.slice(i, i + 30));
+      
+      const results = await Promise.all(batches.map(b => stockApi.getBatchEMA(b).catch(() => [])));
+      const map: Record<string, any> = {};
+      for (const batch of results) {
+        if (!Array.isArray(batch)) continue;
+        for (const item of batch) {
+          if (item.emas) map[item.symbol] = item;
+        }
+      }
+      setEmaData(map);
+      return map;
+    } catch {
+      return {};
+    } finally {
+      setEmaLoading(false);
+    }
+  }, [emaData]);
 
   const scanCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    DEFAULT_SCANS.forEach(s => { counts[s.id] = runConditions(s.conditions).length; });
+    DEFAULT_SCANS.forEach(s => {
+      // Skip EMA scans in count if no EMA data loaded yet
+      if (scanUsesEMA(s.conditions) && Object.keys(emaData).length === 0) {
+        counts[s.id] = -1; // will show "..." 
+      } else {
+        counts[s.id] = runConditions(s.conditions, emaData).length;
+      }
+    });
     return counts;
-  }, []);
+  }, [emaData]);
 
   const filteredScans = useMemo(() => {
     if (selectedCategory === 'all') return DEFAULT_SCANS;
     return DEFAULT_SCANS.filter(s => s.category === selectedCategory);
   }, [selectedCategory]);
 
-  const selectScan = useCallback((scan: ScanPreset) => {
+  const selectScan = useCallback(async (scan: ScanPreset) => {
     setActiveScan(scan);
-    setScanResults(runConditions(scan.conditions));
     setPage(0); setSearch(''); setSortKey('change_pct'); setSortDir('desc'); setExpandedStock(null);
-  }, []);
+    
+    if (scanUsesEMA(scan.conditions)) {
+      // Fetch EMA data first, then run conditions
+      const data = await fetchEMAData();
+      setScanResults(runConditions(scan.conditions, data));
+    } else {
+      setScanResults(runConditions(scan.conditions, emaData));
+    }
+  }, [fetchEMAData, emaData]);
+
+  // Auto-fetch EMA data when EMA category is selected
+  useEffect(() => {
+    if (selectedCategory === 'ema' && Object.keys(emaData).length === 0) {
+      fetchEMAData();
+    }
+  }, [selectedCategory]);
 
   const sortedResults = useMemo(() => {
     if (!scanResults) return null;
