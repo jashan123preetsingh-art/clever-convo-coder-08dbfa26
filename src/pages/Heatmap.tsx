@@ -276,17 +276,32 @@ export default function Heatmap() {
         <div className="relative rounded-lg overflow-hidden border border-border/40" style={{ width: '100%', paddingBottom: `${(HEIGHT / WIDTH) * 100}%` }}>
           <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
             {sectorLayout.map((sec) => {
-              const stockLayout = squarify(sec.stocks, sec.x, sec.y, sec.w, sec.h);
+              const HEADER_H = sec.h > 50 ? 16 : 0;
+              const stockArea = { x: sec.x, y: sec.y + HEADER_H, w: sec.w, h: Math.max(sec.h - HEADER_H, 0) };
+              const stockLayout = squarify(sec.stocks, stockArea.x, stockArea.y, stockArea.w, stockArea.h);
 
               return (
                 <g key={sec.sector}>
-                  {sec.w > 80 && sec.h > 30 && (
-                    <text x={sec.x + 5} y={sec.y + 12}
-                      fill={isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)'} fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif">
-                      {sec.sector} ›
-                    </text>
+                  {/* Sector border */}
+                  <rect
+                    x={sec.x} y={sec.y} width={sec.w} height={sec.h}
+                    fill="none" stroke={isDark ? 'hsl(225, 30%, 14%)' : 'hsl(225, 15%, 85%)'} strokeWidth="2"
+                  />
+
+                  {/* Sector header bar */}
+                  {HEADER_H > 0 && sec.w > 60 && (
+                    <>
+                      <rect x={sec.x + 1} y={sec.y + 1} width={sec.w - 2} height={HEADER_H - 1}
+                        fill={isDark ? 'hsla(225, 25%, 8%, 0.85)' : 'hsla(225, 15%, 95%, 0.85)'} />
+                      <text x={sec.x + 8} y={sec.y + 11.5}
+                        fill={isDark ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'} fontSize="10" fontWeight="700" fontFamily="Inter, sans-serif"
+                        style={{ textTransform: 'uppercase' as const, letterSpacing: '0.5px' }}>
+                        {sec.sector} ›
+                      </text>
+                    </>
                   )}
 
+                  {/* Stock tiles */}
                   {stockLayout.map(({ node, x, y, w, h }) => {
                     const isLarge = w > 60 && h > 40;
                     const isMedium = w > 40 && h > 28;
@@ -297,7 +312,7 @@ export default function Heatmap() {
                           <rect
                             x={x + 0.5} y={y + 0.5}
                             width={Math.max(w - 1, 1)} height={Math.max(h - 1, 1)}
-                          fill={getHeatColor(node.change_pct, isDark)}
+                            fill={getHeatColor(node.change_pct, isDark)}
                             rx="2" ry="2"
                             className="cursor-pointer transition-opacity hover:opacity-80"
                             stroke={isDark ? 'hsl(225, 25%, 8%)' : 'hsl(225, 15%, 92%)'} strokeWidth="0.5"
@@ -336,11 +351,6 @@ export default function Heatmap() {
                       </g>
                     );
                   })}
-
-                  <rect
-                    x={sec.x} y={sec.y} width={sec.w} height={sec.h}
-                    fill="none" stroke={isDark ? 'hsl(225, 25%, 8%)' : 'hsl(225, 15%, 95%)'} strokeWidth="2"
-                  />
                 </g>
               );
             })}
