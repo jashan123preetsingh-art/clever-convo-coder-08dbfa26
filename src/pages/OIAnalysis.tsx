@@ -91,13 +91,19 @@ function OIChangeHeatmap({ chain, symbol }: { chain: any[]; symbol: string }) {
 
 export default function OIAnalysis() {
   const [activeSymbol, setActiveSymbol] = useState<typeof SYMBOLS[number]>('NIFTY');
+  // Tick counter to force mock data regeneration every 60s when not live
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch live OI from NSE, fallback to mock
   const { data: liveOI, isLoading: oiLoading } = useOptionsChain(activeSymbol);
   const data = useMemo(() => {
     if (liveOI?.chain?.length > 0 && liveOI.live) return liveOI;
     return generateOptionsChain(activeSymbol);
-  }, [activeSymbol, liveOI]);
+  }, [activeSymbol, liveOI, tick]);
   const isLive = liveOI?.live === true && liveOI?.chain?.length > 0;
   const { chain, underlyingValue, analytics } = data;
 
