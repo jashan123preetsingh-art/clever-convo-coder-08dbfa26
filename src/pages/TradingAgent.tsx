@@ -750,11 +750,15 @@ export default function TradingAgent() {
       setResult(data);
       setCurrentStep(steps.length);
       
-      const isFallback = data.agents?.optionsTrader?.includes('AI was temporarily busy');
-      if (isFallback) {
-        toast.success(`${config.label} data-based analysis ready for ${data.symbol}. Re-run later for full AI analysis.`, { duration: 5000 });
+      if (data.cached) {
+        toast.success(`${config.label} cached result for ${data.symbol} (saves credits!) ⚡`, { duration: 4000 });
       } else {
-        toast.success(`${config.label} analysis complete for ${data.symbol}`);
+        const isFallback = data.agents?.optionsTrader?.includes('AI was temporarily busy');
+        if (isFallback) {
+          toast.success(`${config.label} data-based analysis ready for ${data.symbol}. Re-run later for full AI analysis.`, { duration: 5000 });
+        } else {
+          toast.success(`${config.label} analysis complete for ${data.symbol}`);
+        }
       }
     } catch (err: any) {
       if (stepTimer) clearInterval(stepTimer);
