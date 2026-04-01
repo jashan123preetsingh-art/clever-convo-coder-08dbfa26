@@ -158,12 +158,7 @@ function extractVerdict(agents: Record<string, string>, mode: TradeMode) {
   const durMatch = pm.match(/(?:hold(?:ing)?|duration|horizon|time|type)[:\s]*([^\n,]+)/i);
   if (durMatch) duration = durMatch[1].trim();
 
-  // Extract strategy name for options mode
   let strategy = '';
-  if (mode === 'options') {
-    const stratMatch = pm.match(/(?:strategy|primary)[:\s]*\**([^\n*]+)/i);
-    if (stratMatch) strategy = stratMatch[1].trim();
-  }
 
   const summary = pm.split(/[.\n]/)[0]?.trim() || 'Analysis complete.';
   return { action, riskScore, confidence, summary, duration, strategy };
