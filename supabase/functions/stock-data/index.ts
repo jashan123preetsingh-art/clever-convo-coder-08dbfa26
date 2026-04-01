@@ -380,23 +380,145 @@ async function getBatchQuotes(symbols: string[]) {
   }));
 }
 
+// Popular NSE stocks for local fallback search
+const NSE_STOCKS: Array<{ symbol: string; name: string }> = [
+  { symbol: "RELIANCE", name: "Reliance Industries Limited" },
+  { symbol: "TCS", name: "Tata Consultancy Services Limited" },
+  { symbol: "HDFCBANK", name: "HDFC Bank Limited" },
+  { symbol: "INFY", name: "Infosys Limited" },
+  { symbol: "ICICIBANK", name: "ICICI Bank Limited" },
+  { symbol: "HINDUNILVR", name: "Hindustan Unilever Limited" },
+  { symbol: "ITC", name: "ITC Limited" },
+  { symbol: "SBIN", name: "State Bank of India" },
+  { symbol: "BHARTIARTL", name: "Bharti Airtel Limited" },
+  { symbol: "KOTAKBANK", name: "Kotak Mahindra Bank Limited" },
+  { symbol: "LT", name: "Larsen & Toubro Limited" },
+  { symbol: "AXISBANK", name: "Axis Bank Limited" },
+  { symbol: "WIPRO", name: "Wipro Limited" },
+  { symbol: "HCLTECH", name: "HCL Technologies Limited" },
+  { symbol: "ASIANPAINT", name: "Asian Paints Limited" },
+  { symbol: "MARUTI", name: "Maruti Suzuki India Limited" },
+  { symbol: "SUNPHARMA", name: "Sun Pharmaceutical Industries Limited" },
+  { symbol: "TATAMOTORS", name: "Tata Motors Limited" },
+  { symbol: "TATASTEEL", name: "Tata Steel Limited" },
+  { symbol: "BAJFINANCE", name: "Bajaj Finance Limited" },
+  { symbol: "BAJAJFINSV", name: "Bajaj Finserv Limited" },
+  { symbol: "TITAN", name: "Titan Company Limited" },
+  { symbol: "NESTLEIND", name: "Nestle India Limited" },
+  { symbol: "ULTRACEMCO", name: "UltraTech Cement Limited" },
+  { symbol: "ADANIENT", name: "Adani Enterprises Limited" },
+  { symbol: "ADANIPORTS", name: "Adani Ports and Special Economic Zone Limited" },
+  { symbol: "POWERGRID", name: "Power Grid Corporation of India Limited" },
+  { symbol: "NTPC", name: "NTPC Limited" },
+  { symbol: "ONGC", name: "Oil and Natural Gas Corporation Limited" },
+  { symbol: "JSWSTEEL", name: "JSW Steel Limited" },
+  { symbol: "M&M", name: "Mahindra & Mahindra Limited" },
+  { symbol: "TECHM", name: "Tech Mahindra Limited" },
+  { symbol: "DRREDDY", name: "Dr. Reddy's Laboratories Limited" },
+  { symbol: "DIVISLAB", name: "Divi's Laboratories Limited" },
+  { symbol: "CIPLA", name: "Cipla Limited" },
+  { symbol: "COALINDIA", name: "Coal India Limited" },
+  { symbol: "BPCL", name: "Bharat Petroleum Corporation Limited" },
+  { symbol: "GRASIM", name: "Grasim Industries Limited" },
+  { symbol: "INDUSINDBK", name: "IndusInd Bank Limited" },
+  { symbol: "EICHERMOT", name: "Eicher Motors Limited" },
+  { symbol: "HEROMOTOCO", name: "Hero MotoCorp Limited" },
+  { symbol: "APOLLOHOSP", name: "Apollo Hospitals Enterprise Limited" },
+  { symbol: "TATACONSUM", name: "Tata Consumer Products Limited" },
+  { symbol: "BRITANNIA", name: "Britannia Industries Limited" },
+  { symbol: "PIDILITIND", name: "Pidilite Industries Limited" },
+  { symbol: "DABUR", name: "Dabur India Limited" },
+  { symbol: "GODREJCP", name: "Godrej Consumer Products Limited" },
+  { symbol: "HAVELLS", name: "Havells India Limited" },
+  { symbol: "BIOCON", name: "Biocon Limited" },
+  { symbol: "SBILIFE", name: "SBI Life Insurance Company Limited" },
+  { symbol: "HDFCLIFE", name: "HDFC Life Insurance Company Limited" },
+  { symbol: "ICICIPRULI", name: "ICICI Prudential Life Insurance Company Limited" },
+  { symbol: "BAJAJ-AUTO", name: "Bajaj Auto Limited" },
+  { symbol: "SHREECEM", name: "Shree Cement Limited" },
+  { symbol: "HINDALCO", name: "Hindalco Industries Limited" },
+  { symbol: "TRENT", name: "Trent Limited" },
+  { symbol: "ZOMATO", name: "Zomato Limited" },
+  { symbol: "PAYTM", name: "One97 Communications Limited (Paytm)" },
+  { symbol: "NYKAA", name: "FSN E-Commerce Ventures Limited (Nykaa)" },
+  { symbol: "DELHIVERY", name: "Delhivery Limited" },
+  { symbol: "HAL", name: "Hindustan Aeronautics Limited" },
+  { symbol: "BEL", name: "Bharat Electronics Limited" },
+  { symbol: "IRCTC", name: "Indian Railway Catering and Tourism Corporation Limited" },
+  { symbol: "IRFC", name: "Indian Railway Finance Corporation Limited" },
+  { symbol: "PNB", name: "Punjab National Bank" },
+  { symbol: "BANKBARODA", name: "Bank of Baroda" },
+  { symbol: "CANBK", name: "Canara Bank" },
+  { symbol: "VEDL", name: "Vedanta Limited" },
+  { symbol: "JINDALSTEL", name: "Jindal Steel & Power Limited" },
+  { symbol: "SAIL", name: "Steel Authority of India Limited" },
+  { symbol: "TATAPOWER", name: "Tata Power Company Limited" },
+  { symbol: "ADANIGREEN", name: "Adani Green Energy Limited" },
+  { symbol: "ADANIPOWER", name: "Adani Power Limited" },
+  { symbol: "RPOWER", name: "Reliance Power Limited" },
+  { symbol: "DLF", name: "DLF Limited" },
+  { symbol: "GODREJPROP", name: "Godrej Properties Limited" },
+  { symbol: "OBEROIRLTY", name: "Oberoi Realty Limited" },
+  { symbol: "PRESTIGE", name: "Prestige Estates Projects Limited" },
+  { symbol: "IDEA", name: "Vodafone Idea Limited" },
+  { symbol: "YESBANK", name: "Yes Bank Limited" },
+  { symbol: "IDFCFIRSTB", name: "IDFC First Bank Limited" },
+  { symbol: "FEDERALBNK", name: "Federal Bank Limited" },
+  { symbol: "BANDHANBNK", name: "Bandhan Bank Limited" },
+  { symbol: "ASHOKLEY", name: "Ashok Leyland Limited" },
+  { symbol: "BHEL", name: "Bharat Heavy Electricals Limited" },
+  { symbol: "GAIL", name: "GAIL (India) Limited" },
+  { symbol: "IOC", name: "Indian Oil Corporation Limited" },
+  { symbol: "HINDPETRO", name: "Hindustan Petroleum Corporation Limited" },
+  { symbol: "RECLTD", name: "REC Limited" },
+  { symbol: "PFC", name: "Power Finance Corporation Limited" },
+  { symbol: "NHPC", name: "NHPC Limited" },
+  { symbol: "SJVN", name: "SJVN Limited" },
+  { symbol: "HYUNDAI", name: "Hyundai Motor India Limited" },
+  { symbol: "OLAELEC", name: "Ola Electric Mobility Limited" },
+  { symbol: "MAZDOCK", name: "Mazagon Dock Shipbuilders Limited" },
+  { symbol: "COCHINSHIP", name: "Cochin Shipyard Limited" },
+  { symbol: "GRSE", name: "Garden Reach Shipbuilders & Engineers Limited" },
+  { symbol: "BDL", name: "Bharat Dynamics Limited" },
+];
+
+function localSearch(query: string): Array<{ symbol: string; name: string; exchange: string; type: string }> {
+  const q = query.toUpperCase().trim();
+  if (!q) return [];
+  return NSE_STOCKS
+    .filter(s => s.symbol.includes(q) || s.name.toUpperCase().includes(q))
+    .slice(0, 15)
+    .map(s => ({ symbol: s.symbol, name: s.name, exchange: "NSE", type: "EQUITY" }));
+}
+
 async function searchStocks(query: string) {
-  const resp = await fetchSafe(`${YF_BASE}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=25&newsCount=0&listsCount=0`);
-  if (!resp) return [];
-  const data = await resp.json();
-  const results = (data.quotes || [])
-    .filter((q: any) => {
-      const isIndian = ["NSI", "BSE", "NSE", "BOM"].includes(q.exchange) ||
-        q.symbol?.endsWith(".NS") || q.symbol?.endsWith(".BO");
-      return isIndian;
-    })
-    .map((q: any) => ({
-      symbol: q.symbol?.replace(".NS", "").replace(".BO", ""),
-      name: q.longname || q.shortname || q.symbol,
-      exchange: q.exchange === "BSE" || q.exchange === "BOM" ? "BSE" : "NSE",
-      type: q.quoteType,
-    }));
-  return results;
+  if (!query || query.length < 1) return [];
+
+  // Try Yahoo Finance search first
+  try {
+    const resp = await fetchSafe(`${YF_BASE}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=25&newsCount=0&listsCount=0`);
+    if (resp) {
+      const data = await resp.json();
+      const results = (data.quotes || [])
+        .filter((q: any) => {
+          const isIndian = ["NSI", "BSE", "NSE", "BOM"].includes(q.exchange) ||
+            q.symbol?.endsWith(".NS") || q.symbol?.endsWith(".BO");
+          return isIndian;
+        })
+        .map((q: any) => ({
+          symbol: q.symbol?.replace(".NS", "").replace(".BO", ""),
+          name: q.longname || q.shortname || q.symbol,
+          exchange: q.exchange === "BSE" || q.exchange === "BOM" ? "BSE" : "NSE",
+          type: q.quoteType,
+        }));
+      if (results.length > 0) return results;
+    }
+  } catch (e) {
+    console.warn("Yahoo search failed, using local fallback:", e);
+  }
+
+  // Fallback to local search
+  return localSearch(query);
 }
 
 // ── Yahoo Finance Options Chain (replaces failing NSE scraping) ──

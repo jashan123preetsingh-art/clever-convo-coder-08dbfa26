@@ -51,6 +51,7 @@ function AddPositionForm({ onSubmit }: { onSubmit: (data: { symbol: string; entr
 }
 
 function PositionRow({ pos, ltp, onClose, onDelete }: { pos: PortfolioPosition; ltp?: number; onClose: (id: string, price: number) => void; onDelete: (id: string) => void }) {
+  const hasLivePrice = pos.status === 'closed' || ltp != null;
   const currentPrice = pos.status === 'closed' ? pos.exit_price! : (ltp ?? pos.entry_price);
   const pnl = (currentPrice - pos.entry_price) * pos.quantity * (pos.trade_type === 'sell' ? -1 : 1);
   const pnlPct = ((currentPrice - pos.entry_price) / pos.entry_price) * 100 * (pos.trade_type === 'sell' ? -1 : 1);
@@ -96,14 +97,16 @@ export default function Portfolio() {
   const { openPositions, closedPositions, isLoading, addPosition, closePosition, deletePosition } = usePortfolio();
   const [tab, setTab] = useState<'open' | 'closed'>('open');
 
-  const symbols = useMemo(() => openPositions.map(p => p.symbol), [openPositions]);
+  const symbols = useMemo(() => [...new Set(openPositions.map(p => p.symbol))], [openPositions]);
   const { data: liveQuotes } = useBatchQuotes(symbols);
 
   const quoteMap = useMemo(() => {
     const m: Record<string, number> = {};
     if (Array.isArray(liveQuotes)) {
-      liveQuotes.forEach((q: { symbol?: string; data?: { ltp?: number } }) => {
-        if (q?.symbol && q?.data?.ltp) m[q.symbol] = q.data.ltp;
+      liveQuotes.forEach((q: { symbol?: string; data?: { symbol?: string; ltp?: number } | null }) => {
+        const sym = q?.symbol;
+        const ltp = q?.data?.ltp;
+        if (sym && ltp != null && ltp > 0) m[sym] = ltp;
       });
     }
     return m;
