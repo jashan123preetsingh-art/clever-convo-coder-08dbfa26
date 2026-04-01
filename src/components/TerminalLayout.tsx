@@ -86,7 +86,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
     if (Array.isArray(searchResults) && searchResults.length > 0) return searchResults.slice(0, 10);
     return [];
   }, [searchInput, searchResults]);
-  const marketOpen = isMarketOpen();
+  
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
