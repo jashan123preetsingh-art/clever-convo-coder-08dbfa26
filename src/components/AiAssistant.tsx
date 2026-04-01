@@ -76,57 +76,6 @@ export default function AiAssistant() {
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, open]);
   useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
 
-  // Clipboard paste support for images
-  useEffect(() => {
-    if (!open) return;
-    const handlePaste = async (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          e.preventDefault();
-          const file = item.getAsFile();
-          if (!file) continue;
-          try {
-            const compressed = await compressImage(file);
-            setPendingImage(compressed);
-            if (inputRef.current) inputRef.current.focus();
-          } catch (err) {
-            console.error('Paste image error:', err);
-          }
-          break;
-        }
-      }
-    };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [open]);
-
-  const getContext = () => {
-    const path = location.pathname;
-    const parts = path.split('/');
-    return {
-      currentPage: path,
-      currentStock: parts[1] === 'stock' ? parts[2] : undefined,
-      liveIndices: liveData.indices,
-      fiiDii: liveData.fiiDii,
-      stockData: liveData.stockData,
-    };
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return;
-    try {
-      const compressed = await compressImage(file);
-      setPendingImage(compressed);
-      if (inputRef.current) inputRef.current.focus();
-    } catch (err) {
-      console.error('Image compression error:', err);
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
 
   const sendMessage = useCallback(async (text: string) => {
     if ((!text.trim() && !pendingImage) || loading) return;
