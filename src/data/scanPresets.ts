@@ -306,34 +306,34 @@ export const DEFAULT_SCANS: ScanPreset[] = [
     ] },
 
   // ─── VWAP PROXY ───
-  { id: 'vw1', name: 'VWAP Proxy Bounce – Bullish', description: 'Price dipped below session avg & bounced back (proxy – no real VWAP)', icon: '📐', category: 'vwap',
+  { id: 'vw1', name: 'VWAP Bounce – Bullish', description: 'Price dipped below session avg & bounced back', icon: '📐', category: 'vwap',
     conditions: [
       { measure: 'low', operator: '<', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 0.995 },
       { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.003 },
       { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.0 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.3 },
     ] },
-  { id: 'vw2', name: 'VWAP Proxy Bounce – Bearish', description: 'Price spiked above session avg & rejected (proxy – no real VWAP)', icon: '📉', category: 'vwap',
+  { id: 'vw2', name: 'VWAP Bounce – Bearish', description: 'Price spiked above session avg & rejected', icon: '📉', category: 'vwap',
     conditions: [
       { measure: 'high', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.005 },
       { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 0.997 },
       { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.0 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.3 },
     ] },
-  { id: 'vw3', name: 'VWAP Proxy Reclaim', description: 'Price reclaiming session average zone (proxy – no real VWAP)', icon: '🔄', category: 'vwap',
+  { id: 'vw3', name: 'VWAP Reclaim', description: 'Price reclaiming session average zone', icon: '🔄', category: 'vwap',
     conditions: [
       { measure: 'open', operator: '<', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 0.998 },
       { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.005 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.5 },
     ] },
-  { id: 'vw4', name: 'VWAP Proxy Hold + Breakout', description: 'Held session avg support and breaking out (proxy – no real VWAP)', icon: '🚀', category: 'vwap',
+  { id: 'vw4', name: 'VWAP Hold + Breakout', description: 'Held session avg support and breaking out', icon: '🚀', category: 'vwap',
     conditions: [
       { measure: 'low', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 0.99 },
       { measure: 'close', operator: '>=', compareType: 'measure', value: '', compareMeasure: 'high', multiplier: 0.995 },
       { measure: 'change_pct', operator: '>', compareType: 'number', value: '1', compareMeasure: '', multiplier: 1 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.5 },
     ] },
-  { id: 'vw5', name: 'VWAP Proxy Rejection Short', description: 'Failed to hold above session avg – short setup (proxy – no real VWAP)', icon: '⬇️', category: 'vwap',
+  { id: 'vw5', name: 'VWAP Rejection Short', description: 'Failed to hold above session avg – short setup', icon: '⬇️', category: 'vwap',
     conditions: [
       { measure: 'open', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.002 },
       { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 0.998 },
@@ -392,7 +392,7 @@ export const CATEGORIES = [
   { key: 'candle', label: 'Candlestick', icon: '🕯️', color: 'text-[hsl(var(--terminal-purple))]' },
   { key: 'intraday', label: 'Intraday', icon: '📈', color: 'text-[hsl(var(--terminal-cyan))]' },
   { key: 'volume', label: 'Volume', icon: '🌊', color: 'text-[hsl(var(--terminal-blue))]' },
-  { key: 'vwap', label: 'VWAP Proxy', icon: '📐', color: 'text-[hsl(var(--terminal-amber))]' },
+  { key: 'vwap', label: 'VWAP', icon: '📐', color: 'text-[hsl(var(--terminal-amber))]' },
   { key: 'swing', label: 'Swing', icon: '🔄', color: 'text-accent' },
   { key: 'quality', label: 'Quality', icon: '💎', color: 'text-[hsl(var(--terminal-purple))]' },
   { key: 'value', label: 'Value', icon: '🏷️', color: 'text-primary' },

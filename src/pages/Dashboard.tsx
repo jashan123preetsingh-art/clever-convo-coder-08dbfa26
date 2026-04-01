@@ -1,11 +1,26 @@
 import React, { useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { INDICES, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
 import { useIndices, useFiiDiiData, useMarketBreadth, useBatchQuotes, useMarketMetrics } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
 import MarketBrief from '@/components/MarketBrief';
 import WatchlistWidget from '@/components/WatchlistWidget';
+
+const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+
+async function fetchLiveNews() {
+  const resp = await fetch(`${FUNCTIONS_URL}/market-news`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+  });
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return data.news as { title: string; source: string; category: string; published_at: string; url: string }[];
+}
 
 // ── Quick Action ──
 function QuickAction({ icon, title, desc, to }: { icon: string; title: string; desc: string; to: string }) {
@@ -87,6 +102,15 @@ export default function Dashboard() {
   const { data: marketMetrics } = useMarketMetrics();
   const indices = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : INDICES;
   const isLive = liveIndices?.length > 0 && !liveIndices[0]?.error;
+
+  const { data: liveNews } = useQuery({
+    queryKey: ['dashboard-news'],
+    queryFn: fetchLiveNews,
+    staleTime: 300_000,
+    retry: 1,
+  });
+
+  const newsItems = liveNews && liveNews.length > 0 ? liveNews : NEWS;
 
   // Parse live FII/DII data
   const fiiDiiParsed = useMemo(() => {
@@ -331,17 +355,17 @@ export default function Dashboard() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">±1σ Move</p>
-                  <p className="text-xl font-black text-primary font-data">±{move}</p>
-                  <p className="text-[8px] text-muted-foreground/40">{(move / item.ltp * 100).toFixed(1)}%</p>
+                  <p className="text-xl font-black text-primary font-data">{move != null ? `±${move}` : '—'}</p>
+                  <p className="text-[8px] text-muted-foreground/40">{move != null && item.ltp ? `${(move / item.ltp * 100).toFixed(1)}%` : 'Loading...'}</p>
                 </div>
                 <div>
                   <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">ATM Straddle</p>
-                  <p className="text-xl font-black text-foreground font-data">₹{straddle}</p>
-                  <p className="text-[8px] text-muted-foreground/40">{item.metrics ? 'Live' : 'Estimated'}</p>
+                  <p className="text-xl font-black text-foreground font-data">{straddle != null ? `₹${straddle}` : '—'}</p>
+                  <p className="text-[8px] text-muted-foreground/40">{item.metrics ? 'Live' : 'Loading...'}</p>
                 </div>
                 <div>
                   <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">ATM IV</p>
-                  <p className="text-xl font-black text-accent font-data">{iv ? `${iv.toFixed(1)}%` : '—'}</p>
+                  <p className="text-xl font-black text-accent font-data">{iv != null ? `${iv.toFixed(1)}%` : '—'}</p>
                   <p className="text-[8px] text-muted-foreground/40">{item.metrics ? 'Implied' : 'Loading...'}</p>
                 </div>
               </div>
@@ -399,8 +423,8 @@ export default function Dashboard() {
         {/* News */}
         <div className="col-span-12 lg:col-span-6">
           <div className="rounded-2xl bg-card/40 border border-border/15 overflow-hidden hover:border-border/25 transition-all">
-            <SectionHeader title="Market News" link="/news" linkText="All News" />
-            {NEWS.slice(0, 6).map((article, i) => (
+            <SectionHeader title="Market News" badge={liveNews ? 'LIVE' : ''} link="/news" linkText="All News" />
+            {newsItems.slice(0, 6).map((article, i) => (
               <div key={i} className="py-3 px-4 hover:bg-primary/3 transition-all cursor-pointer">
                 <p className="text-[10px] text-foreground leading-relaxed line-clamp-2 font-medium">{article.title}</p>
                 <div className="flex items-center gap-2 mt-1.5">
