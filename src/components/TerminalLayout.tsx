@@ -90,6 +90,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:text-sm focus:font-semibold">Skip to content</a>
       {/* ═══ Premium Top Bar ═══ */}
       <header className="h-12 md:h-12 bg-card/70 glass border-b border-border/30 flex items-center justify-between px-3 md:px-5 flex-shrink-0 z-30">
         <div className="flex items-center gap-3 md:gap-5">
