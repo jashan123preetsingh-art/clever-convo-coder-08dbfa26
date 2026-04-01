@@ -313,7 +313,7 @@ export const DEFAULT_SCANS: ScanPreset[] = [
       { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.0 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.3 },
     ] },
-  { id: 'vw2', name: 'VWAP Proxy Bounce – Bearish', description: 'Price spiked above session avg & rejected (proxy – no real VWAP)', icon: '📉', category: 'vwap',
+  { id: 'vw2', name: 'VWAP Bounce – Bearish', description: 'Price spiked above session avg & rejected', icon: '📉', category: 'vwap',
     conditions: [
       { measure: 'high', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.005 },
       { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 0.997 },
