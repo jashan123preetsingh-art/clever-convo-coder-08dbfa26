@@ -481,6 +481,7 @@ export const CATEGORY_ACCENT: Record<string, string> = {
   quality: 'border-l-[hsl(var(--terminal-purple))]',
   value: 'border-l-primary',
   price: 'border-l-[hsl(var(--terminal-amber))]',
+  investment: 'border-l-primary',
 };
 
 export const RESULT_COLUMNS = [
