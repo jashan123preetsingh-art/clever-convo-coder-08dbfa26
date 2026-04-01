@@ -316,12 +316,12 @@ export default function OptionsChain() {
   const loadPresetToCustom = useCallback((presetIdx: number) => {
     if (chain.length === 0) return;
     const strat = PRESET_STRATEGIES[presetIdx];
-    const legDefs = strat.legs(atmStrike, strikeDiff);
-    const newLegs = legDefs.map((leg, i) => {
+    const legDefs = strat.legs();
+    const newLegs = legDefs.map((leg: any, i: number) => {
       const strike = atmStrike + leg.strikeOffset * strikeDiff;
       const row = chain.find((c: any) => c.strike === strike) || chain[atmIndex];
       const premium = leg.type === 'CE' ? row.ce.ltp : row.pe.ltp;
-      return { id: `custom-${Date.now()}-${i}`, type: leg.type, action: leg.action, strike, premium, lots: 1 } as StrategyLeg;
+      return { id: `custom-${Date.now()}-${i}`, type: leg.type, action: leg.action, strike, premium, lots: leg.lots || 1 } as StrategyLeg;
     });
     setCustomLegs(newLegs);
   }, [atmStrike, strikeDiff, chain, atmIndex]);
