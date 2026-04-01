@@ -872,8 +872,16 @@ serve(async (req) => {
     console.log(`TradingAgents [${mode}] started for ${symbol}${chartImage ? ' (chart)' : ''}`);
 
     const dataRange = mode === "invest" ? "1y" : "3mo";
-    const stockData = await fetchStockData(symbol, dataRange);
-    const dataCtx = stockData ? `Stock: ${symbol}\n${buildDataContext(stockData, mode)}` : `Stock: ${symbol} (limited data)`;
+    let stockData = await fetchStockData(symbol, dataRange);
+    // Retry with 1y range if 3mo fails
+    if (!stockData && dataRange === "3mo") {
+      stockData = await fetchStockData(symbol, "1y");
+    }
+    if (stockData && (stockData.price == null || stockData.price <= 0)) {
+      console.warn(`Invalid price for ${symbol}, stockData.price = ${stockData.price}`);
+      stockData = null;
+    }
+    const dataCtx = stockData ? `Stock: ${symbol}\n${buildDataContext(stockData, mode)}` : `Stock: ${symbol} (limited data — use your knowledge of ${symbol} on NSE India)`;
 
     let result;
     if (mode === "scalp") {
