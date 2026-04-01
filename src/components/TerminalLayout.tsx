@@ -322,11 +322,10 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto bg-background">
-          <motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}
-            className="min-h-full">
+        <main className="flex-1 overflow-y-auto bg-background" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-h-full">
             {children}
-          </motion.div>
+          </div>
         </main>
       </div>
 
