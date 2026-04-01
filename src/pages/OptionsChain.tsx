@@ -225,7 +225,9 @@ export default function OptionsChain() {
 
   const activeLegs = activeView === 'custom' ? customLegs : presetLegs;
 
-  // ── Payoff calculation ──
+  const lotSize = LOT_SIZES[symbol] || 25;
+
+  // ── Payoff calculation (in ₹, lot-size aware) ──
   const payoffData = useMemo(() => {
     if (activeLegs.length === 0) return [];
     const points: { price: number; pnl: number }[] = [];
@@ -235,17 +237,17 @@ export default function OptionsChain() {
       activeLegs.forEach(leg => {
         const intrinsic = leg.type === 'CE' ? Math.max(price - leg.strike, 0) : Math.max(leg.strike - price, 0);
         const legPnl = leg.action === 'BUY' ? intrinsic - leg.premium : leg.premium - intrinsic;
-        pnl += legPnl * leg.lots;
+        pnl += legPnl * leg.lots * lotSize;
       });
-      points.push({ price: Math.round(price), pnl: Math.round(pnl * 100) / 100 });
+      points.push({ price: Math.round(price), pnl: Math.round(pnl) });
     }
     return points;
-  }, [activeLegs, underlyingValue, strikeDiff]);
+  }, [activeLegs, underlyingValue, strikeDiff, lotSize]);
 
   const maxProfit = payoffData.length > 0 ? Math.max(...payoffData.map(p => p.pnl)) : 0;
   const maxLoss = payoffData.length > 0 ? Math.min(...payoffData.map(p => p.pnl)) : 0;
   const breakevens = payoffData.filter((p, i) => i > 0 && (payoffData[i - 1].pnl * p.pnl < 0)).map(p => p.price);
-  const netPremium = activeLegs.reduce((sum, l) => sum + (l.action === 'BUY' ? -l.premium : l.premium), 0);
+  const netPremium = activeLegs.reduce((sum, l) => sum + (l.action === 'BUY' ? -l.premium : l.premium) * l.lots * lotSize, 0);
 
   // ── Custom leg management ──
   const addCustomLeg = useCallback(() => {
