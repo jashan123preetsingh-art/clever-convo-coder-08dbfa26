@@ -25,42 +25,74 @@ interface StrategyLeg {
 }
 
 const PRESET_STRATEGIES = [
-  { name: 'Bull Call Spread', desc: 'Buy lower CE, Sell higher CE', legs: (atm: number, sd: number) => [
+  // ── BULLISH ──
+  { name: 'Bull Call Spread', category: 'Bullish', desc: 'Buy ITM/ATM CE, Sell OTM CE — limited risk bullish', legs: () => [
     { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 0 },
-    { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 2 },
-  ]},
-  { name: 'Bear Put Spread', desc: 'Buy higher PE, Sell lower PE', legs: (atm: number, sd: number) => [
-    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: 0 },
-    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: -2 },
-  ]},
-  { name: 'Iron Condor', desc: 'Sell CE+PE ATM, Buy wings', legs: (atm: number, sd: number) => [
     { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 3 },
-    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 5 },
-    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: -3 },
-    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: -5 },
   ]},
-  { name: 'Long Straddle', desc: 'Buy ATM CE + PE', legs: () => [
-    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 0 },
+  { name: 'Bull Put Spread', category: 'Bullish', desc: 'Sell ATM PE, Buy OTM PE — credit spread', legs: () => [
+    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: 0 },
+    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: -3 },
+  ]},
+  { name: 'Call Ratio Back Spread', category: 'Bullish', desc: 'Sell 1 ATM CE, Buy 2 OTM CE — explosive upside', legs: () => [
+    { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 0, lots: 1 },
+    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 3, lots: 2 },
+  ]},
+  // ── BEARISH ──
+  { name: 'Bear Put Spread', category: 'Bearish', desc: 'Buy ATM PE, Sell OTM PE — limited risk bearish', legs: () => [
     { type: 'PE' as const, action: 'BUY' as const, strikeOffset: 0 },
+    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: -3 },
   ]},
-  { name: 'Short Straddle', desc: 'Sell ATM CE + PE', legs: () => [
+  { name: 'Bear Call Spread', category: 'Bearish', desc: 'Sell ATM CE, Buy OTM CE — credit spread', legs: () => [
+    { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 0 },
+    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 3 },
+  ]},
+  { name: 'Put Ratio Back Spread', category: 'Bearish', desc: 'Sell 1 ATM PE, Buy 2 OTM PE — explosive downside', legs: () => [
+    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: 0, lots: 1 },
+    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: -3, lots: 2 },
+  ]},
+  // ── NEUTRAL ──
+  { name: 'Iron Condor', category: 'Neutral', desc: 'Sell OTM CE+PE, Buy further OTM wings — range-bound', legs: () => [
+    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: -6 },
+    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: -3 },
+    { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 3 },
+    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 6 },
+  ]},
+  { name: 'Short Straddle', category: 'Neutral', desc: 'Sell ATM CE + PE — max theta decay', legs: () => [
     { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 0 },
     { type: 'PE' as const, action: 'SELL' as const, strikeOffset: 0 },
   ]},
-  { name: 'Long Strangle', desc: 'Buy OTM CE + PE', legs: () => [
+  { name: 'Short Strangle', category: 'Neutral', desc: 'Sell OTM CE + PE — wider breakeven', legs: () => [
+    { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 3 },
+    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: -3 },
+  ]},
+  { name: 'Iron Butterfly', category: 'Neutral', desc: 'Sell ATM straddle, buy OTM wings — capped risk', legs: () => [
+    { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 0 },
+    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: 0 },
+    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 5 },
+    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: -5 },
+  ]},
+  { name: 'Jade Lizard', category: 'Neutral', desc: 'Short put + short call spread — no upside risk', legs: () => [
+    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: -2 },
+    { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 3 },
+    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 5 },
+  ]},
+  // ── VOLATILITY ──
+  { name: 'Long Straddle', category: 'Volatility', desc: 'Buy ATM CE + PE — big move expected', legs: () => [
+    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 0 },
+    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: 0 },
+  ]},
+  { name: 'Long Strangle', category: 'Volatility', desc: 'Buy OTM CE + PE — cheaper big move bet', legs: () => [
     { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 3 },
     { type: 'PE' as const, action: 'BUY' as const, strikeOffset: -3 },
   ]},
-  { name: 'Iron Butterfly', desc: 'Sell ATM straddle, buy wings', legs: () => [
-    { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 0 },
-    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: 0 },
-    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 4 },
-    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: -4 },
+  { name: 'Strip', category: 'Volatility', desc: 'Buy 1 ATM CE + 2 ATM PE — bearish bias volatility', legs: () => [
+    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 0, lots: 1 },
+    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: 0, lots: 2 },
   ]},
-  { name: 'Jade Lizard', desc: 'Short put + short call spread', legs: () => [
-    { type: 'PE' as const, action: 'SELL' as const, strikeOffset: -2 },
-    { type: 'CE' as const, action: 'SELL' as const, strikeOffset: 3 },
-    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 5 },
+  { name: 'Strap', category: 'Volatility', desc: 'Buy 2 ATM CE + 1 ATM PE — bullish bias volatility', legs: () => [
+    { type: 'CE' as const, action: 'BUY' as const, strikeOffset: 0, lots: 2 },
+    { type: 'PE' as const, action: 'BUY' as const, strikeOffset: 0, lots: 1 },
   ]},
 ];
 
@@ -214,12 +246,12 @@ export default function OptionsChain() {
   const presetLegs = useMemo(() => {
     if (chain.length === 0 || atmIndex < 0) return [];
     const strat = PRESET_STRATEGIES[selectedPreset];
-    const legDefs = strat.legs(atmStrike, strikeDiff);
-    return legDefs.map((leg, i) => {
+    const legDefs = strat.legs();
+    return legDefs.map((leg: any, i: number) => {
       const strike = atmStrike + leg.strikeOffset * strikeDiff;
       const row = chain.find((c: any) => c.strike === strike) || chain[atmIndex];
       const premium = leg.type === 'CE' ? row.ce.ltp : row.pe.ltp;
-      return { id: `preset-${i}`, type: leg.type, action: leg.action, strike, premium, lots: 1 } as StrategyLeg;
+      return { id: `preset-${i}`, type: leg.type, action: leg.action, strike, premium, lots: leg.lots || 1 } as StrategyLeg;
     });
   }, [selectedPreset, atmStrike, chain, atmIndex, strikeDiff]);
 
@@ -284,12 +316,12 @@ export default function OptionsChain() {
   const loadPresetToCustom = useCallback((presetIdx: number) => {
     if (chain.length === 0) return;
     const strat = PRESET_STRATEGIES[presetIdx];
-    const legDefs = strat.legs(atmStrike, strikeDiff);
-    const newLegs = legDefs.map((leg, i) => {
+    const legDefs = strat.legs();
+    const newLegs = legDefs.map((leg: any, i: number) => {
       const strike = atmStrike + leg.strikeOffset * strikeDiff;
       const row = chain.find((c: any) => c.strike === strike) || chain[atmIndex];
       const premium = leg.type === 'CE' ? row.ce.ltp : row.pe.ltp;
-      return { id: `custom-${Date.now()}-${i}`, type: leg.type, action: leg.action, strike, premium, lots: 1 } as StrategyLeg;
+      return { id: `custom-${Date.now()}-${i}`, type: leg.type, action: leg.action, strike, premium, lots: leg.lots || 1 } as StrategyLeg;
     });
     setCustomLegs(newLegs);
   }, [atmStrike, strikeDiff, chain, atmIndex]);
@@ -497,17 +529,27 @@ export default function OptionsChain() {
           {activeView === 'strategy' && (
             <div className="space-y-2">
               <div className="t-card">
-                <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">Select Strategy</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-                  {PRESET_STRATEGIES.map((strat, i) => (
-                    <button key={i} onClick={() => setSelectedPreset(i)}
-                      className={`text-left px-3 py-2 rounded border transition-all
-                        ${selectedPreset === i ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-secondary/50 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'}`}>
-                      <p className="text-[10px] font-semibold">{strat.name}</p>
-                      <p className="text-[8px] opacity-70 mt-0.5">{strat.desc}</p>
-                    </button>
-                  ))}
-                </div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold mb-3">Select Strategy</p>
+                {['Bullish', 'Bearish', 'Neutral', 'Volatility'].map(cat => {
+                  const strats = PRESET_STRATEGIES.map((s, i) => ({ ...s, idx: i })).filter(s => s.category === cat);
+                  if (strats.length === 0) return null;
+                  const catColors: Record<string, string> = { Bullish: 'text-primary', Bearish: 'text-destructive', Neutral: 'text-accent', Volatility: 'text-yellow-400' };
+                  return (
+                    <div key={cat} className="mb-2.5">
+                      <p className={`text-[8px] font-bold uppercase tracking-[0.15em] mb-1.5 ${catColors[cat] || 'text-muted-foreground'}`}>{cat}</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                        {strats.map(strat => (
+                          <button key={strat.idx} onClick={() => setSelectedPreset(strat.idx)}
+                            className={`text-left px-3 py-2 rounded border transition-all
+                              ${selectedPreset === strat.idx ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-secondary/50 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'}`}>
+                            <p className="text-[10px] font-semibold">{strat.name}</p>
+                            <p className="text-[8px] opacity-70 mt-0.5">{strat.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <StrategyDisplay legs={activeLegs} netPremium={netPremium} maxProfit={maxProfit} maxLoss={maxLoss}
