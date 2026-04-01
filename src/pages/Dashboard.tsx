@@ -2,13 +2,15 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { INDICES, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
-import { useIndices, useFiiDiiData, useMarketBreadth, useBatchQuotes, useMarketMetrics } from '@/hooks/useStockData';
+import { getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
+import { useFiiDiiData, useMarketBreadth, useBatchQuotes, useMarketMetrics } from '@/hooks/useStockData';
+import { useIndicesWithFallback } from '@/hooks/useIndicesWithFallback';
 import { formatPercent } from '@/utils/format';
 import { isMarketHours } from '@/utils/marketHours';
 import MarketBrief from '@/components/MarketBrief';
 import WatchlistWidget from '@/components/WatchlistWidget';
 import DataBadge from '@/components/dashboard/DataBadge';
+import DataStatusBanner from '@/components/DataStatusBanner';
 import QuickActionsGrid from '@/components/dashboard/QuickActions';
 import IndexCards from '@/components/dashboard/IndexCards';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
@@ -16,7 +18,7 @@ import ExpectedMove from '@/components/dashboard/ExpectedMove';
 import TopMovers from '@/components/dashboard/TopMovers';
 import SectorsList from '@/components/dashboard/SectorsList';
 import NewsWidget from '@/components/dashboard/NewsWidget';
-import type { Stock, IndexData, FiiDiiEntry } from '@/types/stock';
+import type { Stock, FiiDiiEntry } from '@/types/stock';
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
@@ -35,12 +37,10 @@ async function fetchLiveNews() {
 const fadeUp = { hidden: { opacity: 0, y: 6 }, visible: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
-  const { data: liveIndices, isLoading: indicesLoading } = useIndices();
+  const { indices, hasLiveData, isUsingMockData, isError } = useIndicesWithFallback();
   const { data: liveFiiDii } = useFiiDiiData();
   const { data: liveBreadth } = useMarketBreadth();
   const { data: marketMetrics, isLoading: metricsLoading } = useMarketMetrics();
-  const indices: IndexData[] = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : INDICES;
-  const hasLiveData = liveIndices?.length > 0 && !liveIndices[0]?.error;
   const marketOpen = isMarketHours();
 
   const { data: liveNews } = useQuery({
@@ -130,6 +130,8 @@ export default function Dashboard() {
 
   return (
     <div className="p-3 sm:p-5 max-w-[1800px] mx-auto space-y-3 sm:space-y-4">
+      <DataStatusBanner isUsingMockData={isUsingMockData} isError={isError} />
+
       {/* Welcome Header */}
       <motion.div variants={fadeUp} initial="hidden" animate="visible"
         className="relative rounded-xl bg-card/40 border border-border/10 p-4 sm:p-6 overflow-hidden">

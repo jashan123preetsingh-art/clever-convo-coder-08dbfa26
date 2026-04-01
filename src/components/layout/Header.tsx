@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Menu, X, Sun, Moon, Settings, LogOut } from 'lucide-react';
 import { useStockSearch } from '@/hooks/useStockData';
 import type { IndexData, SearchResult } from '@/types/stock';
 
@@ -50,9 +51,7 @@ export default function Header({
     <header className="h-12 md:h-12 bg-gradient-to-r from-card/90 via-card/70 to-card/90 glass border-b border-border/20 flex items-center justify-between px-3 md:px-5 flex-shrink-0 z-30">
       <div className="flex items-center gap-3 md:gap-5">
         <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} className="md:hidden p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground transition-colors">
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            {mobileMenuOpen ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /> : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />}
-          </svg>
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
         <Link to="/" className="flex items-center gap-2 md:gap-3 group">
@@ -70,9 +69,7 @@ export default function Header({
         {/* Search */}
         <div className="relative z-[70]">
           <div className="flex items-center bg-secondary/40 border border-border/30 rounded-xl px-3 md:px-3.5 py-2 gap-2 focus-within:border-primary/30 focus-within:bg-secondary/60 focus-within:shadow-[0_0_20px_-5px_hsl(var(--primary)/0.1)] transition-all duration-300">
-            <svg className="w-3.5 h-3.5 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <Search className="w-3.5 h-3.5 text-muted-foreground" />
             <input type="text" placeholder="Search stocks..."
               value={searchInput}
               onChange={(e) => { setSearchInput(e.target.value); setShowSearch(true); }}
@@ -117,10 +114,9 @@ export default function Header({
 
       <div className="flex items-center gap-2 md:gap-3">
         <button onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+          aria-label="Open command palette"
           className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/30 border border-border/20 hover:border-border/40 hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-all duration-200">
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <Search className="w-3 h-3" />
           <span className="text-[9px] font-mono">⌘K</span>
         </button>
 
@@ -128,9 +124,9 @@ export default function Header({
 
         <button onClick={toggleTheme}
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="w-8 h-8 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-all duration-200 flex items-center justify-center text-sm"
+          className="w-8 h-8 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-all duration-200 flex items-center justify-center"
           title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}>
-          {theme === 'dark' ? '☀️' : '🌙'}
+          {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/20 border border-border/20">
@@ -143,7 +139,7 @@ export default function Header({
 
         {/* User avatar */}
         <div className="relative">
-          <button onClick={() => setUserMenuOpen(!userMenuOpen)}
+          <button onClick={() => setUserMenuOpen(!userMenuOpen)} aria-label="User menu"
             className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/15 flex items-center justify-center text-primary text-[11px] font-bold hover:border-primary/30 hover:shadow-[0_0_12px_hsl(var(--primary)/0.1)] transition-all duration-200">
             {(profile?.full_name || user?.email || '?')[0].toUpperCase()}
           </button>
@@ -164,12 +160,12 @@ export default function Header({
                 {isAdmin && (
                   <button onClick={() => { navigate('/admin'); setUserMenuOpen(false); }}
                     className="w-full text-left px-4 py-2.5 text-[11px] text-foreground hover:bg-primary/5 transition-colors flex items-center gap-2.5">
-                    <span className="text-sm">⚙️</span> Admin Panel
+                    <Settings className="w-3.5 h-3.5" /> Admin Panel
                   </button>
                 )}
                 <button onClick={() => { signOut(); setUserMenuOpen(false); }}
                   className="w-full text-left px-4 py-2.5 text-[11px] text-destructive hover:bg-destructive/5 transition-colors flex items-center gap-2.5">
-                  <span className="text-sm">↪</span> Sign Out
+                  <LogOut className="w-3.5 h-3.5" /> Sign Out
                 </button>
               </motion.div>
             )}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { formatPercent } from '@/utils/format';
 import DataBadge from './DataBadge';
 import type { IndexData, DataStatus } from '@/types/stock';
@@ -9,10 +9,12 @@ interface IndexCardProps {
   isLive: boolean;
 }
 
-function IndexCard({ idx, isLive }: IndexCardProps) {
+const IndexCard = memo(function IndexCard({ idx, isLive }: IndexCardProps) {
   const isUp = (idx.change_pct || 0) >= 0;
   const marketOpen = isMarketHours();
   const displayStatus: DataStatus = isLive ? (marketOpen ? 'live' : 'market-closed') : 'unavailable';
+  const range = idx.high > idx.low ? ((idx.ltp - idx.low) / (idx.high - idx.low)) * 100 : 50;
+  const clampedRange = Math.min(Math.max(range, 0), 100);
 
   return (
     <div className="rounded-xl bg-card/40 border border-border/10 p-4 sm:p-5 hover:border-border/25 transition-all duration-300 group">
@@ -42,14 +44,16 @@ function IndexCard({ idx, isLive }: IndexCardProps) {
         <div className="h-1 bg-secondary/30 rounded-full overflow-hidden relative">
           <div className="h-full bg-gradient-to-r from-destructive/30 via-accent/20 to-primary/30 rounded-full" />
           {idx.high > idx.low && (
-            <div className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-foreground shadow-md"
-              style={{ left: `${Math.min(((idx.ltp - idx.low) / (idx.high - idx.low)) * 100, 100)}%`, transform: 'translate(-50%, -50%)' }} />
+            <div
+              className="absolute top-1/2 w-1.5 h-1.5 rounded-full bg-foreground shadow-md -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${clampedRange}%` }}
+            />
           )}
         </div>
       </div>
     </div>
   );
-}
+});
 
 interface IndexCardsProps {
   indices: IndexData[];
