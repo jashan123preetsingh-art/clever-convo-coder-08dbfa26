@@ -278,7 +278,22 @@ export default function OptionsChain() {
 
   const maxProfit = payoffData.length > 0 ? Math.max(...payoffData.map(p => p.pnl)) : 0;
   const maxLoss = payoffData.length > 0 ? Math.min(...payoffData.map(p => p.pnl)) : 0;
-  const breakevens = payoffData.filter((p, i) => i > 0 && (payoffData[i - 1].pnl * p.pnl < 0)).map(p => p.price);
+  const breakevens = useMemo(() => {
+    const bks: number[] = [];
+    for (let i = 1; i < payoffData.length; i++) {
+      const prev = payoffData[i - 1];
+      const curr = payoffData[i];
+      if (prev.pnl * curr.pnl < 0) {
+        // Linear interpolation for precise breakeven
+        const ratio = Math.abs(prev.pnl) / (Math.abs(prev.pnl) + Math.abs(curr.pnl));
+        const exact = prev.price + ratio * (curr.price - prev.price);
+        bks.push(Math.round(exact));
+      } else if (curr.pnl === 0) {
+        bks.push(curr.price);
+      }
+    }
+    return bks;
+  }, [payoffData]);
   const netPremium = activeLegs.reduce((sum, l) => sum + (l.action === 'BUY' ? -l.premium : l.premium) * l.lots * lotSize, 0);
 
   // ── Custom leg management ──
