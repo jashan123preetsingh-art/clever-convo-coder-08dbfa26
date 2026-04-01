@@ -2,7 +2,7 @@ import React, { useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { INDICES, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
-import { useIndices, useFiiDiiData, useMarketBreadth, useBatchQuotes } from '@/hooks/useStockData';
+import { useIndices, useFiiDiiData, useMarketBreadth, useBatchQuotes, useMarketMetrics } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
 import MarketBrief from '@/components/MarketBrief';
 import WatchlistWidget from '@/components/WatchlistWidget';
