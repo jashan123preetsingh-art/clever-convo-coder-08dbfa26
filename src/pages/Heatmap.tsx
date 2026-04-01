@@ -160,9 +160,10 @@ function HeatmapSkeleton() {
 export default function Heatmap() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const [maxPerSector, setMaxPerSector] = useState(12);
   const mockStocks = useMemo(() => getAllStocks(), []);
 
-  // Only fetch top 120 stocks by market cap (covers 95%+ of heatmap visual area)
+  // Only fetch top 120 stocks by market cap
   const topSymbols = useMemo(() => {
     return [...mockStocks]
       .sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0))
@@ -170,7 +171,6 @@ export default function Heatmap() {
       .map(s => s.symbol);
   }, [mockStocks]);
 
-  // Use React Query with caching — fetches in batches of 20 internally
   const { data: liveQuotes, isLoading } = useBatchQuotes(topSymbols);
 
   const liveMap = useMemo(() => {
@@ -184,7 +184,7 @@ export default function Heatmap() {
   }, [liveQuotes]);
 
   // Merge live + mock data
-  const stocks: TreeNode[] = useMemo(() => {
+  const allStocks: TreeNode[] = useMemo(() => {
     return mockStocks.map(s => {
       const live = liveMap.get(s.symbol);
       return {
@@ -198,22 +198,31 @@ export default function Heatmap() {
     }).sort((a, b) => b.market_cap - a.market_cap);
   }, [mockStocks, liveMap]);
 
-  // Group by sector
+  // Group by sector, keep only top N stocks per sector by market cap
   const sectorGroups = useMemo(() => {
     const groups: Record<string, { stocks: TreeNode[]; totalMcap: number }> = {};
-    for (const s of stocks) {
+    for (const s of allStocks) {
       if (!groups[s.sector]) groups[s.sector] = { stocks: [], totalMcap: 0 };
       groups[s.sector].stocks.push(s);
       groups[s.sector].totalMcap += s.market_cap;
     }
     return Object.entries(groups)
-      .map(([sector, data]) => ({
-        sector,
-        stocks: data.stocks.sort((a, b) => b.market_cap - a.market_cap),
-        totalMcap: data.totalMcap,
-      }))
+      .map(([sector, data]) => {
+        const sortedStocks = data.stocks.sort((a, b) => b.market_cap - a.market_cap);
+        const topStocks = sortedStocks.slice(0, maxPerSector);
+        const topMcap = topStocks.reduce((s, st) => s + st.market_cap, 0);
+        return {
+          sector,
+          stocks: topStocks,
+          totalMcap: topMcap,
+          fullCount: data.stocks.length,
+        };
+      })
+      .filter(g => g.stocks.length > 0)
       .sort((a, b) => b.totalMcap - a.totalMcap);
-  }, [stocks]);
+  }, [allStocks, maxPerSector]);
+
+  const displayedCount = sectorGroups.reduce((s, g) => s + g.stocks.length, 0);
 
   const WIDTH = 1600;
   const HEIGHT = 750;
@@ -236,11 +245,19 @@ export default function Heatmap() {
         <div>
           <h1 className="text-sm font-bold text-foreground tracking-wide">MARKET HEATMAP</h1>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            {stocks.length} stocks · {liveMap.size > 0 ? `${liveMap.size} live` : 'Loading...'} · Sector weighted
+            {displayedCount} stocks · {liveMap.size > 0 ? `${liveMap.size} live` : 'Loading...'} · Top {maxPerSector}/sector
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isLoading && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+          <div className="flex items-center gap-1 bg-secondary/30 rounded-lg p-0.5 border border-border/20">
+            {[8, 12, 20].map(n => (
+              <button key={n} onClick={() => setMaxPerSector(n)}
+                className={`px-2.5 py-1 rounded-md text-[9px] font-bold transition-all ${maxPerSector === n ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                Top {n}
+              </button>
+            ))}
+          </div>
           <div className="flex items-center gap-0.5">
             {[{ l: '-3%', c: -3 }, { l: '-2%', c: -2 }, { l: '-1%', c: -1 }, { l: '0%', c: 0 }, { l: '+1%', c: 1 }, { l: '+2%', c: 2 }, { l: '+3%', c: 3 }].map((item, i) => (
               <div key={i} className="w-9 h-4 rounded-sm text-[8px] flex items-center justify-center font-mono"
@@ -271,9 +288,8 @@ export default function Heatmap() {
                   )}
 
                   {stockLayout.map(({ node, x, y, w, h }) => {
-                    const isLarge = w > 70 && h > 45;
-                    const isMedium = w > 45 && h > 30;
-                    const isSmall = w > 25 && h > 20;
+                    const isLarge = w > 60 && h > 40;
+                    const isMedium = w > 40 && h > 28;
 
                     return (
                       <g key={node.symbol}>
@@ -289,28 +305,28 @@ export default function Heatmap() {
                           {isLarge && (
                             <>
                               <text x={x + w / 2} y={y + h / 2 - 6} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="12" fontWeight="700" fontFamily="Inter, sans-serif">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="13" fontWeight="700" fontFamily="Inter, sans-serif">
                                 {node.symbol}
                               </text>
                               <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="12" fontWeight="600" fontFamily="JetBrains Mono, monospace">
                                 {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(2)}%
                               </text>
                             </>
                           )}
                           {!isLarge && isMedium && (
                             <>
-                              <text x={x + w / 2} y={y + h / 2 - 3} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="9" fontWeight="700" fontFamily="Inter, sans-serif">
-                                {node.symbol.slice(0, 7)}
+                              <text x={x + w / 2} y={y + h / 2 - 2} textAnchor="middle"
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="10" fontWeight="700" fontFamily="Inter, sans-serif">
+                                {node.symbol.slice(0, 8)}
                               </text>
-                              <text x={x + w / 2} y={y + h / 2 + 9} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="8" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                              <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="9" fontWeight="600" fontFamily="JetBrains Mono, monospace">
                                 {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(1)}%
                               </text>
                             </>
                           )}
-                          {!isLarge && !isMedium && isSmall && (
+                          {!isLarge && !isMedium && w > 20 && h > 16 && (
                             <text x={x + w / 2} y={y + h / 2 + 3} textAnchor="middle"
                               fill={getTextColor(node.change_pct, isDark)} fontSize="8" fontWeight="600" fontFamily="Inter, sans-serif">
                               {node.symbol.slice(0, 5)}
