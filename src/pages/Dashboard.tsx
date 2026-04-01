@@ -82,8 +82,33 @@ const fadeUp = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const { data: liveIndices } = useIndices();
+  const { data: liveFiiDii } = useFiiDiiData();
+  const { data: liveBreadth } = useMarketBreadth();
   const indices = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : INDICES;
   const isLive = liveIndices?.length > 0 && !liveIndices[0]?.error;
+
+  // Parse live FII/DII data
+  const fiiDiiParsed = useMemo(() => {
+    if (!liveFiiDii || !Array.isArray(liveFiiDii)) return null;
+    const fii = liveFiiDii.find((d: any) => d.category?.includes('FII'));
+    const dii = liveFiiDii.find((d: any) => d.category === 'DII');
+    if (!fii && !dii) return null;
+    return {
+      fiiNet: parseFloat(fii?.netValue || '0'),
+      diiNet: parseFloat(dii?.netValue || '0'),
+      date: fii?.date || dii?.date || '',
+    };
+  }, [liveFiiDii]);
+
+  // Parse live breadth
+  const breadthParsed = useMemo(() => {
+    if (!liveBreadth) return null;
+    return {
+      advances: liveBreadth.advances ?? 0,
+      declines: liveBreadth.declines ?? 0,
+      unchanged: liveBreadth.unchanged ?? 0,
+    };
+  }, [liveBreadth]);
 
   const { gainers, losers, active, sectors, advances, declines, unchanged } = useMemo(() => {
     const g = getTopGainers();
@@ -93,11 +118,11 @@ export default function Dashboard() {
     const all = getAllStocks();
     return {
       gainers: g, losers: l, active: a, sectors: s,
-      advances: all.filter(st => st.change_pct > 0).length,
-      declines: all.filter(st => st.change_pct < 0).length,
-      unchanged: all.filter(st => st.change_pct === 0).length,
+      advances: breadthParsed?.advances ?? all.filter(st => st.change_pct > 0).length,
+      declines: breadthParsed?.declines ?? all.filter(st => st.change_pct < 0).length,
+      unchanged: breadthParsed?.unchanged ?? all.filter(st => st.change_pct === 0).length,
     };
-  }, []);
+  }, [breadthParsed]);
 
   const niftyLtp = indices.find((i: any) => i.symbol === 'NIFTY 50')?.ltp || 22800;
   const expectedMove = Math.round(niftyLtp * 0.014);
