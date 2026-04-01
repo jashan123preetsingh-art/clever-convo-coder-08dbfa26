@@ -69,19 +69,22 @@ async function getQuote(symbol: string) {
   const ts = result.timestamp || [];
   const last = ts.length - 1;
   const prev = meta.chartPreviousClose || meta.previousClose || (closes.length >= 2 ? closes[closes.length - 2] : 0) || 0;
+  const ltp = meta.regularMarketPrice || closes[last] || 0;
+
+  if (!ltp || ltp <= 0) return null;
 
   return {
     symbol, name: meta.longName || meta.shortName || symbol,
-    ltp: meta.regularMarketPrice,
+    ltp: ltp,
     prev_close: round(prev),
-    open: quote?.open?.[last], high: quote?.high?.[last],
-    low: quote?.low?.[last], close: quote?.close?.[last],
-    volume: quote?.volume?.[last],
-    change: round(meta.regularMarketPrice - prev),
-    change_pct: round(prev ? ((meta.regularMarketPrice - prev) / prev) * 100 : 0),
-    week_52_high: meta.fiftyTwoWeekHigh, week_52_low: meta.fiftyTwoWeekLow,
+    open: quote?.open?.[last] ?? ltp, high: quote?.high?.[last] ?? ltp,
+    low: quote?.low?.[last] ?? ltp, close: quote?.close?.[last] ?? ltp,
+    volume: quote?.volume?.[last] ?? 0,
+    change: round(ltp - prev),
+    change_pct: round(prev > 0 ? ((ltp - prev) / prev) * 100 : 0),
+    week_52_high: meta.fiftyTwoWeekHigh ?? null, week_52_low: meta.fiftyTwoWeekLow ?? null,
     exchange: meta.exchangeName || "NSE", currency: meta.currency,
-    market_cap: meta.marketCap, timezone: meta.exchangeTimezoneName,
+    market_cap: meta.marketCap ?? null, timezone: meta.exchangeTimezoneName,
   };
 }
 
