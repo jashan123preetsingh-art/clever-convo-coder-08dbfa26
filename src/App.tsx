@@ -22,6 +22,10 @@ const News = lazy(() => import("./pages/News"));
 const StockDetail = lazy(() => import("./pages/StockDetail"));
 const Admin = lazy(() => import("./pages/Admin"));
 const TradingAgent = lazy(() => import("./pages/TradingAgent"));
+const Portfolio = lazy(() => import("./pages/Portfolio"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const Disclaimer = lazy(() => import("./pages/Disclaimer"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -55,6 +59,9 @@ const AppRoutes = () => (
     <Route path="/auth" element={<Auth />} />
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/welcome" element={<Landing />} />
+    <Route path="/privacy" element={<PrivacyPolicy />} />
+    <Route path="/terms" element={<TermsOfService />} />
+    <Route path="/disclaimer" element={<Disclaimer />} />
     <Route path="/" element={<ProtectedRoute><TerminalLayout><Dashboard /></TerminalLayout></ProtectedRoute>} />
     <Route path="/heatmap" element={<ProtectedRoute><TerminalLayout><Heatmap /></TerminalLayout></ProtectedRoute>} />
     <Route path="/scanner" element={<ProtectedRoute><TerminalLayout><Scanner /></TerminalLayout></ProtectedRoute>} />
@@ -70,6 +77,7 @@ const AppRoutes = () => (
     <Route path="/stock/:symbol" element={<ProtectedRoute><TerminalLayout><StockDetail /></TerminalLayout></ProtectedRoute>} />
     <Route path="/admin" element={<ProtectedRoute><TerminalLayout><Admin /></TerminalLayout></ProtectedRoute>} />
     <Route path="/trading-agent" element={<ProtectedRoute><TerminalLayout><TradingAgent /></TerminalLayout></ProtectedRoute>} />
+    <Route path="/portfolio" element={<ProtectedRoute><TerminalLayout><Portfolio /></TerminalLayout></ProtectedRoute>} />
     <Route path="/charts" element={<Navigate to="/" replace />} />
     <Route path="/charts/:symbol" element={<ProtectedRoute><TerminalLayout><StockDetail /></TerminalLayout></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
