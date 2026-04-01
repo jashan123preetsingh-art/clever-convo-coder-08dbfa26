@@ -1,5 +1,5 @@
+import React, { memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Home, Briefcase, LayoutGrid, ScanSearch, Target, Layers, ArrowLeftRight, TrendingUp, Newspaper, Bot, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import useStore from '@/store/useStore';
 

@@ -1,5 +1,5 @@
+import React, { memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Briefcase, LayoutGrid, ScanSearch, Target, Layers, ArrowLeftRight, TrendingUp, Newspaper, Bot, Settings } from 'lucide-react';
 import type { IndexData } from '@/types/stock';
 
