@@ -5,22 +5,37 @@ import { stockApi } from '@/lib/api';
 import { formatPercent } from '@/utils/format';
 import { useBatchQuotes } from '@/hooks/useStockData';
 
-function getHeatColor(pct: number): string {
-  if (pct >= 3) return 'hsl(145, 63%, 32%)';
-  if (pct >= 2) return 'hsl(145, 55%, 26%)';
-  if (pct >= 1) return 'hsl(145, 45%, 20%)';
-  if (pct >= 0.3) return 'hsl(145, 35%, 16%)';
-  if (pct > 0) return 'hsl(145, 25%, 13%)';
-  if (pct === 0) return 'hsl(225, 18%, 12%)';
-  if (pct > -0.3) return 'hsl(0, 25%, 15%)';
-  if (pct > -1) return 'hsl(0, 40%, 20%)';
-  if (pct > -2) return 'hsl(0, 50%, 26%)';
-  if (pct > -3) return 'hsl(0, 58%, 32%)';
-  return 'hsl(0, 65%, 38%)';
+function getHeatColor(pct: number, isDark = true): string {
+  if (isDark) {
+    if (pct >= 3) return 'hsl(145, 63%, 32%)';
+    if (pct >= 2) return 'hsl(145, 55%, 26%)';
+    if (pct >= 1) return 'hsl(145, 45%, 20%)';
+    if (pct >= 0.3) return 'hsl(145, 35%, 16%)';
+    if (pct > 0) return 'hsl(145, 25%, 13%)';
+    if (pct === 0) return 'hsl(225, 18%, 12%)';
+    if (pct > -0.3) return 'hsl(0, 25%, 15%)';
+    if (pct > -1) return 'hsl(0, 40%, 20%)';
+    if (pct > -2) return 'hsl(0, 50%, 26%)';
+    if (pct > -3) return 'hsl(0, 58%, 32%)';
+    return 'hsl(0, 65%, 38%)';
+  }
+  // Light mode — brighter, more saturated
+  if (pct >= 3) return 'hsl(145, 55%, 42%)';
+  if (pct >= 2) return 'hsl(145, 48%, 48%)';
+  if (pct >= 1) return 'hsl(145, 40%, 55%)';
+  if (pct >= 0.3) return 'hsl(145, 32%, 65%)';
+  if (pct > 0) return 'hsl(145, 22%, 75%)';
+  if (pct === 0) return 'hsl(225, 15%, 82%)';
+  if (pct > -0.3) return 'hsl(0, 22%, 75%)';
+  if (pct > -1) return 'hsl(0, 35%, 65%)';
+  if (pct > -2) return 'hsl(0, 45%, 55%)';
+  if (pct > -3) return 'hsl(0, 52%, 48%)';
+  return 'hsl(0, 58%, 42%)';
 }
 
-function getTextColor(pct: number): string {
-  return Math.abs(pct) >= 1 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)';
+function getTextColor(pct: number, isDark = true): string {
+  if (isDark) return Math.abs(pct) >= 1 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)';
+  return Math.abs(pct) >= 1 ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.7)';
 }
 
 interface TreeNode {
