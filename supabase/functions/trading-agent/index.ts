@@ -1,12 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /*
- * TradingAgents-style Multi-Agent Framework — 4 Modes
+ * TradingAgents — Consolidated Multi-Agent Framework
  * 
- * Mode 1: SCALP (Intraday & Scalping) — Pure technical, fast, no fundamentals/portfolio
- * Mode 2: SWING (Swing & Position) — Full pipeline with holding duration
- * Mode 3: INVEST (Long-term 1-10yr) — Warren Buffett style, deep fundamentals
- * Mode 4: OPTIONS — Full options analysis, OI, Greeks, strategies, risk-reward
+ * OPTIMIZED: Consolidated AI calls to reduce credit usage while maintaining quality.
+ * - Scalp: 2 calls (was 4)
+ * - Swing: 3 calls (was 12)
+ * - Invest: 3 calls (was 8)
+ * - Options: 2 calls (unchanged)
+ * 
+ * DB caching: Results cached for 30 min in ai_analysis_cache table.
+ * UI still shows full pipeline stages — each consolidated response is split into sections.
  */
 
 const corsHeaders = {
@@ -17,9 +22,13 @@ const corsHeaders = {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-// ── In-Memory Cache (10 min TTL) ────────────────────────────
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
-const cache = new Map<string, { data: any; timestamp: number }>();
+// ── DB Cache ────────────────────────────────────────────────
+function getSupabaseAdmin() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+}
 
 function getCacheKey(symbol: string, mode: string, optionsConfig?: any): string {
   const base = `${symbol.toUpperCase()}:${mode}`;
@@ -29,85 +38,51 @@ function getCacheKey(symbol: string, mode: string, optionsConfig?: any): string 
   return base;
 }
 
-function getFromCache(key: string): any | null {
-  const entry = cache.get(key);
-  if (!entry) return null;
-  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
-    cache.delete(key);
-    return null;
-  }
-  return entry.data;
+async function getDBCache(cacheKey: string): Promise<any | null> {
+  try {
+    const sb = getSupabaseAdmin();
+    const { data } = await sb
+      .from("ai_analysis_cache")
+      .select("result")
+      .eq("cache_key", cacheKey)
+      .gt("expires_at", new Date().toISOString())
+      .single();
+    return data?.result || null;
+  } catch { return null; }
 }
 
-function setCache(key: string, data: any) {
-  // Limit cache size to prevent memory issues
-  if (cache.size > 100) {
-    const oldest = [...cache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
-    if (oldest) cache.delete(oldest[0]);
-  }
-  cache.set(key, { data, timestamp: Date.now() });
+async function setDBCache(cacheKey: string, symbol: string, mode: string, result: any) {
+  try {
+    const sb = getSupabaseAdmin();
+    await sb.from("ai_analysis_cache").upsert({
+      cache_key: cacheKey,
+      symbol,
+      mode,
+      result,
+      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+    }, { onConflict: "cache_key" });
+  } catch (e) { console.error("Cache write error:", e); }
 }
 
-// ── Mode-Optimized Model Selection ──────────────────────────
-// SCALP: Speed + technical precision. Flash models for low latency, GPT-5.2 for price action.
-// SWING: Balanced mix. Pro models for debate depth, GPT-5 for final decisions.
-// INVEST: Deep research. GPT-5 with reasoning for DCF/moat, Pro for thorough debate.
-
+// ── Model Selection (cost-optimized) ──────────────────────
 const MODELS = {
-  scalp: {
-    technical:    "google/gemini-2.5-flash",     // Fast technical analysis
-    sentiment:    "google/gemini-2.5-flash-lite", // Fast sentiment scan
-    trader:       "google/gemini-2.5-flash",     // Decisive quick calls
-    risk:         "google/gemini-3-flash-preview", // Fast risk check
-  },
-  swing: {
-    technical:    "google/gemini-2.5-flash",     // Strong technical analysis
-    sentiment:    "google/gemini-2.5-flash-lite", // Balanced sentiment
-    news:         "google/gemini-3-flash-preview", // Fast news digest
-    fundamentals: "google/gemini-2.5-flash",     // Balanced fundamentals
-    bull:         "google/gemini-2.5-flash",     // Bull arguments
-    bear:         "google/gemini-2.5-flash",     // Bear arguments
-    manager:      "google/gemini-2.5-flash",     // Strong judgment
-    trader:       "google/gemini-2.5-flash",     // Decisive trader
-    riskAggr:     "google/gemini-3-flash-preview",
-    riskCons:     "google/gemini-3-flash-preview",
-    riskNeut:     "google/gemini-2.5-flash-lite",
-    portfolio:    "google/gemini-2.5-flash",     // Final decision
-  },
-  invest: {
-    fundamentals: "google/gemini-2.5-flash",     // Deep value analysis
-    moat:         "google/gemini-2.5-flash",     // Moat analysis
-    technical:    "google/gemini-2.5-flash-lite", // Light technical for entry timing
-    news:         "google/gemini-2.5-flash-lite", // Macro outlook
-    bull:         "google/gemini-2.5-flash",     // Thorough bull case
-    bear:         "google/gemini-2.5-flash",     // Thorough bear case
-    committee:    "google/gemini-2.5-flash",     // Investment committee
-    architect:    "google/gemini-2.5-flash",     // Final Buffett-style decision
-  },
-  options: {
-    oiAnalyst:    "google/gemini-2.5-flash",         // Fast + strong analysis
-    greeksAnalyst:"google/gemini-2.5-flash",         // Fast Greeks & IV
-    technical:    "google/gemini-2.5-flash",         // Fast strike selection
-    strategist:   "google/gemini-2.5-flash",         // Strategy construction
-    riskManager:  "google/gemini-2.5-flash",         // Risk check
-    trader:       "google/gemini-2.5-flash",         // Final trade decision
-  },
+  scalp:   { analysis: "google/gemini-2.5-flash", decision: "google/gemini-2.5-flash" },
+  swing:   { research: "google/gemini-2.5-flash", debate: "google/gemini-2.5-flash", decision: "google/gemini-2.5-flash" },
+  invest:  { fundamentals: "google/gemini-2.5-flash", context: "google/gemini-2.5-flash", decision: "google/gemini-2.5-flash" },
+  options: { analysis: "google/gemini-2.5-flash", decision: "google/gemini-2.5-flash" },
 };
 
-const MAX_DEBATE_ROUNDS = 1;
-const MAX_RISK_ROUNDS = 1;
-
+// ── AI Call Helpers ──────────────────────────────────────────
 async function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
 async function callAIRaw(apiKey: string, system: string, user: string | Array<any>, model: string): Promise<string> {
   const messages = [{ role: "system", content: system }, { role: "user", content: user }];
   const MAX_RETRIES = 3;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const body: any = { model, messages, stream: false };
     const resp = await fetch(AI_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ model, messages, stream: false }),
     });
     if (resp.ok) {
       const data = await resp.json();
@@ -136,6 +111,44 @@ async function callAIWithImage(apiKey: string, system: string, userText: string,
   ], model);
 }
 
+// ── Section Parser ──────────────────────────────────────────
+// Splits a multi-section AI response by ## headers into named agent outputs
+function parseSections(text: string, sectionMap: Record<string, string>): Record<string, string> {
+  const result: Record<string, string> = {};
+  const parts = text.split(/(?=^##\s)/m);
+
+  for (const part of parts) {
+    const headerMatch = part.match(/^##\s*(.+)/m);
+    if (!headerMatch) continue;
+    const headerText = headerMatch[1].trim().toUpperCase();
+    const content = part.replace(/^##\s*.+\n?/, "").trim();
+
+    for (const [pattern, agentKey] of Object.entries(sectionMap)) {
+      if (headerText.includes(pattern.toUpperCase())) {
+        result[agentKey] = content;
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+// Ensures all expected keys exist (fallback to full text if parsing fails)
+function ensureKeys(parsed: Record<string, string>, keys: string[], fullText: string): Record<string, string> {
+  const result = { ...parsed };
+  const missingKeys = keys.filter(k => !result[k] || result[k].length < 20);
+  if (missingKeys.length > 0 && Object.keys(parsed).length === 0) {
+    // Parsing completely failed — put full text in first key
+    result[keys[0]] = fullText;
+    for (let i = 1; i < keys.length; i++) {
+      result[keys[i]] = result[keys[i]] || "See above section for combined analysis.";
+    }
+  }
+  return result;
+}
+
+// ── Stock Data Fetcher ──────────────────────────────────────
 async function fetchStockData(symbol: string, range = "3mo") {
   const ySymbol = symbol.includes(".") ? symbol : `${symbol}.NS`;
   try {
@@ -163,12 +176,10 @@ async function fetchStockData(symbol: string, range = "3mo") {
     const high52 = Math.max(...closes.filter((c: any) => c));
     const low52 = Math.min(...closes.filter((c: any) => c && c > 0));
 
-    // Intraday-relevant: recent OHLCV candles, ATR, volume ratio, swing points
     const recentCandles = [];
     for (let i = Math.max(0, closes.length - 10); i < closes.length; i++) {
       recentCandles.push({ o: opens[i], h: highs[i], l: lows[i], c: closes[i], v: volumes[i] });
     }
-    // ATR (14-period)
     const atrPeriod = Math.min(14, closes.length - 1);
     let atrSum = 0;
     for (let i = closes.length - atrPeriod; i < closes.length; i++) {
@@ -180,17 +191,12 @@ async function fetchStockData(symbol: string, range = "3mo") {
       atrSum += tr;
     }
     const atr14 = atrSum / atrPeriod;
-    
-    // Volume ratio (today vs 10-day avg)
     const todayVol = volumes[volumes.length - 1] || 0;
     const volRatio = avgVol > 0 ? (todayVol / avgVol).toFixed(2) : "N/A";
-
-    // PDH, PDL, PDC (Previous Day High/Low/Close)
     const pdh = highs[highs.length - 2] || 0;
     const pdl = lows[lows.length - 2] || 0;
     const pdc = closes[closes.length - 2] || 0;
 
-    // Recent swing highs/lows (last 20 candles)
     const swingPoints: string[] = [];
     for (let i = Math.max(2, closes.length - 18); i < closes.length - 2; i++) {
       if (highs[i] > highs[i-1] && highs[i] > highs[i-2] && highs[i] > highs[i+1] && highs[i] > highs[i+2]) {
@@ -214,212 +220,281 @@ async function fetchStockData(symbol: string, range = "3mo") {
   } catch { return null; }
 }
 
-// ── Mode-specific prompts ──────────────────────────────────
+// ════════════════════════════════════════════════════════════
+// CONSOLIDATED PIPELINE PROMPTS
+// Each call combines multiple agent roles into a single comprehensive prompt
+// The model outputs multiple ## sections that get parsed back into individual agents
+// ════════════════════════════════════════════════════════════
 
-// === SCALP MODE prompts (Intraday/Scalping) ===
-const SCALP_MARKET_SYSTEM = `You are a **World-Class Intraday Price Action & Volume Analyst** — the most feared scalper on Dalal Street. You trade NAKED CHARTS with surgical precision. Zero indicators, pure tape reading.
+// ── SCALP: Call 1 — Technical + Sentiment ──────────────────
+const SCALP_ANALYSIS_SYSTEM = `You are a **World-Class Intraday Multi-Specialist Team**. Provide your analysis in TWO clearly separated sections using EXACTLY these headers:
 
-## MANDATORY ANALYSIS FRAMEWORK (follow this exact order):
+## TECHNICAL ANALYSIS
 
-### 1. TREND STRUCTURE (most important)
-- **Multi-timeframe trend**: 15min trend inside 1H trend inside Daily trend — are they aligned or conflicting?
-- **Market phase**: Accumulation / Markup / Distribution / Markdown (Wyckoff)
-- **Swing structure**: Map the last 5 swing points — HH/HL (bullish) or LH/LL (bearish)?
-- **BOS vs CHoCH**: Has structure broken? Where exactly (₹ level)? Is this a trend continuation or reversal signal?
-- **Trend strength**: Are impulse moves stronger than corrections? (compare candle sizes, speed)
+As a Price Action & Volume Analyst, analyze:
+- **Trend Structure**: Multi-timeframe (15min/1H/Daily alignment), HH/HL or LH/LL, BOS/CHoCH
+- **Smart Money Concepts**: Order blocks, breaker blocks, FVGs with exact ₹ zones
+- **Liquidity**: Stop-loss clusters, liquidity grabs, springs/upthrusts
+- **Supply/Demand**: Fresh zones only, rate tested/untested
+- **Volume Analysis**: Volume-price relationship, VWAP position, relative volume, climactic vs no-demand bars
+- **Key Levels**: PDH/PDL/PDC, round numbers, gap levels
+- **Trade Setup**: Setup type, entry trigger, entry/target/SL ₹ levels
 
-### 2. PRICE ACTION DEEP DIVE
-- **Smart Money Concepts**: Order blocks (OB), breaker blocks, mitigation blocks with exact ₹ zones
-- **Liquidity mapping**: Where are stop-losses clustered? (below equal lows, above equal highs, below trendlines)
-- **Liquidity grabs**: Has price swept liquidity and reversed? (spring, upthrust, deviation, trap)
-- **Fair Value Gaps (FVG)**: Unfilled imbalances — price WILL revisit these. Mark exact ₹ ranges
-- **Supply/Demand zones**: Fresh zones only. Rate: tested/untested, how price left the zone (strong/weak departure)
-- **Candle analysis at key levels**: Pin bars, engulfing, inside bars, doji — ONLY at S/D zones or OBs (ignore random candles)
+## SENTIMENT
 
-### 3. VOLUME ANALYSIS (critical for intraday)
-- **Volume-Price relationship**: Up move + high volume = strong. Up move + low volume = weak/suspect
-- **Volume spikes**: Where did climactic volume occur? What happened after? (absorption, exhaustion, breakout)
-- **No-demand bars**: Up bars with below-average volume = weakness (Wyckoff VSA)
-- **No-supply bars**: Down bars with below-average volume = strength
-- **VWAP**: Is price above/below VWAP? VWAP acts as dynamic S/R for institutional traders
-- **Relative volume**: Today's volume vs 10-day avg — is there unusual activity?
-- **Volume at key levels**: Did support/resistance levels have volume confirmation?
+As a Sentiment Analyst, gauge:
+- Retail & institutional sentiment, FII/DII activity hints
+- Social media buzz, market mood
+- Options PCR indication, fear/greed positioning
 
-### 4. KEY LEVELS (exact ₹ prices)
-- PDH (Previous Day High), PDL (Previous Day Low), PDC (Previous Day Close)
-- Opening Range High/Low (first 15-30 min)
-- Round numbers (psychological levels)
-- CPR (Central Pivot Range) or Standard Pivots
-- Gap levels (if any gap up/down)
+Keep each section focused and specific with ₹ levels. Total under 500 words.`;
 
-### 5. TRADE SETUP
-- **Setup type**: Breakout-Retest / Pullback to Demand / Rejection at Supply / Liquidity Sweep Reversal / FVG Fill
-- **Entry trigger**: What EXACT candle or price action confirms entry?
-- **Entry ₹**: Exact price
-- **Target 1 ₹** (scalp): Nearest opposing zone
-- **Target 2 ₹** (intraday): Next major level
-- **Stop Loss ₹**: Below/above the setup structure (not arbitrary)
-- **Risk:Reward**: Must be minimum 1:1.5
+const SCALP_ANALYSIS_CHART_SYSTEM = `You are a **World-Class Intraday Chart Reading Team**. Analyze the uploaded chart AND numerical data. Provide TWO clearly separated sections:
 
-DO NOT mention PE, fundamentals, long-term outlook. ZERO indicators except VWAP and volume. This is PURE PRICE ACTION.
-Keep under 400 words. Be specific with every ₹ level.`;
+## TECHNICAL ANALYSIS
 
-const SCALP_MARKET_CHART_SYSTEM = `You are a **World-Class Intraday Chart Reader** — you see what 99% of traders miss. Analyze the uploaded chart for PRECISION trade setups.
+Read the chart for:
+- Trend structure: HH/HL or LH/LL, BOS, CHoCH
+- Supply/demand zones, order blocks, FVGs with ₹ levels
+- Volume analysis: spikes, absorption, climactic action
+- Candlestick patterns AT key levels only
+- Trade setup with exact entry/target/SL ₹ levels
 
-## CHART READING PROTOCOL:
+## SENTIMENT
 
-### STRUCTURE FIRST
-- What is the prevailing trend on this timeframe? Map HH/HL or LH/LL
-- Has BOS (Break of Structure) occurred? Where? Is it confirmed or just a wick?
-- Any CHoCH (Change of Character) signaling reversal?
+Quick sentiment assessment:
+- Market mood from price action and volume behavior
+- Institutional vs retail positioning hints
+- Overall bias with confidence level
 
-### ZONES & LEVELS
-- Mark ALL supply/demand zones visible on chart with exact ₹ levels
-- Identify order blocks (last opposing candle before a strong move)
-- Fair value gaps (3-candle imbalances)
-- Key horizontal S/R that price has reacted to multiple times
+Total under 500 words. Every claim must reference specific ₹ levels.`;
 
-### VOLUME & CANDLES
-- Volume bars: Where are the volume spikes? Absorption or breakout volume?
-- Candle patterns AT key levels only (ignore noise)
-- Wyckoff VSA: No-demand, no-supply, stopping volume, climactic action
+// ── SCALP: Call 2 — Trade Decision + Risk ──────────────────
+const SCALP_DECISION_SYSTEM = `You are a combined **Elite Scalp Trader + Risk Manager**. Based on the analysis, provide TWO sections:
 
-### TRADE SETUP
-- **Entry ₹**: Based on what you see on the chart
-- **Target ₹**: Next opposing zone/level
-- **Stop Loss ₹**: Structural stop (below demand or above supply)
-- **R:R**: Calculate precisely
-
-Keep under 400 words. Every claim must reference a specific ₹ level visible on chart.`;
-
-const SCALP_TRADER_SYSTEM = `You are the **Elite Intraday Scalp Trader** — you execute with ZERO emotion, pure system-based decisions.
-
-Based on the technical analysis provided, deliver your FINAL TRADE CALL:
-
-## TRADE DECISION FORMAT:
+## TRADE DECISION
 
 **BIAS**: Bullish / Bearish / Neutral (with confidence %)
-**ACTION**: BUY / SELL / NO TRADE (and WHY in one line)
+**ACTION**: BUY / SELL / NO TRADE
 
 **TRADE PLAN:**
 | Parameter | Value |
 |-----------|-------|
 | Entry ₹ | Exact trigger price |
 | Entry Type | Market / Limit / Stop-Limit |
-| Target 1 ₹ | Quick scalp target (book 50%) |
-| Target 2 ₹ | Extended target (trail remaining) |
+| Target 1 ₹ | Quick scalp (book 50%) |
+| Target 2 ₹ | Extended (trail remaining) |
 | Stop Loss ₹ | Hard stop, non-negotiable |
 | Risk:Reward | Minimum 1:1.5 |
 | Trade Duration | 10-30 min / 30-60 min / 1-3 hours |
 | Position Size | 2-5% of capital |
-| Trailing Stop | How to trail after T1 hit |
+| Trailing Stop | How to trail after T1 |
 
-**ENTRY CONFIRMATION**: What MUST happen before entering? (e.g., "Wait for 5min close above ₹X with volume > avg")
-**INVALIDATION**: What kills this setup? (e.g., "If price closes below ₹X, setup is dead")
-**MARKET CONTEXT**: Is broader market (NIFTY/BANKNIFTY) supporting this trade?
+**ENTRY CONFIRMATION**: What MUST happen before entering?
+**INVALIDATION**: What kills this setup?
 
-Be DECISIVE. No "maybe" or "could go either way". Pick a side. Keep under 200 words.`;
+## RISK CHECK
 
-const SCALP_RISK_SYSTEM = `You are the **Intraday Risk Manager** — your job is to PROTECT CAPITAL above all else.
+**Trade Quality Score**: 1-10
+- R:R ratio assessment, setup clarity, confluence factors
+- Stop-loss validation (structural or arbitrary?)
+- Volume/liquidity risk, volatility (ATR-based), spread concerns
+- Time risk (market close, news events)
+**VERDICT**: APPROVED / APPROVED WITH ADJUSTMENTS / REJECTED
+If adjustments needed, provide modified parameters.
 
-## RISK ASSESSMENT:
+Be DECISIVE. Total under 400 words.`;
 
-### 1. Trade Quality Score (1-10)
-- R:R ratio (min 1:1.5 for scalp, 1:2 for positional intraday)
-- Setup clarity (is the setup textbook or forced?)
-- Multiple confluence factors (trend + volume + level + candle = strong)
+// ── SWING: Call 1 — Full Research Team ──────────────────────
+const SWING_RESEARCH_SYSTEM = `You are a **Professional Trading Firm Research Team** with 4 specialists. Provide FOUR clearly separated sections:
 
-### 2. Risk Checks
-- **Stop-loss validation**: Is SL below a structural level or just arbitrary? Is SL too wide for the timeframe (>0.5% for scalp, >1% for intraday)?
-- **Volume risk**: Is there enough liquidity for clean execution? Check avg volume vs position size
-- **Volatility**: ATR-based assessment — is the stock moving enough to hit target but not so wild it'll hit SL randomly?
-- **Spread**: For illiquid stocks, bid-ask spread eats into profits
-- **Time risk**: Is this trade too close to market close or a high-impact news event?
-- **Correlation**: Is this trade doubling exposure to the same sector/index move?
+## TECHNICAL ANALYSIS
 
-### 3. VERDICT
-- **APPROVED** / **APPROVED WITH ADJUSTMENTS** / **REJECTED**
-- If adjustments: provide modified SL, target, or position size
-- If rejected: explain clearly why and what would make it tradeable
+As an Elite Price Action Analyst:
+- Trend structure: HH/HL or LH/LL, BOS, CHoCH
+- Supply/Demand zones with exact ₹ levels, order blocks
+- Volume Profile: POC, Value Area High/Low
+- Key S/R levels, candlestick patterns at key levels
+- RSI divergences (1H+ timeframes only)
+Keep under 250 words.
 
-Keep under 200 words. Be strict — only good setups deserve capital.`;
+## SENTIMENT
 
-// === SWING MODE prompts ===
-const SWING_TRADER_SYSTEM = `You are the **Swing/Position Trader Agent**. Given all reports, make a CLEAR trading decision:
+As a Sentiment Analyst:
+- Retail & institutional sentiment, social media buzz
+- FII/DII activity, options PCR, market mood
+Keep under 150 words.
 
+## NEWS
+
+As a News & Macro Analyst:
+- Recent news, regulatory changes, sector trends
+- Global macro factors, insider transactions, event risks
+Keep under 150 words.
+
+## FUNDAMENTALS
+
+As a Fundamentals Analyst:
+- PE, PB, ROE, ROCE, debt-to-equity
+- Promoter holding, revenue/profit growth, FCF, dividend yield
+Keep under 200 words.
+
+Be specific with numbers and ₹ levels throughout.`;
+
+const SWING_RESEARCH_CHART_SYSTEM = `You are a **Professional Trading Firm Research Team** with 4 specialists. Analyze the uploaded chart AND numerical data. Provide FOUR sections:
+
+## TECHNICAL ANALYSIS
+Chart reading + price action: trend structure, S/D zones, volume analysis, patterns. Use ₹ levels from chart.
+
+## SENTIMENT
+Market mood, retail vs institutional positioning, PCR indication.
+
+## NEWS
+Recent catalysts, sector trends, macro factors.
+
+## FUNDAMENTALS
+Key ratios: PE, PB, ROE, ROCE, debt, promoter holding, growth.
+
+Total under 700 words.`;
+
+// ── SWING: Call 2 — Bull vs Bear Debate + Manager ──────────
+const SWING_DEBATE_SYSTEM = `You are a **Research Debate Panel** — a Bull Researcher, Bear Researcher, and Research Manager. Based on the analysis provided, produce THREE sections:
+
+## BULL CASE
+
+As the Bullish Researcher, build the STRONGEST bull case:
+- Upside targets with specific ₹ levels
+- Key catalysts and growth drivers
+- Challenge bear arguments
+Keep under 200 words.
+
+## BEAR CASE
+
+As the Bearish Researcher, build the STRONGEST bear case:
+- Downside risks and red flags
+- Specific downside targets
+- Challenge bull arguments
+Keep under 200 words.
+
+## RESEARCH VERDICT
+
+As the Research Manager / Investment Judge:
+- Evaluate both sides objectively
+- Clear Investment Plan with bias, conviction level, key factors
+- State which side has stronger arguments and why
+Keep under 200 words.`;
+
+// ── SWING: Call 3 — Trader + Risk Panel + Portfolio Manager ─
+const SWING_DECISION_SYSTEM = `You are a **Trading Decision Committee** combining 5 roles. Based on all analysis, debate, and research, provide FIVE sections:
+
+## TRADER DECISION
+
+As the Swing/Position Trader:
 - **Action**: Strong Buy / Buy / Hold / Sell / Strong Sell
 - **Entry Price**: specific ₹ level
-- **Target Price**: specific ₹ level (and extended target)
-- **Stop Loss**: specific ₹ level
-- **Position Size**: % of portfolio (3-10%)
-- **Holding Duration**: MUST specify expected duration (e.g., "2-4 weeks", "1-3 months", "3-6 months")
-- **Key Catalysts**: what will drive the move in this timeframe
-- **Exit Strategy**: conditions for early exit or trailing stop
+- **Target Price**: specific ₹ (and extended target)
+- **Stop Loss**: specific ₹
+- **Position Size**: 3-10% of portfolio
+- **Holding Duration**: MUST specify (e.g., "2-4 weeks", "1-3 months")
+- **Key Catalysts**: what drives the move
+- **Exit Strategy**: trailing stop or conditions
 
-Be decisive and always mention the expected holding period. Keep under 250 words.`;
+## AGGRESSIVE RISK
 
-const SWING_PORTFOLIO_SYSTEM = `You are the **Portfolio Manager** — the FINAL decision-maker for Swing/Position trades.
+As the Aggressive Risk Analyst, argue FOR trade execution. Favorable R:R, momentum support. Under 120 words.
 
-Make the FINAL decision:
+## CONSERVATIVE RISK
+
+As the Conservative Risk Analyst, focus on downside protection, suggest hedges. Under 120 words.
+
+## NEUTRAL RISK
+
+As the Neutral Risk Analyst, balance both views, practical adjustments. Under 120 words.
+
+## PORTFOLIO MANAGER
+
+As the FINAL decision-maker:
 - **Decision**: APPROVE or REJECT
 - **Final Action**: Strong Buy / Buy / Hold / Sell / Strong Sell
-- **Holding Duration**: Confirm or adjust expected hold time (weeks/months)
-- **Adjusted Position Size**: if different from trader's suggestion
+- **Holding Duration**: Confirm or adjust
+- **Position Size**: Final recommendation
 - **Risk Score**: 1-10 (10 = highest risk)
 - **Confidence**: percentage
-- **Trailing Stop Strategy**: how to protect profits as trade moves
-- **Summary**: 2-3 sentence rationale including why this timeframe
+- **Trailing Stop Strategy**: how to protect profits
+- **Summary**: 2-3 sentence rationale
 
-Be authoritative. Keep under 200 words.`;
+Be authoritative and decisive. Total under 700 words.`;
 
-// === INVEST MODE prompts (Warren Buffett style) ===
-const INVEST_FUNDAMENTALS_SYSTEM = `You are a **Warren Buffett-style Value Investor & Fundamental Analyst**. Analyze this company as if you're buying the ENTIRE BUSINESS, not just a stock.
+// ── INVEST: Call 1 — Deep Fundamentals + Moat ──────────────
+const INVEST_FUNDAMENTALS_SYSTEM = `You are a **Warren Buffett-style Investment Research Team**. Provide TWO in-depth sections:
 
-Apply Buffett's core principles:
-1. **Economic Moat**: Does this company have a durable competitive advantage? (brand, network effects, switching costs, cost advantages, patents)
-2. **Management Quality**: Is management honest, competent, and shareholder-friendly? (capital allocation, insider buying, promoter holding)
-3. **Financial Fortress**: Strong balance sheet? (debt/equity < 0.5 preferred, consistent FCF, ROE > 15%, ROCE > 15%)
-4. **Earnings Power**: Consistent earnings growth over 5-10 years? Predictable business?
-5. **Intrinsic Value**: What is the business worth? Use DCF, earnings yield, asset value. What's the margin of safety?
-6. **Circle of Competence**: Is this business simple to understand?
+## FUNDAMENTAL ANALYSIS
 
-Key metrics: PE, PB, ROE, ROCE, Debt/Equity, Dividend Yield, FCF Yield, Revenue/Profit CAGR (5yr, 10yr), Promoter Holding, Pledge %.
+As a Buffett-style Value Investor, analyze this company as if buying the ENTIRE BUSINESS:
+1. **Economic Moat**: Durable competitive advantage? (brand, network effects, switching costs, cost advantages)
+2. **Management Quality**: Honest, competent, shareholder-friendly? Capital allocation, insider buying, promoter holding
+3. **Financial Fortress**: Debt/equity < 0.5, consistent FCF, ROE > 15%, ROCE > 15%
+4. **Earnings Power**: Consistent growth over 5-10 years? Predictable business?
+5. **Intrinsic Value**: DCF, earnings yield, asset value. Margin of safety?
+6. **Circle of Competence**: Simple to understand?
 
-"Price is what you pay, value is what you get." — Warren Buffett
+Key metrics: PE, PB, ROE, ROCE, D/E, Dividend Yield, FCF Yield, Revenue/Profit CAGR (5yr, 10yr), Promoter Holding, Pledge %.
+Keep under 350 words.
 
-Be specific with numbers. Keep under 350 words.`;
+## MOAT ANALYSIS
 
-const INVEST_MOAT_SYSTEM = `You are a **Competitive Moat Analyst** (inspired by Pat Dorsey / Morningstar moat methodology).
-
-Analyze the company's moat across 5 dimensions:
-1. **Brand Power**: Pricing power, brand recognition, customer loyalty
-2. **Network Effects**: Does the product become more valuable as more people use it?
-3. **Switching Costs**: How hard is it for customers to switch to competitors?
-4. **Cost Advantages**: Scale, process, location, or resource advantages
-5. **Efficient Scale**: Natural monopoly or oligopoly characteristics
-
+As a Competitive Moat Analyst (Pat Dorsey / Morningstar methodology):
 Rate each dimension: None / Narrow / Wide
-Overall Moat Rating: None / Narrow / Wide
+1. **Brand Power**: Pricing power, recognition, loyalty
+2. **Network Effects**: Value increases with users?
+3. **Switching Costs**: How hard to switch?
+4. **Cost Advantages**: Scale, process, location advantages
+5. **Efficient Scale**: Natural monopoly/oligopoly?
 
-Also assess **Moat Trend**: Strengthening / Stable / Weakening
-
+**Overall Moat Rating**: None / Narrow / Wide
+**Moat Trend**: Strengthening / Stable / Weakening
 Keep under 200 words.`;
 
-const INVEST_BULL_SYSTEM = `You are the **Long-term Bull Case Builder** (think like a Warren Buffett disciple).
-Build the STRONGEST case for buying and HOLDING this stock for 3-10 years.
-Focus on: business quality, growth runway, management, reinvestment potential, dividend growth, sector tailwinds.
-Cite specific numbers: revenue CAGR, margin expansion potential, addressable market size.
+// ── INVEST: Call 2 — Technical + News + Bull/Bear ──────────
+const INVEST_CONTEXT_SYSTEM = `You are a **Long-term Investment Context Team**. Provide FOUR sections:
+
+## TECHNICAL ANALYSIS
+
+Long-term technical perspective:
+- Weekly/monthly structure, major S/R levels, long-term trend
+- Multi-year chart patterns, major breakout/breakdown levels
+- Entry timing based on long-term technicals
+Keep under 200 words.
+
+## NEWS
+
+Long-term macro outlook:
+- Regulatory environment, sector tailwinds/headwinds
+- Global macro factors, industry disruption risks
+- Upcoming catalysts (earnings, policy changes)
+Keep under 150 words.
+
+## BULL CASE
+
+As a Warren Buffett disciple, build the STRONGEST case for buying and HOLDING 3-10 years:
+- Business quality, growth runway, management
+- Reinvestment potential, dividend growth, sector tailwinds
+- Cite specific numbers: revenue CAGR, margin expansion, addressable market
+Keep under 200 words.
+
+## BEAR CASE
+
+As Charlie Munger ("Invert, always invert"), what could DESTROY this investment over 5-10 years?
+- Disruption risk, regulatory threats, management red flags
+- Accounting concerns, cyclicality, capital misallocation, governance
 Keep under 200 words.`;
 
-const INVEST_BEAR_SYSTEM = `You are the **Long-term Risk Analyst** (think like Charlie Munger — "Invert, always invert").
-What could DESTROY this investment over 5-10 years?
-Focus on: disruption risk, regulatory threats, management red flags, accounting concerns, cyclicality, capital misallocation, governance issues.
-"It's not about being bearish. It's about avoiding permanent loss of capital."
-Keep under 200 words.`;
+// ── INVEST: Call 3 — Committee + Architect ──────────────────
+const INVEST_DECISION_SYSTEM = `You are a **Long-term Investment Decision Board**. Provide TWO sections:
 
-const INVEST_MANAGER_SYSTEM = `You are the **Investment Committee Chairman** evaluating a long-term (1-10 year) investment.
-Given the fundamental analysis, moat assessment, bull case, and bear case:
+## INVESTMENT COMMITTEE
 
+As the Investment Committee Chairman evaluating a 1-10 year investment:
 - **Investment Grade**: A+ (Exceptional) / A (Strong) / B (Good) / C (Fair) / D (Avoid)
 - **Moat Verdict**: Wide / Narrow / None
 - **Quality Score**: 1-10
@@ -427,396 +502,233 @@ Given the fundamental analysis, moat assessment, bull case, and bear case:
 - **Margin of Safety**: current % discount/premium to fair value
 - **Conviction**: High / Medium / Low
 - **Recommended Action**: Buy / Accumulate on Dips / Hold / Avoid
-- **Investment Horizon**: specify (e.g., "3-5 years", "5-10 years")
-Keep under 200 words.`;
+- **Investment Horizon**: specify years
+Keep under 200 words.
 
-const INVEST_PORTFOLIO_SYSTEM = `You are the **Long-term Portfolio Architect** — Warren Buffett's right hand.
+## PORTFOLIO ARCHITECT
 
-Final investment decision for a multi-year holding:
+As Warren Buffett's right hand, final investment decision:
 - **Decision**: INVEST / WATCHLIST / PASS
 - **Action**: Buy Now / Accumulate Below ₹X / Wait for Better Price
-- **Target Allocation**: % of portfolio (concentrated: 5-15% for high conviction)
+- **Target Allocation**: % of portfolio (5-15% for high conviction)
 - **Investment Horizon**: X-Y years
 - **Expected CAGR**: %
 - **Risk Score**: 1-10
 - **Confidence**: %
 - **Buy Zone**: ₹X - ₹Y (ideal accumulation range)
 - **Exit Criteria**: What would make you sell (thesis breakers)
-- **Key Quote**: One Warren Buffett principle that applies
+- **Key Quote**: One Buffett principle that applies
 
-"Our favorite holding period is forever." — but know when the thesis breaks.
-Keep under 250 words.`;
+"Our favorite holding period is forever." Keep under 250 words.`;
 
-// === Original shared prompts ===
-const MARKET_ANALYST_SYSTEM = `You are an **Elite Price Action & Technical Analyst** in a professional trading firm — a master of pure price action trading.
+// ── OPTIONS prompts (already consolidated — 2 calls) ────────
+const OPTIONS_ANALYSIS_SYSTEM = `You are an **Elite Options Analyst** combining expertise in OI patterns, Greeks/IV analysis, and technical analysis for Indian F&O markets. Provide comprehensive, actionable analysis with specific numbers.
 
-Your core expertise:
-**Price Action Mastery:**
-- Read naked charts — identify trend structure (HH/HL for uptrend, LH/LL for downtrend), BOS (Break of Structure), CHoCH (Change of Character)
-- Recognize candlestick patterns with precision
-- Identify key price action setups: pullback entries, breakout retests, fakeouts/traps
+Cover ALL of the following with clear section headers:
 
-**Supply & Demand Zone Analysis:**
-- Mark fresh vs tested supply/demand zones with exact ₹ price levels
-- Order blocks, breaker blocks, mitigation blocks (Smart Money Concepts)
-- Rally-Base-Rally, Drop-Base-Drop formations
+## OI Analysis
+1. OI Build-up Classification: Long/Short Build-up, Unwinding, Covering
+2. PCR Analysis & trend
+3. Max Pain strike & implications
+4. OI Concentration: highest Call OI (resistance) and Put OI (support)
+5. OI Change: which strikes saw max addition/reduction
+6. Writers vs Buyers dominance
+7. Straddle premium & expected move range
 
-**Volume & Volume Profile (PRIMARY):**
-- Volume Profile: POC, Value Area High/Low, HVN, LVN
-- Volume Price Analysis: climactic volume, no-demand/no-supply bars
-- RSI divergences — use only on 1H+ timeframes
+## Greeks & IV
+1. Current IV vs historical, IV Rank, IV Percentile
+2. IV Skew (Call vs Put)
+3. Greeks breakdown: Delta, Gamma, Theta, Vega at key strikes
+4. Volatility regime (low-vol sell premium vs high-vol buy premium)
+5. Event risk assessment
 
-Be specific with ₹ price levels. Keep under 250 words.`;
+## Technical Analysis
+- Key S/R for strike selection with exact ₹ levels
+- Trend & structure for directional bias
+- VWAP position for intraday options
+- Expected range based on ATR
+- Pattern-based targets for strike selection
 
-const MARKET_ANALYST_CHART_SYSTEM = `You are an **Elite Price Action & Technical Analyst** with chart reading expertise.
-Analyze the uploaded chart along with numerical data:
-- Market structure: HH/HL, LH/LL, BOS, CHoCH
-- Supply/Demand zones with ₹ levels
-- Chart patterns, candlestick patterns
-- Volume profile analysis
-- Key S/R levels
-Combine visual + numerical analysis. Keep under 350 words.`;
+Keep total under 600 words.`;
 
-const SENTIMENT_ANALYST_SYSTEM = `You are the **Sentiment Analyst**. Gauge retail & institutional sentiment, social media buzz, FII/DII activity, options PCR, and market mood. Be specific. Keep under 200 words.`;
+const OPTIONS_DECISION_SYSTEM = `You are an **Elite Options Strategist & Trader** for Indian F&O markets. Based on the analysis, provide your COMPLETE recommendation with these sections:
 
-const NEWS_ANALYST_SYSTEM = `You are the **News Analyst**. Analyze recent news, regulatory changes, sector trends, global macro, insider transactions, and event risks. Be specific. Keep under 200 words.`;
+## Recommended Strategies
+Construct 2-3 optimal strategies with different risk profiles:
+- **Aggressive** (directional, high risk/reward)
+- **Moderate** (spreads, balanced)
+- **Conservative** (premium selling, income)
 
-const FUNDAMENTALS_ANALYST_SYSTEM = `You are the **Fundamentals Analyst**. Evaluate PE, PB, ROE, ROCE, debt-to-equity, promoter holding, revenue/profit growth, FCF, dividend yield. Be specific with numbers. Keep under 200 words.`;
+For EACH: Strategy name, exact legs (strikes, CE/PE, Buy/Sell, lots), net premium, max profit/loss, breakevens, R:R ratio, probability of profit, trade type, holding duration, SL, target, adjustments.
 
-const BULL_RESEARCHER_SYSTEM = `You are the **Bullish Researcher**. Build the STRONGEST bull case with upside targets, catalysts, and growth drivers. Challenge bear arguments if provided. Keep under 200 words.`;
-const BEAR_RESEARCHER_SYSTEM = `You are the **Bearish Researcher**. Build the STRONGEST bear case. Highlight risks, red flags, downside targets. Challenge bull arguments. Keep under 200 words.`;
-const RESEARCH_MANAGER_SYSTEM = `You are the **Research Manager / Investment Judge**. Evaluate both sides and produce a clear Investment Plan with bias, conviction, key factors. Keep under 200 words.`;
+## Risk Assessment
+- Risk score 1-10 for each strategy
+- Margin requirements, max drawdown
+- Greeks risk (gamma near expiry, theta timeline, vega)
+- Liquidity risk, event risk
+- Position sizing (% of portfolio)
+- Exit rules (SL, target, time stop)
 
-const TRADER_SYSTEM = `You are the **Trader Agent**. Make a CLEAR trading decision: Action, Entry ₹, Target ₹, Stop Loss ₹, Position Size %, Time Horizon. Be decisive. Keep under 200 words.`;
-
-const AGGRESSIVE_RISK_SYSTEM = `You are the **Aggressive Risk Analyst**. Evaluate and argue FOR the trade execution. Discuss favorable risk/reward. Keep under 150 words.`;
-const CONSERVATIVE_RISK_SYSTEM = `You are the **Conservative Risk Analyst**. Focus on downside protection, suggest hedges. Keep under 150 words.`;
-const NEUTRAL_RISK_SYSTEM = `You are the **Neutral Risk Analyst**. Balance aggressive and conservative views. Offer practical adjustments. Keep under 150 words.`;
-const PORTFOLIO_MANAGER_SYSTEM = `You are the **Portfolio Manager** — FINAL decision-maker. Decision, Final Action, Position Size, Risk Score 1-10, Confidence %, Conditions, Summary. Keep under 200 words.`;
-
-// === OPTIONS MODE prompts ===
-const OPTIONS_OI_SYSTEM = `You are an **Elite Open Interest (OI) Analyst** for Indian F&O markets. You are the BEST in the world at reading OI data.
-
-Analyze OI patterns for the given stock/index:
-1. **OI Build-up Classification**: Long Build-up, Short Build-up, Long Unwinding, Short Covering — based on price + OI change correlation
-2. **PCR Analysis**: Put-Call Ratio interpretation, PCR trend (rising/falling), extreme levels
-3. **Max Pain**: Identify the max pain strike and its implications for expiry
-4. **OI Concentration**: Where is the highest Call OI (resistance) and Put OI (support)? Identify key strikes
-5. **OI Change Analysis**: Which strikes saw maximum OI addition/reduction? What does it signal?
-6. **Writers vs Buyers**: Who is dominating — option writers (smart money) or buyers (retail)?
-7. **Straddle/Strangle Analysis**: ATM straddle premium, expected move range
-8. **Institutional Footprint**: Detect large OI positions that indicate institutional activity
-
-Provide specific strike prices, OI numbers where possible. Be PRECISE. Keep under 350 words.`;
-
-const OPTIONS_GREEKS_SYSTEM = `You are an **Options Greeks & IV Specialist** — the best in analyzing Implied Volatility and Greeks for Indian markets.
-
-Analyze:
-1. **IV Analysis**: Current IV vs historical IV, IV Rank, IV Percentile. Is IV cheap or expensive?
-2. **IV Skew**: Call vs Put IV skew, what it signals about market direction
-3. **IV Surface**: Term structure — near-month vs far-month IV differences
-4. **Greeks Breakdown**:
-   - Delta: Directional exposure, probability of ITM
-   - Gamma: Rate of delta change, gamma risk near expiry
-   - Theta: Time decay — how much premium erodes daily
-   - Vega: Volatility sensitivity — impact of IV crush/expansion
-5. **Volatility Regime**: Is the market in low-vol (sell premium) or high-vol (buy premium) regime?
-6. **Event Risk**: Any upcoming events (earnings, RBI policy, expiry) that could cause IV spike?
-
-Recommend whether to BUY premium (directional) or SELL premium (income). Keep under 300 words.`;
-
-const OPTIONS_STRATEGY_SYSTEM = `You are an **Elite Options Strategist** — master of constructing optimal options strategies for Indian F&O markets.
-
-Based on the OI analysis, Greeks/IV analysis, and technical view, recommend the BEST strategy:
-
-For EACH recommended strategy provide:
-1. **Strategy Name**: (e.g., Bull Call Spread, Iron Condor, Naked Put, Calendar Spread, Ratio Spread)
-2. **Legs**: Exact strikes, CE/PE, Buy/Sell, Lot size, Premium ₹
-3. **Net Premium**: Total debit or credit ₹
-4. **Max Profit**: ₹ amount and at what level
-5. **Max Loss**: ₹ amount and at what level
-6. **Breakeven Points**: Exact ₹ levels
-7. **Risk:Reward Ratio**: e.g., 1:2, 1:3
-8. **Probability of Profit**: approximate %
-9. **Trade Type**: Intraday / Swing / Till Expiry
-10. **Holding Duration**: Expected time to hold
-11. **Stop Loss**: When to exit (premium-based or underlying-based)
-12. **Target**: When to book profits
-13. **Adjustments**: What to do if trade goes against you
-
-Recommend 2-3 strategies with different risk profiles:
-- **Aggressive** (high risk, high reward — directional)
-- **Moderate** (balanced — spreads)
-- **Conservative** (low risk, income — premium selling)
-
-Be SPECIFIC with lot sizes for NSE (NIFTY=25, BANKNIFTY=15, stocks=varies). Keep under 400 words.`;
-
-const OPTIONS_RISK_SYSTEM = `You are the **Options Risk Manager** — specialist in F&O risk assessment.
-
-Evaluate the proposed options strategies:
-1. **Margin Requirement**: Approximate margin needed for each strategy
-2. **Max Drawdown**: Worst-case scenario analysis
-3. **Greeks Risk**: Gamma risk near expiry, theta decay timeline, vega risk from IV changes
-4. **Liquidity Risk**: Bid-ask spread concerns, OI liquidity at recommended strikes
-5. **Event Risk**: Impact of upcoming events on the strategy
-6. **Position Sizing**: Recommended capital allocation (% of total portfolio)
-7. **Exit Rules**: 
-   - Stop loss: At what premium loss % to exit
-   - Target: At what profit % to book
-   - Time stop: Exit before expiry if not in profit by when?
-8. **Hedge Recommendations**: How to protect the position if it goes wrong
-9. **Risk Score**: 1-10 for each strategy
-
-Approve, modify, or reject each strategy. Keep under 250 words.`;
-
-const OPTIONS_TECHNICAL_SYSTEM = `You are a **Technical Analyst specializing in Options Trading**. Analyze for OPTIONS STRIKE SELECTION.
-
-Focus on:
-- **Key Support/Resistance**: Exact ₹ levels for strike selection
-- **Trend & Structure**: For directional bias (CE vs PE)
-- **VWAP**: Current position relative to VWAP for intraday options
-- **Volume Profile**: POC, Value Area for identifying key levels
-- **Expected Range**: Based on ATR, what range can the stock move today/this week?
-- **Pattern-based Targets**: Where is price likely heading? This determines strike selection.
-
-Keep analysis focused on helping select the RIGHT strikes and direction. Keep under 200 words.`;
-
-const OPTIONS_TRADER_SYSTEM = `You are the **Options Trade Executor** — FINAL decision-maker for F&O trades.
-
-Based on ALL analysis (OI, Greeks, Strategy, Risk, Technical), provide the FINAL trade recommendation:
-
+## Final Trade Decision
 **PRIMARY TRADE:**
-- **Strategy**: Name
-- **Direction**: Bullish / Bearish / Neutral
-- **Legs**: Complete details with strikes, CE/PE, Buy/Sell, Lots, Premium
-- **Net Cost/Credit**: ₹
-- **Risk:Reward**: ratio
-- **Max Profit**: ₹ | **Max Loss**: ₹
-- **Breakeven**: ₹ level(s)
-- **Trade Type**: Intraday / Swing (2-5 days) / Till Expiry
-- **Entry**: Now or wait for level ₹X
-- **Stop Loss**: Exit if premium drops/rises to ₹X (or underlying hits ₹X)
-- **Target 1**: Book 50% at ₹X premium
-- **Target 2**: Trail remaining 50%
-- **Confidence**: %
-- **Risk Score**: 1-10
-- **Capital Required**: ₹ (margin + premium)
+- Strategy, direction, complete leg details
+- Net cost/credit, R:R, max profit/loss, breakeven
+- Entry, SL, Target 1 (book 50%), Target 2 (trail)
+- Confidence %, Risk Score, Capital Required
 
-**ALTERNATIVE TRADE** (if primary doesn't suit risk appetite):
-- Provide a lower-risk alternative
+**ALTERNATIVE** (lower-risk option)
 
-"In options, risk management IS the strategy." Keep under 300 words.`;
+Use NSE lot sizes (NIFTY=25, BANKNIFTY=15). Keep under 800 words.`;
 
-// ── Pipeline runners by mode ─────────────────────────────
+// ════════════════════════════════════════════════════════════
+// PIPELINE RUNNERS — Consolidated
+// ════════════════════════════════════════════════════════════
 
 async function runScalpPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any, chartImage?: string) {
   const M = MODELS.scalp;
   const hasChart = !!chartImage;
 
-  // Step 1: Technical analysis (speed-optimized, no fundamentals)
-  const marketReport = hasChart
-    ? await callAIWithImage(apiKey, SCALP_MARKET_CHART_SYSTEM, `Scalp/intraday analysis for ${symbol}. ${dataCtx}`, chartImage, M.technical)
-    : await callAI(apiKey, SCALP_MARKET_SYSTEM, `Scalp/intraday analysis for ${symbol}. ${dataCtx}`, M.technical);
+  // Call 1: Technical + Sentiment (combined)
+  const analysisResult = hasChart
+    ? await callAIWithImage(apiKey, SCALP_ANALYSIS_CHART_SYSTEM, `Scalp/intraday analysis for ${symbol}. ${dataCtx}`, chartImage!, M.analysis)
+    : await callAI(apiKey, SCALP_ANALYSIS_SYSTEM, `Scalp/intraday analysis for ${symbol}. ${dataCtx}`, M.analysis);
 
-  const sentimentReport = await callAI(apiKey, SENTIMENT_ANALYST_SYSTEM, `Quick sentiment check for ${symbol} (intraday context). ${dataCtx}`, M.sentiment);
+  const analysisParts = parseSections(analysisResult, {
+    "TECHNICAL": "market",
+    "SENTIMENT": "sentiment",
+  });
+  const agents1 = ensureKeys(analysisParts, ["market", "sentiment"], analysisResult);
 
-  await sleep(600);
+  await sleep(400);
 
-  // Step 2: Direct to trader (no debate for scalp — speed matters)
-  const analystContext = `TECHNICAL ANALYSIS${hasChart ? ' (with chart)' : ''}:\n${marketReport}\n\nSENTIMENT:\n${sentimentReport}`;
-  const traderDecision = await callAI(apiKey, SCALP_TRADER_SYSTEM, `Make scalp/intraday call for ${symbol}.\n${analystContext}`, M.trader);
+  // Call 2: Trade Decision + Risk Check (combined)
+  const decisionResult = await callAI(apiKey, SCALP_DECISION_SYSTEM,
+    `Make scalp/intraday call for ${symbol}.\nANALYSIS:\n${analysisResult}\nDATA: ${dataCtx}`, M.decision);
 
-  await sleep(600);
+  const decisionParts = parseSections(decisionResult, {
+    "TRADE": "traderDecision",
+    "RISK": "riskCheck",
+  });
+  const agents2 = ensureKeys(decisionParts, ["traderDecision", "riskCheck"], decisionResult);
 
-  // Step 3: Quick risk check
-  const riskCheck = await callAI(apiKey, SCALP_RISK_SYSTEM, `Evaluate this scalp trade for ${symbol}.\nTRADER CALL:\n${traderDecision}\n\n${analystContext}\n\nDATA: ${dataCtx}`, M.risk);
-
-  return {
-    agents: { market: marketReport, sentiment: sentimentReport, traderDecision, riskCheck },
-  };
+  return { agents: { ...agents1, ...agents2 } };
 }
 
 async function runSwingPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any, chartImage?: string) {
   const M = MODELS.swing;
   const hasChart = !!chartImage;
 
-  // Step 1: Full analyst team (parallel batch)
-  const marketPromise = hasChart
-    ? callAIWithImage(apiKey, MARKET_ANALYST_CHART_SYSTEM, `Analyze for ${symbol}. ${dataCtx}`, chartImage, M.technical)
-    : callAI(apiKey, MARKET_ANALYST_SYSTEM, `Analyze ${symbol}. ${dataCtx}`, M.technical);
+  // Call 1: Full Research Team (Technical + Sentiment + News + Fundamentals)
+  const researchResult = hasChart
+    ? await callAIWithImage(apiKey, SWING_RESEARCH_CHART_SYSTEM, `Full analysis for ${symbol}. ${dataCtx}`, chartImage!, M.research)
+    : await callAI(apiKey, SWING_RESEARCH_SYSTEM, `Full analysis for ${symbol}. ${dataCtx}`, M.research);
 
-  const [marketReport, sentimentReport] = await Promise.all([
-    marketPromise,
-    callAI(apiKey, SENTIMENT_ANALYST_SYSTEM, `Sentiment for ${symbol}. ${dataCtx}`, M.sentiment),
-  ]);
-  await sleep(800);
+  const researchParts = parseSections(researchResult, {
+    "TECHNICAL": "market",
+    "SENTIMENT": "sentiment",
+    "NEWS": "news",
+    "FUNDAMENTAL": "fundamentals",
+  });
+  const agents1 = ensureKeys(researchParts, ["market", "sentiment", "news", "fundamentals"], researchResult);
 
-  const [newsReport, fundamentalsReport] = await Promise.all([
-    callAI(apiKey, NEWS_ANALYST_SYSTEM, `News for ${symbol}. ${dataCtx}`, M.news),
-    callAI(apiKey, FUNDAMENTALS_ANALYST_SYSTEM, `Fundamentals for ${symbol}. ${dataCtx}`, M.fundamentals),
-  ]);
+  await sleep(400);
 
-  const chartNote = hasChart ? "\n[Chart analysis included]" : "";
-  const analystContext = `TECHNICAL${hasChart ? ' (with chart)' : ''}:\n${marketReport}\n\nSENTIMENT:\n${sentimentReport}\n\nNEWS:\n${newsReport}\n\nFUNDAMENTALS:\n${fundamentalsReport}${chartNote}`;
+  // Call 2: Bull vs Bear Debate + Research Manager
+  const debateResult = await callAI(apiKey, SWING_DEBATE_SYSTEM,
+    `Research debate for ${symbol}.\nFULL ANALYSIS:\n${researchResult}`, M.debate);
 
-  // Step 2: Bull vs Bear debate
-  let bullCase = "", bearCase = "";
-  for (let round = 0; round <= MAX_DEBATE_ROUNDS; round++) {
-    const ctx = round === 0 ? analystContext : `${analystContext}\nPREV BULL:\n${bullCase}\nPREV BEAR:\n${bearCase}`;
-    [bullCase, bearCase] = await Promise.all([
-      callAI(apiKey, BULL_RESEARCHER_SYSTEM, `Round ${round + 1} bull for ${symbol}.\n${ctx}`, M.bull),
-      callAI(apiKey, BEAR_RESEARCHER_SYSTEM, `Round ${round + 1} bear for ${symbol}.\n${ctx}`, M.bear),
-    ]);
-  }
+  const debateParts = parseSections(debateResult, {
+    "BULL": "bullCase",
+    "BEAR": "bearCase",
+    "RESEARCH": "researchManager",
+  });
+  const agents2 = ensureKeys(debateParts, ["bullCase", "bearCase", "researchManager"], debateResult);
 
-  // Step 3: Research Manager (GPT-5 for strong judgment)
-  const researchManager = await callAI(apiKey, RESEARCH_MANAGER_SYSTEM,
-    `Judge debate for ${symbol}.\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\n${analystContext}`, M.manager);
+  await sleep(400);
 
-  // Step 4: Swing Trader
-  const traderDecision = await callAI(apiKey, SWING_TRADER_SYSTEM,
-    `Swing/Position trade for ${symbol}.\nRESEARCH MANAGER:\n${researchManager}\n${analystContext}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}`, M.trader);
+  // Call 3: Trader + Risk Panel + Portfolio Manager
+  const decisionResult = await callAI(apiKey, SWING_DECISION_SYSTEM,
+    `Final trading decision for ${symbol}.\nRESEARCH:\n${researchResult}\nDEBATE:\n${debateResult}`, M.decision);
 
-  // Step 5: Risk debate
-  let aggressiveView = "", conservativeView = "", neutralView = "";
-  const riskCtx = `TRADER PROPOSAL:\n${traderDecision}\nDATA:\n${dataCtx}\nRESEARCH:\n${researchManager}`;
-  for (let round = 0; round <= MAX_RISK_ROUNDS; round++) {
-    const prev = round === 0 ? riskCtx : `${riskCtx}\nAGGR:\n${aggressiveView}\nCONS:\n${conservativeView}\nNEUT:\n${neutralView}`;
-    aggressiveView = await callAI(apiKey, AGGRESSIVE_RISK_SYSTEM, `Round ${round + 1} risk for ${symbol}.\n${prev}`, M.riskAggr);
-    conservativeView = await callAI(apiKey, CONSERVATIVE_RISK_SYSTEM, `Round ${round + 1} risk for ${symbol}.\n${prev}\nAGGR:\n${aggressiveView}`, M.riskCons);
-    neutralView = await callAI(apiKey, NEUTRAL_RISK_SYSTEM, `Round ${round + 1} risk for ${symbol}.\n${prev}\nAGGR:\n${aggressiveView}\nCONS:\n${conservativeView}`, M.riskNeut);
-  }
+  const decisionParts = parseSections(decisionResult, {
+    "TRADER": "traderDecision",
+    "AGGRESSIVE": "aggressiveRisk",
+    "CONSERVATIVE": "conservativeRisk",
+    "NEUTRAL": "neutralRisk",
+    "PORTFOLIO": "portfolioManager",
+  });
+  const agents3 = ensureKeys(decisionParts, ["traderDecision", "aggressiveRisk", "conservativeRisk", "neutralRisk", "portfolioManager"], decisionResult);
 
-  // Step 6: Portfolio Manager (GPT-5 for depth)
-  const portfolioManager = await callAI(apiKey, SWING_PORTFOLIO_SYSTEM,
-    `Final swing/position decision for ${symbol}.\n${analystContext}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nRESEARCH:\n${researchManager}\nTRADER:\n${traderDecision}\nRISK: Aggr: ${aggressiveView}\nCons: ${conservativeView}\nNeut: ${neutralView}`,
-    M.portfolio);
-
-  return {
-    agents: {
-      market: marketReport, sentiment: sentimentReport, news: newsReport, fundamentals: fundamentalsReport,
-      bullCase, bearCase, researchManager, traderDecision,
-      aggressiveRisk: aggressiveView, conservativeRisk: conservativeView, neutralRisk: neutralView,
-      portfolioManager,
-    },
-  };
+  return { agents: { ...agents1, ...agents2, ...agents3 } };
 }
 
 async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any) {
   const M = MODELS.invest;
 
-  // Step 1: Deep fundamentals (Buffett style) + Moat analysis
-  const [fundamentalsReport, moatReport] = await Promise.all([
-    callAI(apiKey, INVEST_FUNDAMENTALS_SYSTEM, `Deep fundamental analysis of ${symbol} for long-term investment (1-10 years). ${dataCtx}`, M.fundamentals),
-    callAI(apiKey, INVEST_MOAT_SYSTEM, `Analyze competitive moat of ${symbol}. ${dataCtx}`, M.moat),
-  ]);
+  // Call 1: Deep Fundamentals + Moat
+  const fundResult = await callAI(apiKey, INVEST_FUNDAMENTALS_SYSTEM,
+    `Deep fundamental analysis of ${symbol} for long-term investment (1-10 years). ${dataCtx}`, M.fundamentals);
 
-  await sleep(1000);
+  const fundParts = parseSections(fundResult, {
+    "FUNDAMENTAL": "fundamentals",
+    "MOAT": "moat",
+  });
+  const agents1 = ensureKeys(fundParts, ["fundamentals", "moat"], fundResult);
 
-  // Step 2: Technical (light, for entry timing) + News/Macro
-  const [marketReport, newsReport] = await Promise.all([
-    callAI(apiKey, MARKET_ANALYST_SYSTEM, `Long-term technical perspective for ${symbol} (focus on weekly/monthly structure, major S/R, long-term trend). ${dataCtx}`, M.technical),
-    callAI(apiKey, NEWS_ANALYST_SYSTEM, `Long-term news & macro outlook for ${symbol}. ${dataCtx}`, M.news),
-  ]);
+  await sleep(400);
 
-  const analystContext = `BUFFETT FUNDAMENTALS:\n${fundamentalsReport}\n\nMOAT ANALYSIS:\n${moatReport}\n\nTECHNICAL (long-term):\n${marketReport}\n\nNEWS & MACRO:\n${newsReport}`;
+  // Call 2: Technical + News + Bull/Bear
+  const contextResult = await callAI(apiKey, INVEST_CONTEXT_SYSTEM,
+    `Long-term context for ${symbol}.\nFUNDAMENTALS:\n${fundResult}\n${dataCtx}`, M.context);
 
-  await sleep(1000);
+  const contextParts = parseSections(contextResult, {
+    "TECHNICAL": "market",
+    "NEWS": "news",
+    "BULL": "bullCase",
+    "BEAR": "bearCase",
+  });
+  const agents2 = ensureKeys(contextParts, ["market", "news", "bullCase", "bearCase"], contextResult);
 
-  // Step 3: Bull (Buffett disciple) vs Bear (Munger skeptic)
-  let bullCase = "", bearCase = "";
-  for (let round = 0; round <= MAX_DEBATE_ROUNDS; round++) {
-    const ctx = round === 0 ? analystContext : `${analystContext}\nPREV BULL:\n${bullCase}\nPREV BEAR:\n${bearCase}`;
-    [bullCase, bearCase] = await Promise.all([
-      callAI(apiKey, INVEST_BULL_SYSTEM, `Round ${round + 1} long-term bull case for ${symbol}.\n${ctx}`, M.bull),
-      callAI(apiKey, INVEST_BEAR_SYSTEM, `Round ${round + 1} long-term bear risks for ${symbol}.\n${ctx}`, M.bear),
-    ]);
-  }
+  await sleep(400);
 
-  // Step 4: Investment Committee
-  const investmentManager = await callAI(apiKey, INVEST_MANAGER_SYSTEM,
-    `Investment committee review for ${symbol} (1-10yr horizon).\nFUNDAMENTALS:\n${fundamentalsReport}\nMOAT:\n${moatReport}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nTECHNICAL:\n${marketReport}\nNEWS:\n${newsReport}`,
-    M.committee);
+  // Call 3: Investment Committee + Portfolio Architect
+  const decisionResult = await callAI(apiKey, INVEST_DECISION_SYSTEM,
+    `Final investment decision for ${symbol} (1-10yr horizon).\nFUNDAMENTALS & MOAT:\n${fundResult}\nCONTEXT:\n${contextResult}`, M.decision);
 
-  await sleep(800);
+  const decisionParts = parseSections(decisionResult, {
+    "INVESTMENT COMMITTEE": "investmentManager",
+    "PORTFOLIO ARCHITECT": "portfolioArchitect",
+  });
+  const agents3 = ensureKeys(decisionParts, ["investmentManager", "portfolioArchitect"], decisionResult);
 
-  // Step 5: Portfolio Architect (final Buffett decision)
-  const portfolioArchitect = await callAI(apiKey, INVEST_PORTFOLIO_SYSTEM,
-    `Final long-term investment decision for ${symbol}.\n${analystContext}\nBULL:\n${bullCase}\nBEAR:\n${bearCase}\nINVESTMENT COMMITTEE:\n${investmentManager}`,
-    M.architect);
-
-  return {
-    agents: {
-      fundamentals: fundamentalsReport, moat: moatReport,
-      market: marketReport, news: newsReport,
-      bullCase, bearCase, investmentManager, portfolioArchitect,
-    },
-  };
+  return { agents: { ...agents1, ...agents2, ...agents3 } };
 }
 
 async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: string, stockData: any, optionsConfig?: { riskReward?: string; tradeType?: string }) {
   const M = MODELS.options;
   const rrFilter = optionsConfig?.riskReward || "1:2";
   const tradeType = optionsConfig?.tradeType || "all";
-
-  const configCtx = `\nUser's Risk:Reward preference: minimum ${rrFilter}\nTrade type preference: ${tradeType === 'all' ? 'Show Intraday, Swing (2-5 days), and Till Expiry options' : tradeType}\nToday's date: ${new Date().toISOString().split('T')[0]}`;
+  const configCtx = `\nRisk:Reward preference: minimum ${rrFilter}\nTrade type: ${tradeType === 'all' ? 'Intraday, Swing, Till Expiry' : tradeType}\nDate: ${new Date().toISOString().split('T')[0]}`;
 
   try {
-    // Step 1: Combined OI + Greeks + Technical in ONE call (saves 2 round trips)
-    const analysisPrompt = `Complete options analysis for ${symbol}. Cover ALL of the following in your response with clear section headers:
-
-## OI Analysis
-Analyze open interest patterns, PCR, max pain, support/resistance from OI buildup.
-
-## Greeks & IV
-Analyze implied volatility surface, IV percentile, key Greeks for ATM/OTM strikes, IV skew.
-
-## Technical Analysis
-Price action analysis for optimal strike selection, key levels, trend direction.
-
-${configCtx}
-${dataCtx}`;
-
-    const combinedAnalysis = await callAI(apiKey, 
-      `You are an **Elite Options Analyst** combining expertise in OI patterns, Greeks/IV analysis, and technical analysis for Indian F&O markets. Provide comprehensive, actionable analysis with specific numbers. Keep total response under 600 words.`,
-      analysisPrompt, M.oiAnalyst);
+    // Call 1: Combined OI + Greeks + Technical
+    const analysisResult = await callAI(apiKey, OPTIONS_ANALYSIS_SYSTEM,
+      `Complete options analysis for ${symbol}.\n${configCtx}\n${dataCtx}`, M.analysis);
 
     await sleep(200);
 
-    // Step 2: Strategy + Risk + Final Trade in ONE call (the critical decision)
-    const finalPrompt = `Based on this analysis, provide your COMPLETE options strategy recommendation for ${symbol}.
-
-ANALYSIS:
-${combinedAnalysis}
-
-Your response MUST include these sections:
-
-## Recommended Strategies
-Construct 2-3 optimal multi-leg strategies with exact strikes, premiums, lot sizes. Calculate max profit, max loss, breakevens for each.
-
-## Risk Assessment  
-Evaluate each strategy's risk. Score risk 1-10. Identify key risks and hedging suggestions.
-
-## Final Trade Decision
-Pick the BEST strategy. Give exact entry, SL, targets. Include position sizing guidance.
-
-Risk:Reward filter: minimum ${rrFilter}
-Trade types: ${tradeType}
-${dataCtx}${configCtx}`;
-
-    const finalDecision = await callAI(apiKey,
-      `You are an **Elite Options Strategist & Trader** for Indian F&O markets. You construct optimal strategies AND make final trade decisions. Be specific with exact strikes, premiums, Greeks. Always respect the user's Risk:Reward minimum. Keep under 800 words.`,
-      finalPrompt, M.strategist);
+    // Call 2: Strategy + Risk + Final Trade
+    const decisionResult = await callAI(apiKey, OPTIONS_DECISION_SYSTEM,
+      `Options strategy for ${symbol}.\nANALYSIS:\n${analysisResult}\nR:R filter: ${rrFilter}\nTrade types: ${tradeType}\n${dataCtx}${configCtx}`, M.decision);
 
     return {
       agents: {
-        oiAnalysis: combinedAnalysis,
-        optionsTrader: finalDecision,
+        oiAnalysis: analysisResult,
+        optionsTrader: decisionResult,
       },
     };
   } catch (err) {
-    // Fallback: generate deterministic options report from stock data
-    console.error("Options pipeline AI error, using fallback:", err);
+    console.error("Options pipeline error, using fallback:", err);
     return generateOptionsFallback(symbol, stockData, rrFilter, tradeType);
   }
 }
@@ -829,35 +741,23 @@ function generateOptionsFallback(symbol: string, stockData: any, rrFilter: strin
   const high52 = stockData?.high52 || price * 1.2;
   const low52 = stockData?.low52 || price * 0.8;
   const changePct = stockData?.changePct || 0;
-  const volume = stockData?.volume || 0;
-  const avgVol = stockData?.avgVolume || volume;
-  const volRatio = avgVol > 0 ? (volume / avgVol).toFixed(2) : "1.00";
-
   const trend = price > sma20 && price > sma50 ? "BULLISH" : price < sma20 && price < sma50 ? "BEARISH" : "NEUTRAL";
   const nearSupport = Math.round(Math.min(sma20, sma50, low52 * 1.05));
   const nearResist = Math.round(Math.max(sma20, sma50, high52 * 0.95));
-  const atr = Math.round(price * 0.02); // Approximate 2% ATR
   const ceStrike = Math.ceil(price / 50) * 50;
   const peStrike = Math.floor(price / 50) * 50;
 
   return {
     agents: {
-      oiAnalysis: `## OI Analysis — ${symbol} (Data-Based Estimate)\n\n**Trend**: ${trend} (Price ₹${price.toFixed(0)} vs SMA20 ₹${sma20.toFixed(0)}, SMA50 ₹${sma50.toFixed(0)})\n**Volume Ratio**: ${volRatio}x average\n**Key Resistance (Call OI zone)**: ₹${nearResist}\n**Key Support (Put OI zone)**: ₹${nearSupport}\n**Max Pain Estimate**: ₹${ceStrike}\n**PCR Indication**: ${trend === "BULLISH" ? "Moderately bullish (Put writing dominant)" : trend === "BEARISH" ? "Bearish (Call writing dominant)" : "Neutral range"}\n\n*Note: This is a data-driven estimate. Live OI data may differ.*`,
-
-      greeksIV: `## Greeks & IV Analysis — ${symbol}\n\n**IV Regime**: ${Math.abs(changePct) > 2 ? "High volatility" : "Low-moderate volatility"} (${Math.abs(changePct).toFixed(1)}% daily move)\n**Recommendation**: ${Math.abs(changePct) > 2 ? "BUY premium — high vol favors directional plays" : "SELL premium — low vol favors income strategies"}\n**ATM Straddle Range**: ±₹${atr * 2} from current price\n**Delta Target**: 0.4-0.6 for directional, 0.2-0.3 for hedges\n**Theta Impact**: ~₹${Math.round(price * 0.001)}/day per lot decay\n**Gamma Risk**: ${Math.abs(changePct) > 2 ? "HIGH — manage positions actively" : "MODERATE"}`,
-
-      technical: `## Technical for Strike Selection — ${symbol}\n\n**Price**: ₹${price.toFixed(2)} | **Trend**: ${trend}\n**Immediate Support**: ₹${nearSupport} | **Resistance**: ₹${nearResist}\n**52W Range**: ₹${low52.toFixed(0)} — ₹${high52.toFixed(0)}\n**SMA20**: ₹${sma20.toFixed(0)} | **SMA50**: ₹${sma50.toFixed(0)}\n**Expected Daily Range**: ₹${(price - atr).toFixed(0)} — ₹${(price + atr).toFixed(0)}\n\n**Strike Selection**: CE ${ceStrike}, PE ${peStrike}`,
-
-      strategy: `## Options Strategies — ${symbol}\n\n### 1. Aggressive — ${trend === "BULLISH" ? "Bull Call Spread" : trend === "BEARISH" ? "Bear Put Spread" : "Long Straddle"}\n- **Legs**: ${trend === "BULLISH" ? `Buy ${ceStrike} CE, Sell ${ceStrike + 100} CE` : trend === "BEARISH" ? `Buy ${peStrike} PE, Sell ${peStrike - 100} PE` : `Buy ${ceStrike} CE + Buy ${peStrike} PE`}\n- **Risk:Reward**: 1:2.5\n- **Max Loss**: Limited to premium paid\n- **Trade Type**: ${tradeType === "all" ? "Swing / Till Expiry" : tradeType}\n\n### 2. Conservative — ${trend === "BULLISH" ? "Cash-Secured Put Sell" : "Covered Call / Iron Condor"}\n- **Risk:Reward**: ${rrFilter}\n- **Trade Type**: Till Expiry\n- **Max Loss**: Limited\n\n*Risk:Reward filter applied: minimum ${rrFilter}*`,
-
-      riskAssessment: `## Risk Assessment — ${symbol} Options\n\n**Risk Score**: ${Math.abs(changePct) > 3 ? "7/10 (High)" : Math.abs(changePct) > 1.5 ? "5/10 (Moderate)" : "3/10 (Low)"}\n**Position Sizing**: 2-5% of capital\n**Stop Loss**: Exit at 50% premium loss\n**Target**: Book 50% at 1.5x premium, trail rest\n**Time Stop**: Exit 2 days before expiry if not in profit\n**Key Risk**: ${Math.abs(changePct) > 2 ? "High volatility — sudden reversals possible" : "Low volatility — theta decay risk for buyers"}`,
-
-      optionsTrader: `## Final Trade Decision — ${symbol}\n\n**Direction**: ${trend}\n**Strategy**: ${trend === "BULLISH" ? "Bull Call Spread" : trend === "BEARISH" ? "Bear Put Spread" : "Iron Condor"}\n**Strikes**: ${trend === "BULLISH" ? `Buy ${ceStrike} CE / Sell ${ceStrike + 100} CE` : trend === "BEARISH" ? `Buy ${peStrike} PE / Sell ${peStrike - 100} PE` : `Sell ${ceStrike} CE + Sell ${peStrike} PE`}\n**Risk:Reward**: ${rrFilter}\n**Trade Type**: ${tradeType === "all" ? "Swing" : tradeType}\n**Entry**: At market open or on pullback to ₹${(price * 0.99).toFixed(0)}\n**Stop Loss**: 50% of premium paid\n**Target 1**: 1.5x premium (book 50%)\n**Target 2**: Trail remaining with SL at cost\n**Confidence**: 65%\n**Risk Score**: 5/10\n\n⚠️ *Analysis generated from price data (AI was temporarily busy). Re-run for full AI analysis.*`,
+      oiAnalysis: `## OI Analysis — ${symbol} (Estimated)\n\n**Trend**: ${trend} | Price ₹${price.toFixed(0)} vs SMA20 ₹${sma20.toFixed(0)}\n**Resistance**: ₹${nearResist} | **Support**: ₹${nearSupport}\n**Max Pain**: ₹${ceStrike}\n\n*Data-driven estimate. Re-run for full AI analysis.*`,
+      optionsTrader: `## Trade Decision — ${symbol}\n\n**Direction**: ${trend}\n**Strategy**: ${trend === "BULLISH" ? "Bull Call Spread" : trend === "BEARISH" ? "Bear Put Spread" : "Iron Condor"}\n**Strikes**: ${trend === "BULLISH" ? `Buy ${ceStrike} CE / Sell ${ceStrike + 100} CE` : `Sell ${ceStrike} CE + Sell ${peStrike} PE`}\n**R:R**: ${rrFilter}\n**Confidence**: 65% | **Risk**: 5/10\n\n⚠️ *Estimated from price data. Re-run for full AI analysis.*`,
     },
   };
 }
 
-// ── Main Handler ─────────────────────────────────────────
+// ════════════════════════════════════════════════════════════
+// MAIN HANDLER
+// ════════════════════════════════════════════════════════════
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -871,12 +771,12 @@ serve(async (req) => {
       });
     }
 
-    // ── Check cache first (skip if chart image provided — unique each time) ──
+    // ── Check DB cache (skip if chart image — unique each time) ──
     const cacheKey = getCacheKey(symbol, mode, optionsConfig);
     if (!chartImage) {
-      const cached = getFromCache(cacheKey);
+      const cached = await getDBCache(cacheKey);
       if (cached) {
-        console.log(`TradingAgents [${mode}] CACHE HIT for ${symbol}`);
+        console.log(`TradingAgents [${mode}] DB CACHE HIT for ${symbol}`);
         return new Response(
           JSON.stringify({ ...cached, cached: true }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -888,7 +788,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const hasChart = !!chartImage;
-    console.log(`TradingAgents [${mode}] pipeline started for ${symbol}${hasChart ? ' (with chart)' : ''}`);
+    console.log(`TradingAgents [${mode}] started for ${symbol}${hasChart ? ' (chart)' : ''}`);
 
     const dataRange = mode === "invest" ? "1y" : "3mo";
     const stockData = await fetchStockData(symbol, dataRange);
@@ -896,7 +796,7 @@ serve(async (req) => {
     if (stockData) {
       const base = `Stock: ${symbol}, Price: ₹${stockData.price?.toFixed(2)}, Change: ${stockData.changePct?.toFixed(2)}%, SMA20: ₹${stockData.sma20?.toFixed(2)}, SMA50: ₹${stockData.sma50?.toFixed(2)}, Volume: ${stockData.volume?.toLocaleString()}, Avg Vol: ${stockData.avgVolume?.toLocaleString()}, 52W High: ₹${stockData.high52?.toFixed(2)}, 52W Low: ₹${stockData.low52?.toFixed(2)}, Recent closes: ${stockData.recentCloses?.slice(-10)?.map((c: number) => c?.toFixed(2))?.join(", ")}`;
       if (mode === "scalp") {
-        const intradayCtx = `\nATR(14): ₹${stockData.atr14?.toFixed(2)}, Vol Ratio (today/avg): ${stockData.volRatio}x, PDH: ₹${stockData.pdh?.toFixed(2)}, PDL: ₹${stockData.pdl?.toFixed(2)}, PDC: ₹${stockData.pdc?.toFixed(2)}\nRecent Swing Points: ${stockData.swingPoints?.join(", ") || "None detected"}\nLast 5 Candles (OHLCV):\n${stockData.recentCandles?.slice(-5)?.map((c: any, i: number) => `  [${i+1}] O:₹${c.o?.toFixed(2)} H:₹${c.h?.toFixed(2)} L:₹${c.l?.toFixed(2)} C:₹${c.c?.toFixed(2)} V:${(c.v || 0).toLocaleString()}`).join("\n") || "N/A"}`;
+        const intradayCtx = `\nATR(14): ₹${stockData.atr14?.toFixed(2)}, Vol Ratio: ${stockData.volRatio}x, PDH: ₹${stockData.pdh?.toFixed(2)}, PDL: ₹${stockData.pdl?.toFixed(2)}, PDC: ₹${stockData.pdc?.toFixed(2)}\nSwing Points: ${stockData.swingPoints?.join(", ") || "None"}\nLast 5 Candles:\n${stockData.recentCandles?.slice(-5)?.map((c: any, i: number) => `  [${i+1}] O:₹${c.o?.toFixed(2)} H:₹${c.h?.toFixed(2)} L:₹${c.l?.toFixed(2)} C:₹${c.c?.toFixed(2)} V:${(c.v || 0).toLocaleString()}`).join("\n") || "N/A"}`;
         dataCtx = base + intradayCtx;
       } else {
         dataCtx = base;
@@ -916,7 +816,7 @@ serve(async (req) => {
       result = await runSwingPipeline(LOVABLE_API_KEY, symbol, dataCtx, stockData, chartImage);
     }
 
-    console.log(`TradingAgents [${mode}] pipeline complete for ${symbol}`);
+    console.log(`TradingAgents [${mode}] complete for ${symbol}`);
 
     const responseData = {
       symbol, mode, hasChartAnalysis: hasChart,
@@ -928,9 +828,9 @@ serve(async (req) => {
       agents: result.agents,
     };
 
-    // Store in cache (skip chart-based analyses)
+    // Store in DB cache (skip chart-based)
     if (!chartImage) {
-      setCache(cacheKey, responseData);
+      setDBCache(cacheKey, symbol.toUpperCase(), mode, responseData).catch(() => {});
     }
 
     return new Response(

@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_analysis_cache: {
+        Row: {
+          cache_key: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          mode: string
+          result: Json
+          symbol: string
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          mode: string
+          result: Json
+          symbol: string
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          mode?: string
+          result?: Json
+          symbol?: string
+        }
+        Relationships: []
+      }
       discount_codes: {
         Row: {
           applicable_plans: string[] | null
