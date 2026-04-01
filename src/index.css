@@ -444,11 +444,9 @@
     padding-bottom: env(safe-area-inset-bottom, 8px);
   }
 
-  /* GPU-accelerate scrolling containers */
+  /* Smooth scrolling for touch devices */
   main, .overflow-y-auto, .overflow-x-auto {
-    will-change: scroll-position;
     -webkit-overflow-scrolling: touch;
-    transform: translateZ(0);
   }
 
   /* Reduce transition durations */
