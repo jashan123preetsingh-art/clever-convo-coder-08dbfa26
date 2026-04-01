@@ -529,17 +529,27 @@ export default function OptionsChain() {
           {activeView === 'strategy' && (
             <div className="space-y-2">
               <div className="t-card">
-                <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">Select Strategy</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-                  {PRESET_STRATEGIES.map((strat, i) => (
-                    <button key={i} onClick={() => setSelectedPreset(i)}
-                      className={`text-left px-3 py-2 rounded border transition-all
-                        ${selectedPreset === i ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-secondary/50 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'}`}>
-                      <p className="text-[10px] font-semibold">{strat.name}</p>
-                      <p className="text-[8px] opacity-70 mt-0.5">{strat.desc}</p>
-                    </button>
-                  ))}
-                </div>
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold mb-3">Select Strategy</p>
+                {['Bullish', 'Bearish', 'Neutral', 'Volatility'].map(cat => {
+                  const strats = PRESET_STRATEGIES.map((s, i) => ({ ...s, idx: i })).filter(s => s.category === cat);
+                  if (strats.length === 0) return null;
+                  const catColors: Record<string, string> = { Bullish: 'text-primary', Bearish: 'text-destructive', Neutral: 'text-accent', Volatility: 'text-yellow-400' };
+                  return (
+                    <div key={cat} className="mb-2.5">
+                      <p className={`text-[8px] font-bold uppercase tracking-[0.15em] mb-1.5 ${catColors[cat] || 'text-muted-foreground'}`}>{cat}</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                        {strats.map(strat => (
+                          <button key={strat.idx} onClick={() => setSelectedPreset(strat.idx)}
+                            className={`text-left px-3 py-2 rounded border transition-all
+                              ${selectedPreset === strat.idx ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-secondary/50 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'}`}>
+                            <p className="text-[10px] font-semibold">{strat.name}</p>
+                            <p className="text-[8px] opacity-70 mt-0.5">{strat.desc}</p>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               <StrategyDisplay legs={activeLegs} netPremium={netPremium} maxProfit={maxProfit} maxLoss={maxLoss}
