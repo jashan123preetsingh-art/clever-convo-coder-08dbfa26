@@ -456,7 +456,7 @@ function AgentReportCard({ agentKey, content, delay, forceExpand }: { agentKey: 
 
 /* ── Mode Selector ─────────────────────────── */
 function ModeSelector({ mode, setMode, disabled }: { mode: TradeMode; setMode: (m: TradeMode) => void; disabled: boolean }) {
-  const modes: TradeMode[] = ['scalp', 'swing', 'invest', 'options'];
+  const modes: TradeMode[] = ['scalp', 'swing', 'invest'];
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
       {modes.map(m => {
