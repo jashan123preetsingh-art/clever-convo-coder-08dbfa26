@@ -147,90 +147,90 @@ export default function StockDetail() {
   const multiTFLevels = React.useMemo(() => {
     if (!realChartData || realChartData.length < 20) return null;
     
-    const calcPivots = (candles: any[]) => {
+    const calcPivotsFromRange = (candles: any[]) => {
       if (!candles.length) return null;
-      const last = candles[candles.length - 1];
-      const pivot = (last.high + last.low + last.close) / 3;
+      const h = Math.max(...candles.map((c: any) => c.high));
+      const l = Math.min(...candles.map((c: any) => c.low));
+      const c = candles[candles.length - 1].close;
+      const p = (h + l + c) / 3;
       return {
-        pivot: Math.round(pivot * 100) / 100,
-        s1: Math.round((2 * pivot - last.high) * 100) / 100,
-        s2: Math.round((pivot - (last.high - last.low)) * 100) / 100,
-        s3: Math.round((last.low - 2 * (last.high - pivot)) * 100) / 100,
-        r1: Math.round((2 * pivot - last.low) * 100) / 100,
-        r2: Math.round((pivot + (last.high - last.low)) * 100) / 100,
-        r3: Math.round((last.high + 2 * (pivot - last.low)) * 100) / 100,
+        pivot: Math.round(p * 100) / 100,
+        s1: Math.round((2 * p - h) * 100) / 100,
+        s2: Math.round((p - (h - l)) * 100) / 100,
+        r1: Math.round((2 * p - l) * 100) / 100,
+        r2: Math.round((p + (h - l)) * 100) / 100,
       };
     };
 
-    // Simulate different TF from daily data
-    // Daily (1D) = last candle
-    const daily = calcPivots(realChartData);
+    // 4H: last 2 days
+    const fourH = calcPivotsFromRange(realChartData.slice(-2));
+    // 1D: last candle
+    const daily = calcPivotsFromRange(realChartData.slice(-1));
+    // 1W: last 5 days
+    const weekly = calcPivotsFromRange(realChartData.slice(-5));
+    // 1M: last 22 trading days
+    const monthly = realChartData.length >= 22 ? calcPivotsFromRange(realChartData.slice(-22)) : null;
+    // 1Y: last 252 trading days
+    const yearly = realChartData.length >= 100 ? calcPivotsFromRange(realChartData.slice(-252)) : null;
 
-    // 4H approximation: use last 2 days range
-    const last2 = realChartData.slice(-2);
-    const fourH = last2.length >= 2 ? (() => {
-      const h = Math.max(...last2.map((c: any) => c.high));
-      const l = Math.min(...last2.map((c: any) => c.low));
-      const c = last2[last2.length - 1].close;
-      const p = (h + l + c) / 3;
-      return {
-        pivot: Math.round(p * 100) / 100,
-        s1: Math.round((2 * p - h) * 100) / 100,
-        s2: Math.round((p - (h - l)) * 100) / 100,
-        r1: Math.round((2 * p - l) * 100) / 100,
-        r2: Math.round((p + (h - l)) * 100) / 100,
-      };
-    })() : null;
-
-    // Weekly (1W) approximation: use last 5 days
-    const last5 = realChartData.slice(-5);
-    const weekly = last5.length >= 3 ? (() => {
-      const h = Math.max(...last5.map((c: any) => c.high));
-      const l = Math.min(...last5.map((c: any) => c.low));
-      const c = last5[last5.length - 1].close;
-      const p = (h + l + c) / 3;
-      return {
-        pivot: Math.round(p * 100) / 100,
-        s1: Math.round((2 * p - h) * 100) / 100,
-        s2: Math.round((p - (h - l)) * 100) / 100,
-        r1: Math.round((2 * p - l) * 100) / 100,
-        r2: Math.round((p + (h - l)) * 100) / 100,
-      };
-    })() : null;
-
-    return { daily, fourH, weekly };
+    return { fourH, daily, weekly, monthly, yearly };
   }, [realChartData]);
 
-  // ─── Supply/Demand Zones ───
+  // ─── Supply/Demand Zones (MTF aggregated — no TF labels) ───
   const supplyDemandZones = React.useMemo(() => {
     if (!realChartData || realChartData.length < 30) return null;
-    const candles = realChartData.slice(-60);
     const zones: { type: 'supply' | 'demand'; high: number; low: number; strength: number }[] = [];
 
-    for (let i = 2; i < candles.length - 1; i++) {
-      const prev = candles[i - 1];
-      const curr = candles[i];
-      const next = candles[i + 1];
-      
-      // Demand zone: big bullish candle after consolidation
-      if (curr.close > curr.open && (curr.close - curr.open) > (curr.high - curr.low) * 0.6) {
-        const volSpike = curr.volume > (prev.volume * 1.3);
-        if (next.close > curr.close || volSpike) {
-          zones.push({ type: 'demand', high: curr.open, low: curr.low, strength: volSpike ? 3 : 2 });
+    // Scan multiple lookback windows for MTF effect
+    const windows = [
+      { candles: realChartData.slice(-30), weight: 1 },   // Short-term
+      { candles: realChartData.slice(-60), weight: 1.5 },  // Mid-term
+      { candles: realChartData.slice(-120), weight: 2 },   // Long-term
+    ];
+
+    for (const { candles, weight } of windows) {
+      for (let i = 2; i < candles.length - 1; i++) {
+        const prev = candles[i - 1];
+        const curr = candles[i];
+        const next = candles[i + 1];
+        
+        // Demand zone: big bullish candle after consolidation
+        if (curr.close > curr.open && (curr.close - curr.open) > (curr.high - curr.low) * 0.6) {
+          const volSpike = curr.volume > (prev.volume * 1.3);
+          if (next.close > curr.close || volSpike) {
+            zones.push({ type: 'demand', high: curr.open, low: curr.low, strength: Math.round((volSpike ? 3 : 2) * weight) });
+          }
         }
-      }
-      // Supply zone: big bearish candle 
-      if (curr.open > curr.close && (curr.open - curr.close) > (curr.high - curr.low) * 0.6) {
-        const volSpike = curr.volume > (prev.volume * 1.3);
-        if (next.close < curr.close || volSpike) {
-          zones.push({ type: 'supply', high: curr.high, low: curr.open, strength: volSpike ? 3 : 2 });
+        // Supply zone: big bearish candle 
+        if (curr.open > curr.close && (curr.open - curr.close) > (curr.high - curr.low) * 0.6) {
+          const volSpike = curr.volume > (prev.volume * 1.3);
+          if (next.close < curr.close || volSpike) {
+            zones.push({ type: 'supply', high: curr.high, low: curr.open, strength: Math.round((volSpike ? 3 : 2) * weight) });
+          }
         }
       }
     }
 
-    // Keep top zones near current price
-    const ltp = candles[candles.length - 1].close;
-    const relevant = zones.filter(z => Math.abs((z.high + z.low) / 2 - ltp) / ltp < 0.08);
+    // Merge overlapping zones
+    const mergeZones = (zoneList: typeof zones) => {
+      const sorted = [...zoneList].sort((a, b) => b.high - a.high);
+      const merged: typeof zones = [];
+      for (const z of sorted) {
+        const existing = merged.find(m => m.type === z.type && Math.abs(m.high - z.high) / z.high < 0.01);
+        if (existing) {
+          existing.strength = Math.min(existing.strength + 1, 5);
+          existing.high = Math.max(existing.high, z.high);
+          existing.low = Math.min(existing.low, z.low);
+        } else {
+          merged.push({ ...z });
+        }
+      }
+      return merged;
+    };
+
+    const mergedZones = mergeZones(zones);
+    const ltp = realChartData[realChartData.length - 1].close;
+    const relevant = mergedZones.filter(z => Math.abs((z.high + z.low) / 2 - ltp) / ltp < 0.10);
     const supply = relevant.filter(z => z.type === 'supply').sort((a, b) => b.strength - a.strength).slice(0, 3);
     const demand = relevant.filter(z => z.type === 'demand').sort((a, b) => b.strength - a.strength).slice(0, 3);
     return { supply, demand };
@@ -504,7 +504,7 @@ export default function StockDetail() {
                     ) : <p className="text-[10px] text-muted-foreground mb-3">No patterns detected</p>}
                     <div className="grid grid-cols-2 gap-2 text-[10px]">
                       <div className="bg-secondary/20 rounded-lg p-2">
-                        <span className="text-muted-foreground">RSI (14)</span>
+                        <span className="text-muted-foreground">RSI (14) · Daily</span>
                         <p className={`text-base font-black font-data ${(technicals.rsi_14 || 50) > 70 ? 'text-destructive' : (technicals.rsi_14 || 50) < 30 ? 'text-primary' : 'text-foreground'}`}>
                           {technicals.rsi_14?.toFixed(1) || '—'}
                         </p>
@@ -513,7 +513,7 @@ export default function StockDetail() {
                         </span>
                       </div>
                       <div className="bg-secondary/20 rounded-lg p-2">
-                        <span className="text-muted-foreground">ATR (14)</span>
+                        <span className="text-muted-foreground">ATR (14) · Daily</span>
                         <p className="text-base font-black text-foreground font-data">{technicals.atr_14?.toFixed(2) || '—'}</p>
                         <span className="text-[8px] text-muted-foreground font-bold">VOLATILITY</span>
                       </div>
@@ -531,7 +531,7 @@ export default function StockDetail() {
                               <div className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
                                 <span className="text-muted-foreground">Zone {i + 1}</span>
-                                <span className="text-[7px] px-1 py-0.5 bg-destructive/8 text-destructive rounded font-bold">{'★'.repeat(z.strength)}</span>
+                                <span className="text-[8px] text-destructive/60 font-bold">{'●'.repeat(Math.min(z.strength, 5))}</span>
                               </div>
                               <span className="text-foreground font-data font-medium">{formatCurrency(z.low)} – {formatCurrency(z.high)}</span>
                             </div>
@@ -544,7 +544,7 @@ export default function StockDetail() {
                               <div className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                                 <span className="text-muted-foreground">Zone {i + 1}</span>
-                                <span className="text-[7px] px-1 py-0.5 bg-primary/8 text-primary rounded font-bold">{'★'.repeat(z.strength)}</span>
+                                <span className="text-[8px] text-primary/60 font-bold">{'●'.repeat(Math.min(z.strength, 5))}</span>
                               </div>
                               <span className="text-foreground font-data font-medium">{formatCurrency(z.low)} – {formatCurrency(z.high)}</span>
                             </div>
@@ -555,7 +555,7 @@ export default function StockDetail() {
                   </div>
                 </div>
 
-                {/* 2. Multi-TF Support & Resistance */}
+                {/* 2. Multi-TF Support & Resistance — ordered 4H, 1D, 1W, 1M, 1Y */}
                 <div className="t-card p-4">
                   <SectionTitle icon="🎯">Multi-Timeframe S/R Levels</SectionTitle>
                   {multiTFLevels ? (
@@ -563,32 +563,40 @@ export default function StockDetail() {
                       <div>
                         <p className="text-[8px] text-primary/70 font-bold uppercase tracking-wider mb-2">Resistance</p>
                         <div className="space-y-1">
+                          {multiTFLevels.yearly && <MultiTFLevel label="R2" value={multiTFLevels.yearly.r2} ltp={ltp} type="resistance" tf="1Y" />}
+                          {multiTFLevels.yearly && <MultiTFLevel label="R1" value={multiTFLevels.yearly.r1} ltp={ltp} type="resistance" tf="1Y" />}
+                          {multiTFLevels.monthly && <MultiTFLevel label="R2" value={multiTFLevels.monthly.r2} ltp={ltp} type="resistance" tf="1M" />}
+                          {multiTFLevels.monthly && <MultiTFLevel label="R1" value={multiTFLevels.monthly.r1} ltp={ltp} type="resistance" tf="1M" />}
                           {multiTFLevels.weekly && <MultiTFLevel label="R2" value={multiTFLevels.weekly.r2} ltp={ltp} type="resistance" tf="1W" />}
                           {multiTFLevels.weekly && <MultiTFLevel label="R1" value={multiTFLevels.weekly.r1} ltp={ltp} type="resistance" tf="1W" />}
-                          {multiTFLevels.fourH && <MultiTFLevel label="R2" value={multiTFLevels.fourH.r2} ltp={ltp} type="resistance" tf="4H" />}
-                          {multiTFLevels.fourH && <MultiTFLevel label="R1" value={multiTFLevels.fourH.r1} ltp={ltp} type="resistance" tf="4H" />}
                           {multiTFLevels.daily && <MultiTFLevel label="R2" value={multiTFLevels.daily.r2} ltp={ltp} type="resistance" tf="1D" />}
                           {multiTFLevels.daily && <MultiTFLevel label="R1" value={multiTFLevels.daily.r1} ltp={ltp} type="resistance" tf="1D" />}
+                          {multiTFLevels.fourH && <MultiTFLevel label="R2" value={multiTFLevels.fourH.r2} ltp={ltp} type="resistance" tf="4H" />}
+                          {multiTFLevels.fourH && <MultiTFLevel label="R1" value={multiTFLevels.fourH.r1} ltp={ltp} type="resistance" tf="4H" />}
                         </div>
                       </div>
                       <div>
                         <p className="text-[8px] text-destructive/70 font-bold uppercase tracking-wider mb-2">Support</p>
                         <div className="space-y-1">
-                          {multiTFLevels.daily && <MultiTFLevel label="S1" value={multiTFLevels.daily.s1} ltp={ltp} type="support" tf="1D" />}
-                          {multiTFLevels.daily && <MultiTFLevel label="S2" value={multiTFLevels.daily.s2} ltp={ltp} type="support" tf="1D" />}
                           {multiTFLevels.fourH && <MultiTFLevel label="S1" value={multiTFLevels.fourH.s1} ltp={ltp} type="support" tf="4H" />}
                           {multiTFLevels.fourH && <MultiTFLevel label="S2" value={multiTFLevels.fourH.s2} ltp={ltp} type="support" tf="4H" />}
+                          {multiTFLevels.daily && <MultiTFLevel label="S1" value={multiTFLevels.daily.s1} ltp={ltp} type="support" tf="1D" />}
+                          {multiTFLevels.daily && <MultiTFLevel label="S2" value={multiTFLevels.daily.s2} ltp={ltp} type="support" tf="1D" />}
                           {multiTFLevels.weekly && <MultiTFLevel label="S1" value={multiTFLevels.weekly.s1} ltp={ltp} type="support" tf="1W" />}
                           {multiTFLevels.weekly && <MultiTFLevel label="S2" value={multiTFLevels.weekly.s2} ltp={ltp} type="support" tf="1W" />}
+                          {multiTFLevels.monthly && <MultiTFLevel label="S1" value={multiTFLevels.monthly.s1} ltp={ltp} type="support" tf="1M" />}
+                          {multiTFLevels.monthly && <MultiTFLevel label="S2" value={multiTFLevels.monthly.s2} ltp={ltp} type="support" tf="1M" />}
+                          {multiTFLevels.yearly && <MultiTFLevel label="S1" value={multiTFLevels.yearly.s1} ltp={ltp} type="support" tf="1Y" />}
+                          {multiTFLevels.yearly && <MultiTFLevel label="S2" value={multiTFLevels.yearly.s2} ltp={ltp} type="support" tf="1Y" />}
                         </div>
                       </div>
                     </div>
                   ) : <p className="text-[10px] text-muted-foreground">Loading S/R data...</p>}
                 </div>
 
-                {/* 3. EMAs */}
+                {/* 3. Daily EMAs */}
                 <div className="t-card p-4">
-                  <SectionTitle icon="📈">Moving Averages (EMA / SMA)</SectionTitle>
+                  <SectionTitle icon="📈">Moving Averages · Daily (EMA / SMA)</SectionTitle>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
                     {[
                       { l: 'EMA 9', v: technicals.ema_9 }, { l: 'EMA 20', v: technicals.ema_20 },
