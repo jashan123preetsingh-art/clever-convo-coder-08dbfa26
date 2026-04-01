@@ -132,7 +132,7 @@ function compressImage(file: File, maxSize = 800): Promise<string> {
 /* ── Helpers ─────────────────────────── */
 function extractVerdict(agents: Record<string, string>, mode: TradeMode) {
   // Pick the final agent based on mode
-  const finalKey = mode === 'scalp' ? 'traderDecision' : mode === 'invest' ? 'portfolioArchitect' : mode === 'options' ? 'optionsTrader' : 'portfolioManager';
+  const finalKey = mode === 'scalp' ? 'traderDecision' : mode === 'invest' ? 'portfolioArchitect' : 'portfolioManager';
   const pm = agents[finalKey] || '';
   let action: 'BUY' | 'SELL' | 'HOLD' | 'INVEST' | 'PASS' = 'HOLD';
   const upper = pm.toUpperCase();
