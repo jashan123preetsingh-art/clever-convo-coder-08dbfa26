@@ -101,7 +101,7 @@ export function AlertBell() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[7px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold">TRIGGERED</span>
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent font-bold">TRIGGERED</span>
                           <button onClick={() => removeAlert(alert.id)}
                             className="opacity-0 group-hover:opacity-100 text-[9px] text-muted-foreground hover:text-destructive transition-all">✕</button>
                         </div>
