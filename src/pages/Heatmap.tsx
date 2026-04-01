@@ -301,11 +301,11 @@ export default function Heatmap() {
                           {!isLarge && isMedium && (
                             <>
                               <text x={x + w / 2} y={y + h / 2 - 3} textAnchor="middle"
-                                fill={getTextColor(node.change_pct)} fontSize="9" fontWeight="700" fontFamily="Inter, sans-serif">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="9" fontWeight="700" fontFamily="Inter, sans-serif">
                                 {node.symbol.slice(0, 7)}
                               </text>
                               <text x={x + w / 2} y={y + h / 2 + 9} textAnchor="middle"
-                                fill={getTextColor(node.change_pct)} fontSize="8" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="8" fontWeight="600" fontFamily="JetBrains Mono, monospace">
                                 {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(1)}%
                               </text>
                             </>
