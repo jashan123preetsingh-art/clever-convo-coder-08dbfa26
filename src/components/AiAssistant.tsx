@@ -254,12 +254,6 @@ export default function AiAssistant() {
                       ? 'bg-primary/15 text-foreground border border-primary/15'
                       : 'bg-secondary/40 text-foreground border border-border/20'
                   }`}>
-                    {/* Show uploaded image thumbnail */}
-                    {msg.imagePreview && (
-                      <div className="mb-2 rounded-lg overflow-hidden border border-border/20">
-                        <img src={msg.imagePreview} alt="Uploaded chart" className="w-full max-h-40 object-contain bg-background/50" />
-                      </div>
-                    )}
                     {msg.role === 'assistant' ? (
                       <div className="prose prose-sm prose-invert max-w-none [&>*]:text-[11px] [&>*]:leading-relaxed [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h1]:text-[13px] [&_h2]:text-[12px] [&_h3]:text-[11px] [&_code]:text-[10px] [&_code]:bg-background/50 [&_code]:px-1 [&_code]:rounded [&_strong]:text-primary [&_a]:text-[hsl(var(--terminal-cyan))]">
                         <ReactMarkdown>{(typeof msg.content === 'string' ? msg.content : getDisplayContent(msg.content)) || '...'}</ReactMarkdown>
