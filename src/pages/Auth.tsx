@@ -123,18 +123,26 @@ export default function Auth() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-secondary/60 border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                required
-                minLength={6}
-              />
-            </div>
+            {!showForgot && (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-secondary/60 border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
+                  required
+                  minLength={6}
+                />
+              </div>
+            )}
+
+            {isLogin && !showForgot && (
+              <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-primary hover:underline">
+                Forgot password?
+              </button>
+            )}
 
             <button
               type="submit"
