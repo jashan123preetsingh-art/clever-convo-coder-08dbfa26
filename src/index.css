@@ -427,4 +427,31 @@
     width: 0;
     height: 0;
   }
+
+  /* Reduce box-shadows on mobile GPU */
+  .glow-primary, .glow-blue {
+    box-shadow: none;
+  }
+
+  /* Disable heavy animations */
+  .float-node {
+    animation: none !important;
+  }
+
+  /* Safe area for notch/home indicator */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 8px);
+  }
+
+  /* GPU-accelerate scrolling containers */
+  main, .overflow-y-auto, .overflow-x-auto {
+    will-change: scroll-position;
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+  }
+
+  /* Reduce transition durations */
+  * {
+    transition-duration: 0.1s !important;
+  }
 }
