@@ -279,14 +279,6 @@ export default function AiAssistant() {
             {/* Input */}
             <div className="p-3 border-t border-border/40 bg-card/80">
               <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex gap-2 items-end">
-                <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
-                <button type="button" onClick={() => fileInputRef.current?.click()}
-                  className="flex-shrink-0 w-9 h-9 rounded-lg bg-secondary/40 border border-border/30 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all"
-                  title="Upload chart screenshot">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </button>
                 <input
                   ref={inputRef}
                   type="text"
