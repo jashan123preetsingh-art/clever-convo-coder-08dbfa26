@@ -19,7 +19,7 @@ const SUGGESTIONS = [
   'Best options strategy for current market?',
   "What does today's FII/DII data indicate?",
   'Support/resistance for BankNifty today',
-  '📸 Upload a chart for analysis',
+  'What sectors are strong today?',
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
