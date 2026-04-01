@@ -434,12 +434,12 @@
     height: 0;
   }
 
-  /* Reduce box-shadows on mobile GPU */
+  /* Disable all box-shadows on mobile GPU */
   .glow-primary, .glow-blue {
     box-shadow: none;
   }
 
-  /* Disable heavy animations */
+  /* Disable heavy animations on mobile */
   .float-node {
     animation: none !important;
   }
@@ -452,10 +452,29 @@
   /* Smooth scrolling for touch devices */
   main, .overflow-y-auto, .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: auto; /* avoid jank from smooth scroll */
   }
 
-  /* Reduce transition durations */
+  /* Faster transitions on mobile — reduces perceived lag */
   * {
-    transition-duration: 0.1s !important;
+    transition-duration: 100ms !important;
+  }
+
+  /* Reduce paint complexity */
+  .stat-value {
+    text-shadow: none;
+  }
+
+  /* Contain layout thrash in cards */
+  .t-card, .t-card-static, .t-card-interactive {
+    contain: content;
+  }
+}
+
+/* Desktop: limit transition-all to color/opacity only where possible */
+@media (min-width: 769px) {
+  .t-card:hover {
+    transition-property: border-color, box-shadow;
+    transition-duration: 200ms;
   }
 }
