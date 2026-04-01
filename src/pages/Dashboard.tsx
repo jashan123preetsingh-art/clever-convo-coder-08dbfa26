@@ -85,14 +85,19 @@ export default function Dashboard() {
   const indices = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : INDICES;
   const isLive = liveIndices?.length > 0 && !liveIndices[0]?.error;
 
-  const gainers = getTopGainers();
-  const losers = getTopLosers();
-  const active = getMostActive();
-  const sectors = getSectorPerformance();
-  const allStocks = getAllStocks();
-  const advances = allStocks.filter(s => s.change_pct > 0).length;
-  const declines = allStocks.filter(s => s.change_pct < 0).length;
-  const unchanged = allStocks.filter(s => s.change_pct === 0).length;
+  const { gainers, losers, active, sectors, advances, declines, unchanged } = useMemo(() => {
+    const g = getTopGainers();
+    const l = getTopLosers();
+    const a = getMostActive();
+    const s = getSectorPerformance();
+    const all = getAllStocks();
+    return {
+      gainers: g, losers: l, active: a, sectors: s,
+      advances: all.filter(st => st.change_pct > 0).length,
+      declines: all.filter(st => st.change_pct < 0).length,
+      unchanged: all.filter(st => st.change_pct === 0).length,
+    };
+  }, []);
 
   const niftyLtp = indices.find((i: any) => i.symbol === 'NIFTY 50')?.ltp || 22800;
   const expectedMove = Math.round(niftyLtp * 0.014);
