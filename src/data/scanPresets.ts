@@ -320,7 +320,7 @@ export const DEFAULT_SCANS: ScanPreset[] = [
       { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.0 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.3 },
     ] },
-  { id: 'vw3', name: 'VWAP Proxy Reclaim', description: 'Price reclaiming session average zone (proxy – no real VWAP)', icon: '🔄', category: 'vwap',
+  { id: 'vw3', name: 'VWAP Reclaim', description: 'Price reclaiming session average zone', icon: '🔄', category: 'vwap',
     conditions: [
       { measure: 'open', operator: '<', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 0.998 },
       { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.005 },
