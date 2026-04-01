@@ -26,9 +26,9 @@ function MetricCard({ label, value, sub, color, icon }: { label: string; value: 
   );
 }
 
-function OIChangeHeatmap({ chain, symbol }: { chain: any[]; symbol: string }) {
-  // Take strikes around ATM
-  const underlyingValue = symbol === 'NIFTY' ? 22800 : 52200;
+function OIChangeHeatmap({ chain, symbol, spot }: { chain: any[]; symbol: string; spot: number }) {
+  // Take strikes around ATM — use live spot price
+  const underlyingValue = spot || (symbol === 'NIFTY' ? 22800 : 52200);
   const atmIdx = chain.findIndex(c => Math.abs(c.strike - underlyingValue) === Math.min(...chain.map(r => Math.abs(r.strike - underlyingValue))));
   const visible = chain.slice(Math.max(0, atmIdx - 10), atmIdx + 11);
   const maxChg = Math.max(...visible.map(c => Math.max(Math.abs(c.ce.chg_oi), Math.abs(c.pe.chg_oi))), 1);
