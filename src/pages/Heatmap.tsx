@@ -303,8 +303,26 @@ export default function Heatmap() {
 
                   {/* Stock tiles */}
                   {stockLayout.map(({ node, x, y, w, h }) => {
-                    const isLarge = w > 60 && h > 40;
-                    const isMedium = w > 40 && h > 28;
+                    // Dynamic font sizing based on tile dimensions
+                    const minDim = Math.min(w, h);
+                    const isXL = w > 80 && h > 50;
+                    const isLarge = w > 55 && h > 38;
+                    const isMedium = w > 35 && h > 24;
+                    const isSmall = w > 22 && h > 16;
+                    
+                    // Calculate max chars that fit in the tile width (roughly 7px per char at size 12)
+                    const symFontSize = isXL ? 13 : isLarge ? 11 : isMedium ? 9 : 7;
+                    const charWidth = symFontSize * 0.65;
+                    const maxChars = Math.max(2, Math.floor((w - 6) / charWidth));
+                    const displaySymbol = node.symbol.length > maxChars ? node.symbol.slice(0, maxChars) : node.symbol;
+                    
+                    const pctFontSize = isXL ? 11 : isLarge ? 10 : isMedium ? 8 : 7;
+                    const pctText = isXL || isLarge 
+                      ? `${node.change_pct >= 0 ? '+' : ''}${node.change_pct.toFixed(2)}%`
+                      : `${node.change_pct >= 0 ? '+' : ''}${node.change_pct.toFixed(1)}%`;
+
+                    const showPct = (isXL || isLarge || isMedium) && h > 28;
+                    const textColor = getTextColor(node.change_pct, isDark);
 
                     return (
                       <g key={node.symbol}>
@@ -317,36 +335,30 @@ export default function Heatmap() {
                             className="cursor-pointer transition-opacity hover:opacity-80"
                             stroke={isDark ? 'hsl(225, 25%, 8%)' : 'hsl(225, 15%, 92%)'} strokeWidth="0.5"
                           />
-                          {isLarge && (
-                            <>
-                              <text x={x + w / 2} y={y + h / 2 - 6} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="13" fontWeight="700" fontFamily="Inter, sans-serif">
-                                {node.symbol}
+                          {/* Clip text to tile bounds */}
+                          <clipPath id={`clip-${node.symbol}`}>
+                            <rect x={x + 1} y={y + 1} width={Math.max(w - 2, 0)} height={Math.max(h - 2, 0)} />
+                          </clipPath>
+                          <g clipPath={`url(#clip-${node.symbol})`}>
+                            {(isXL || isLarge || isMedium || isSmall) && (
+                              <text 
+                                x={x + w / 2} 
+                                y={showPct ? y + h / 2 - (pctFontSize * 0.4) : y + h / 2 + symFontSize * 0.35}
+                                textAnchor="middle"
+                                fill={textColor} fontSize={symFontSize} fontWeight="700" fontFamily="Inter, system-ui, sans-serif">
+                                {displaySymbol}
                               </text>
-                              <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="12" fontWeight="600" fontFamily="JetBrains Mono, monospace">
-                                {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(2)}%
+                            )}
+                            {showPct && (
+                              <text 
+                                x={x + w / 2} 
+                                y={y + h / 2 + (symFontSize * 0.6) + 2}
+                                textAnchor="middle"
+                                fill={textColor} fontSize={pctFontSize} fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                                {pctText}
                               </text>
-                            </>
-                          )}
-                          {!isLarge && isMedium && (
-                            <>
-                              <text x={x + w / 2} y={y + h / 2 - 2} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="10" fontWeight="700" fontFamily="Inter, sans-serif">
-                                {node.symbol.slice(0, 8)}
-                              </text>
-                              <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="9" fontWeight="600" fontFamily="JetBrains Mono, monospace">
-                                {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(1)}%
-                              </text>
-                            </>
-                          )}
-                          {!isLarge && !isMedium && w > 20 && h > 16 && (
-                            <text x={x + w / 2} y={y + h / 2 + 3} textAnchor="middle"
-                              fill={getTextColor(node.change_pct, isDark)} fontSize="8" fontWeight="600" fontFamily="Inter, sans-serif">
-                              {node.symbol.slice(0, 5)}
-                            </text>
-                          )}
+                            )}
+                          </g>
                         </Link>
                       </g>
                     );
