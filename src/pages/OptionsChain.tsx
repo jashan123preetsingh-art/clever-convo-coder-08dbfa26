@@ -323,12 +323,12 @@ export default function OptionsChain() {
       let report = '';
       const agentOrder = ['oiAnalysis', 'greeksIV', 'technical', 'strategy', 'riskAssessment', 'optionsTrader'];
       const labels: Record<string, string> = {
-        oiAnalysis: '📊 OI Analysis',
+        oiAnalysis: '📊 Market & OI Analysis',
         greeksIV: '🔬 Greeks & IV',
         technical: '🎯 Strike Selection',
         strategy: '🏗️ Strategy Builder',
         riskAssessment: '🛡️ Risk Assessment',
-        optionsTrader: '💎 Final Trade Decision',
+        optionsTrader: '💎 Strategy & Trade Decision',
       };
       for (const key of agentOrder) {
         if (agents[key]) {

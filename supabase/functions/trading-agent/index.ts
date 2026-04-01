@@ -85,12 +85,12 @@ const MODELS = {
     architect:    "google/gemini-2.5-flash",     // Final Buffett-style decision
   },
   options: {
-    oiAnalyst:    "google/gemini-2.5-pro",       // Best model for deep OI pattern recognition
-    greeksAnalyst:"google/gemini-2.5-pro",       // Best model for Greeks & IV analysis
-    technical:    "google/gemini-2.5-pro",       // Best model for strike selection
-    strategist:   "google/gemini-2.5-pro",       // Best model for strategy construction
-    riskManager:  "google/gemini-2.5-pro",       // Best model for risk assessment
-    trader:       "google/gemini-2.5-pro",       // Best model for final options trade
+    oiAnalyst:    "google/gemini-2.5-flash",         // Fast + strong analysis
+    greeksAnalyst:"google/gemini-2.5-flash",         // Fast Greeks & IV
+    technical:    "google/gemini-2.5-flash",         // Fast strike selection
+    strategist:   "google/gemini-2.5-flash",         // Strategy construction
+    riskManager:  "google/gemini-2.5-flash",         // Risk check
+    trader:       "google/gemini-2.5-flash",         // Final trade decision
   },
 };
 
@@ -762,43 +762,56 @@ async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: strin
   const configCtx = `\nUser's Risk:Reward preference: minimum ${rrFilter}\nTrade type preference: ${tradeType === 'all' ? 'Show Intraday, Swing (2-5 days), and Till Expiry options' : tradeType}\nToday's date: ${new Date().toISOString().split('T')[0]}`;
 
   try {
-    // Step 1: OI Analysis + Greeks/IV in parallel
-    const [oiReport, greeksReport] = await Promise.all([
-      callAI(apiKey, OPTIONS_OI_SYSTEM, `Full OI analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.oiAnalyst),
-      callAI(apiKey, OPTIONS_GREEKS_SYSTEM, `Greeks and IV analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.greeksAnalyst),
-    ]);
+    // Step 1: Combined OI + Greeks + Technical in ONE call (saves 2 round trips)
+    const analysisPrompt = `Complete options analysis for ${symbol}. Cover ALL of the following in your response with clear section headers:
 
-    await sleep(500);
+## OI Analysis
+Analyze open interest patterns, PCR, max pain, support/resistance from OI buildup.
 
-    // Step 2: Technical for strike selection
-    const technicalReport = await callAI(apiKey, OPTIONS_TECHNICAL_SYSTEM, `Technical analysis for options strike selection on ${symbol}.\n${dataCtx}`, M.technical);
+## Greeks & IV
+Analyze implied volatility surface, IV percentile, key Greeks for ATM/OTM strikes, IV skew.
 
-    await sleep(500);
+## Technical Analysis
+Price action analysis for optimal strike selection, key levels, trend direction.
 
-    // Step 3: Strategy construction
-    const analystContext = `OI ANALYSIS:\n${oiReport}\n\nGREEKS & IV:\n${greeksReport}\n\nTECHNICAL (for strikes):\n${technicalReport}`;
-    const strategyReport = await callAI(apiKey, OPTIONS_STRATEGY_SYSTEM, `Construct optimal options strategies for ${symbol}.\nRisk:Reward filter: minimum ${rrFilter}\nTrade types needed: ${tradeType}\n${analystContext}\n${dataCtx}${configCtx}`, M.strategist);
+${configCtx}
+${dataCtx}`;
 
-    await sleep(500);
+    const combinedAnalysis = await callAI(apiKey, 
+      `You are an **Elite Options Analyst** combining expertise in OI patterns, Greeks/IV analysis, and technical analysis for Indian F&O markets. Provide comprehensive, actionable analysis with specific numbers. Keep total response under 600 words.`,
+      analysisPrompt, M.oiAnalyst);
 
-    // Step 4: Risk assessment
-    const riskReport = await callAI(apiKey, OPTIONS_RISK_SYSTEM, `Evaluate options strategies for ${symbol}.\nSTRATEGIES:\n${strategyReport}\n${analystContext}\n${dataCtx}${configCtx}`, M.riskManager);
+    await sleep(200);
 
-    await sleep(500);
+    // Step 2: Strategy + Risk + Final Trade in ONE call (the critical decision)
+    const finalPrompt = `Based on this analysis, provide your COMPLETE options strategy recommendation for ${symbol}.
 
-    // Step 5: Final options trade decision
-    const traderDecision = await callAI(apiKey, OPTIONS_TRADER_SYSTEM,
-      `Final options trade decision for ${symbol}.\nRisk:Reward minimum: ${rrFilter}\nTrade type: ${tradeType}\n\nOI ANALYSIS:\n${oiReport}\nGREEKS:\n${greeksReport}\nTECHNICAL:\n${technicalReport}\nSTRATEGIES:\n${strategyReport}\nRISK ASSESSMENT:\n${riskReport}\n${dataCtx}`,
-      M.trader);
+ANALYSIS:
+${combinedAnalysis}
+
+Your response MUST include these sections:
+
+## Recommended Strategies
+Construct 2-3 optimal multi-leg strategies with exact strikes, premiums, lot sizes. Calculate max profit, max loss, breakevens for each.
+
+## Risk Assessment  
+Evaluate each strategy's risk. Score risk 1-10. Identify key risks and hedging suggestions.
+
+## Final Trade Decision
+Pick the BEST strategy. Give exact entry, SL, targets. Include position sizing guidance.
+
+Risk:Reward filter: minimum ${rrFilter}
+Trade types: ${tradeType}
+${dataCtx}${configCtx}`;
+
+    const finalDecision = await callAI(apiKey,
+      `You are an **Elite Options Strategist & Trader** for Indian F&O markets. You construct optimal strategies AND make final trade decisions. Be specific with exact strikes, premiums, Greeks. Always respect the user's Risk:Reward minimum. Keep under 800 words.`,
+      finalPrompt, M.strategist);
 
     return {
       agents: {
-        oiAnalysis: oiReport,
-        greeksIV: greeksReport,
-        technical: technicalReport,
-        strategy: strategyReport,
-        riskAssessment: riskReport,
-        optionsTrader: traderDecision,
+        oiAnalysis: combinedAnalysis,
+        optionsTrader: finalDecision,
       },
     };
   } catch (err) {
