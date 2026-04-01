@@ -527,24 +527,35 @@ const RESULT_COLUMNS = [
 
 const PAGE_SIZE = 50;
 
-function getStockValue(stock: Stock, key: string): number | null {
+// EMA measures that require server-side data
+const EMA_MEASURES = new Set(['ema9', 'ema20', 'ema50', 'ema100', 'ema200', 'sma20', 'sma50', 'sma200']);
+
+function scanUsesEMA(conditions: Omit<Condition, 'id'>[]): boolean {
+  return conditions.some(c => EMA_MEASURES.has(c.measure) || EMA_MEASURES.has(c.compareMeasure));
+}
+
+function getStockValue(stock: Stock, key: string, emaData?: Record<string, any>): number | null {
   if (key === 'close') return stock.ltp;
   if (key === 'score') return computeQualityScore(stock).total;
+  if (EMA_MEASURES.has(key)) {
+    const data = emaData?.[stock.symbol];
+    return data?.emas?.[key] ?? null;
+  }
   return (stock as any)[key] ?? null;
 }
 
-function runConditions(conditions: Omit<Condition, 'id'>[]): Stock[] {
+function runConditions(conditions: Omit<Condition, 'id'>[], emaData?: Record<string, any>): Stock[] {
   const stocks = getAllStocks();
   return stocks.filter(stock => {
     return conditions.every(cond => {
-      const leftVal = getStockValue(stock, cond.measure);
+      const leftVal = getStockValue(stock, cond.measure, emaData);
       if (leftVal === null) return false;
       let rightVal: number;
       if (cond.compareType === 'number') {
         rightVal = parseFloat(cond.value);
         if (isNaN(rightVal)) return false;
       } else {
-        const base = getStockValue(stock, cond.compareMeasure);
+        const base = getStockValue(stock, cond.compareMeasure, emaData);
         if (base === null) return false;
         rightVal = base * cond.multiplier;
       }
