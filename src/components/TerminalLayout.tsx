@@ -30,7 +30,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   const { sidebarOpen, toggleSidebar } = useStore();
   const { user, isAdmin, profile, signOut } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,8 +39,14 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   const { data: liveIndices } = useIndices();
   const INDICES = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : MOCK_INDICES;
 
+  // Use live search instead of filtering entire getAllStocks() on every keystroke
+  const { data: searchResults } = useStockSearch(searchInput);
+
+  // Update clock every 30s instead of every 1s — no one needs second precision
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
+    const update = () => setTime(new Date().toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit' }));
+    update();
+    const timer = setInterval(update, 30_000);
     return () => clearInterval(timer);
   }, []);
 
