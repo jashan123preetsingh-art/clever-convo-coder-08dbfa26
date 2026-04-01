@@ -544,6 +544,139 @@ async function fetchNSEOptionsChain(symbol: string) {
   return null;
 }
 
+// ── Market Metrics (VIX, PCR, Expected Move, F&O) ──────────
+async function getMarketMetrics() {
+  // 1. Fetch India VIX from Yahoo
+  const vixPromise = fetchSafe(`${YF_BASE}/v8/finance/chart/%5EINDIAVIX?interval=1d&range=5d`).then(async (r) => {
+    if (!r) return null;
+    const data = await r.json();
+    const res = data?.chart?.result?.[0];
+    if (!res?.meta) return null;
+    const closes = res.indicators?.quote?.[0]?.close || [];
+    const current = res.meta.regularMarketPrice;
+    const prev = closes.length >= 2 ? closes[closes.length - 2] : current;
+    return {
+      value: round(current),
+      change: round(current - prev),
+      change_pct: round(prev ? ((current - prev) / prev) * 100 : 0),
+    };
+  }).catch(() => null);
+
+  // 2. Fetch NIFTY & BANKNIFTY options chain for PCR + ATM straddle
+  const niftyOCPromise = fetchNSEOptionsChain("NIFTY").catch(() => null);
+  const bnfOCPromise = fetchNSEOptionsChain("BANKNIFTY").catch(() => null);
+
+  const [vix, niftyOC, bnfOC] = await Promise.all([vixPromise, niftyOCPromise, bnfOCPromise]);
+
+  // Calculate days to next Thursday (weekly expiry)
+  const now = new Date();
+  let daysToExpiry = (4 - now.getDay() + 7) % 7; // 4 = Thursday
+  if (daysToExpiry === 0) {
+    const hours = now.getHours();
+    daysToExpiry = hours >= 15 ? 7 : 0; // After 3:30 PM, next week
+  }
+
+  function calcMetrics(oc: any) {
+    if (!oc || !oc.chain || oc.chain.length === 0) return null;
+    const spot = oc.underlyingValue || 0;
+    const pcr = oc.analytics?.pcr || 0;
+    const totalCallOI = oc.analytics?.totalCallOI || 0;
+    const totalPutOI = oc.analytics?.totalPutOI || 0;
+    const totalCallVol = oc.analytics?.totalCallVol || 0;
+    const totalPutVol = oc.analytics?.totalPutVol || 0;
+    const maxPain = oc.analytics?.maxPain || 0;
+
+    // Find ATM strike
+    let atmRow = oc.chain[0];
+    let minDist = Infinity;
+    for (const row of oc.chain) {
+      const dist = Math.abs(row.strike - spot);
+      if (dist < minDist) { minDist = dist; atmRow = row; }
+    }
+
+    // ATM straddle = CE LTP + PE LTP
+    const atmStraddle = round((atmRow?.ce?.ltp || 0) + (atmRow?.pe?.ltp || 0));
+    // Expected move ≈ ATM straddle * 0.85 (1SD approximation)
+    const expectedMove = round(atmStraddle ? atmStraddle * 0.85 : 0);
+    // IV from ATM options
+    const atmIV = round(((atmRow?.ce?.iv || 0) + (atmRow?.pe?.iv || 0)) / 2);
+
+    // F&O premium turnover estimate: sum of (volume * ltp) for all strikes
+    let premiumTurnover = 0;
+    for (const row of oc.chain) {
+      premiumTurnover += (row.ce?.volume || 0) * (row.ce?.ltp || 0);
+      premiumTurnover += (row.pe?.volume || 0) * (row.pe?.ltp || 0);
+    }
+
+    return {
+      spot, pcr, totalCallOI, totalPutOI, totalCallVol, totalPutVol, maxPain,
+      atmStrike: atmRow?.strike, atmStraddle, expectedMove, atmIV,
+      premiumTurnover: round(premiumTurnover / 10000000), // In crores
+    };
+  }
+
+  const niftyMetrics = calcMetrics(niftyOC);
+  const bnfMetrics = calcMetrics(bnfOC);
+
+  // Total F&O turnover (crude estimate from both)
+  const totalFnOTurnover = round((niftyMetrics?.premiumTurnover || 0) + (bnfMetrics?.premiumTurnover || 0));
+
+  return {
+    vix,
+    nifty: niftyMetrics,
+    banknifty: bnfMetrics,
+    daysToExpiry,
+    fnoTurnover: totalFnOTurnover,
+    timestamp: new Date().toISOString(),
+    live: !!(vix || niftyMetrics || bnfMetrics),
+  };
+}
+
+// ── Batch EMA Calculator ──────────────────────────────────
+async function getBatchEMA(symbols: string[]) {
+  const results = await Promise.allSettled(
+    symbols.slice(0, 30).map(async (sym) => {
+      const candles = await getChart(sym, "1d", "1y");
+      if (!Array.isArray(candles) || candles.length < 20) return { symbol: sym, emas: null };
+
+      const closes = candles.map((c: any) => c.close);
+
+      const calcEMA = (arr: number[], period: number): number | null => {
+        if (arr.length < period) return null;
+        const k = 2 / (period + 1);
+        let e = arr.slice(0, period).reduce((a, b) => a + b, 0) / period;
+        for (let i = period; i < arr.length; i++) e = arr[i] * k + e * (1 - k);
+        return round(e);
+      };
+
+      const calcSMA = (arr: number[], period: number): number | null => {
+        if (arr.length < period) return null;
+        return round(arr.slice(-period).reduce((a, b) => a + b, 0) / period);
+      };
+
+      const price = closes[closes.length - 1];
+      const ema9 = calcEMA(closes, 9);
+      const ema20 = calcEMA(closes, 20);
+      const ema50 = calcEMA(closes, 50);
+      const ema100 = calcEMA(closes, 100);
+      const ema200 = calcEMA(closes, 200);
+      const sma20 = calcSMA(closes, 20);
+      const sma50 = calcSMA(closes, 50);
+      const sma200 = calcSMA(closes, 200);
+
+      return {
+        symbol: sym, price,
+        emas: { ema9, ema20, ema50, ema100, ema200, sma20, sma50, sma200 },
+      };
+    })
+  );
+
+  return results.map((r, i) => ({
+    symbol: symbols[i],
+    ...(r.status === "fulfilled" ? r.value : { emas: null }),
+  }));
+}
+
 async function getIndices() {
   const indices = ["^NSEI", "^BSESN", "^NSEBANK"];
   const names = ["NIFTY 50", "SENSEX", "BANKNIFTY"];
