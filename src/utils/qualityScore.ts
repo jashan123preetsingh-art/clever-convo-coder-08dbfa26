@@ -83,7 +83,8 @@ export function computeQualityScore(stock: Stock): QualityScore {
   sector = Math.min(sector, 5);
 
   const total = priceEvent + volume + candle + structure + liquidity + relStrength + sector;
-  const grade = total >= 85 ? 'A+' : total >= 75 ? 'A' : total >= 65 ? 'B+' : total >= 55 ? 'B' : total >= 45 ? 'C+' : total >= 35 ? 'C' : 'D';
+  // Trading-calibrated grades: optimized for intraday/swing, not long-term investing
+  const grade = total >= 78 ? 'A+' : total >= 68 ? 'A' : total >= 58 ? 'B+' : total >= 48 ? 'B' : total >= 38 ? 'C+' : total >= 28 ? 'C' : 'D';
 
   const keyLevel = distToHigh < 2 ? '52-Week High' : distToHigh < 5 ? 'Near 52W High' : distToLow < 5 ? 'Near 52W Low' : `${posIn52W > 0.5 ? 'Upper' : 'Lower'} Range`;
   const volumeDesc = volRatio >= 3 ? `Massive volume ${volRatio.toFixed(1)}x average` : volRatio >= 1.5 ? `Above average volume ${volRatio.toFixed(1)}x` : 'Normal volume';

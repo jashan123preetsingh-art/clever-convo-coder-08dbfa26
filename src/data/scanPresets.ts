@@ -381,6 +381,74 @@ export const DEFAULT_SCANS: ScanPreset[] = [
       { measure: 'close', operator: '>', compareType: 'number', value: '100', compareMeasure: '', multiplier: 1 },
       { measure: 'close', operator: '<', compareType: 'number', value: '500', compareMeasure: '', multiplier: 1 },
     ] },
+
+  // ─── INVESTMENT ───
+  { id: 'inv1', name: 'Coffee Can Portfolio', description: 'Based on Saurabh Mukherjee — ROE>15, ROCE>15, low debt, large cap', icon: '☕', category: 'investment',
+    conditions: [
+      { measure: 'roe', operator: '>', compareType: 'number', value: '15', compareMeasure: '', multiplier: 1 },
+      { measure: 'roce', operator: '>', compareType: 'number', value: '15', compareMeasure: '', multiplier: 1 },
+      { measure: 'debt_to_equity', operator: '<', compareType: 'number', value: '0.5', compareMeasure: '', multiplier: 1 },
+      { measure: 'market_cap', operator: '>', compareType: 'number', value: '10000', compareMeasure: '', multiplier: 1 },
+    ] },
+  { id: 'inv2', name: 'Magic Formula', description: 'High ROE + Low PE — Greenblatt formula proxy', icon: '🪄', category: 'investment',
+    conditions: [
+      { measure: 'roe', operator: '>', compareType: 'number', value: '20', compareMeasure: '', multiplier: 1 },
+      { measure: 'pe_ratio', operator: '<', compareType: 'number', value: '20', compareMeasure: '', multiplier: 1 },
+    ] },
+  { id: 'inv3', name: 'Piotroski High Score', description: 'High ROE, ROCE, low debt, strong promoter — fundamentally solid', icon: '📋', category: 'investment',
+    conditions: [
+      { measure: 'roe', operator: '>', compareType: 'number', value: '12', compareMeasure: '', multiplier: 1 },
+      { measure: 'roce', operator: '>', compareType: 'number', value: '12', compareMeasure: '', multiplier: 1 },
+      { measure: 'debt_to_equity', operator: '<', compareType: 'number', value: '0.3', compareMeasure: '', multiplier: 1 },
+      { measure: 'promoter_holding', operator: '>', compareType: 'number', value: '50', compareMeasure: '', multiplier: 1 },
+    ] },
+  { id: 'inv4', name: 'Bluest of Blue Chips', description: 'Large Caps (MCap >30K Cr) with solid ROE and low debt', icon: '💎', category: 'investment',
+    conditions: [
+      { measure: 'market_cap', operator: '>', compareType: 'number', value: '30000', compareMeasure: '', multiplier: 1 },
+      { measure: 'roe', operator: '>', compareType: 'number', value: '10', compareMeasure: '', multiplier: 1 },
+      { measure: 'debt_to_equity', operator: '<', compareType: 'number', value: '1', compareMeasure: '', multiplier: 1 },
+    ] },
+  { id: 'inv5', name: 'High Dividend Yield', description: 'Consistent dividend payers with yield >3%', icon: '💰', category: 'investment',
+    conditions: [
+      { measure: 'dividend_yield', operator: '>', compareType: 'number', value: '3', compareMeasure: '', multiplier: 1 },
+    ] },
+  { id: 'inv6', name: 'Growth Stocks', description: 'High growth with reasonable valuations — ROE>18, ROCE>18', icon: '🌱', category: 'investment',
+    conditions: [
+      { measure: 'roe', operator: '>', compareType: 'number', value: '18', compareMeasure: '', multiplier: 1 },
+      { measure: 'roce', operator: '>', compareType: 'number', value: '18', compareMeasure: '', multiplier: 1 },
+    ] },
+  { id: 'inv7', name: 'Debt Free Companies', description: 'Zero or near-zero debt — strong balance sheets', icon: '🏦', category: 'investment',
+    conditions: [
+      { measure: 'debt_to_equity', operator: '<', compareType: 'number', value: '0.1', compareMeasure: '', multiplier: 1 },
+      { measure: 'market_cap', operator: '>', compareType: 'number', value: '1000', compareMeasure: '', multiplier: 1 },
+    ] },
+  { id: 'inv8', name: 'Undervalued Stocks', description: 'Low PE with decent ROE — potential value picks', icon: '🏷️', category: 'investment',
+    conditions: [
+      { measure: 'pe_ratio', operator: '<', compareType: 'number', value: '15', compareMeasure: '', multiplier: 1 },
+      { measure: 'roe', operator: '>', compareType: 'number', value: '10', compareMeasure: '', multiplier: 1 },
+    ] },
+  { id: 'inv9', name: 'CANSLIM Stocks', description: 'W. O\'Neil method — strong earnings, new highs, volume', icon: '📊', category: 'investment',
+    conditions: [
+      { measure: 'roe', operator: '>', compareType: 'number', value: '15', compareMeasure: '', multiplier: 1 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'week_52_high', multiplier: 0.9 },
+      { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.2 },
+    ] },
+  { id: 'inv10', name: 'Multibagger Potential', description: 'High growth + momentum + quality — long-term compounders', icon: '👑', category: 'investment',
+    conditions: [
+      { measure: 'roe', operator: '>', compareType: 'number', value: '20', compareMeasure: '', multiplier: 1 },
+      { measure: 'debt_to_equity', operator: '<', compareType: 'number', value: '0.5', compareMeasure: '', multiplier: 1 },
+      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0', compareMeasure: '', multiplier: 1 },
+    ] },
+  { id: 'inv11', name: 'Companies Near 52W High', description: 'Stocks trading near 52-week high — strong trend', icon: '🏔️', category: 'investment',
+    conditions: [
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'week_52_high', multiplier: 0.95 },
+    ] },
+  { id: 'inv12', name: 'High Quality Businesses', description: 'Good ROCE, low debt, strong promoter holding', icon: '⭐', category: 'investment',
+    conditions: [
+      { measure: 'roce', operator: '>', compareType: 'number', value: '15', compareMeasure: '', multiplier: 1 },
+      { measure: 'debt_to_equity', operator: '<', compareType: 'number', value: '0.25', compareMeasure: '', multiplier: 1 },
+      { measure: 'promoter_holding', operator: '>', compareType: 'number', value: '50', compareMeasure: '', multiplier: 1 },
+    ] },
 ];
 
 export const CATEGORIES = [
