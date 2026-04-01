@@ -13,41 +13,8 @@ import {
   type Condition, type ScanPreset,
 } from '@/data/scanPresets';
 
-const PAGE_SIZE = 50;
 
-const CATEGORY_ACCENT: Record<string, string> = {
-  breakout: 'border-l-[hsl(var(--terminal-amber))]',
-  orb: 'border-l-[hsl(var(--terminal-cyan))]',
-  ema: 'border-l-[hsl(var(--terminal-blue))]',
-  momentum: 'border-l-primary',
-  candle: 'border-l-[hsl(var(--terminal-purple))]',
-  intraday: 'border-l-[hsl(var(--terminal-cyan))]',
-  volume: 'border-l-[hsl(var(--terminal-blue))]',
-  vwap: 'border-l-[hsl(var(--terminal-amber))]',
-  swing: 'border-l-[hsl(var(--terminal-amber))]',
-  quality: 'border-l-[hsl(var(--terminal-purple))]',
-  value: 'border-l-primary',
-  price: 'border-l-[hsl(var(--terminal-amber))]',
-};
 
-const RESULT_COLUMNS = [
-  { key: 'symbol', label: 'Stock', align: 'left' as const },
-  { key: 'ltp', label: 'Price', align: 'right' as const },
-  { key: 'change_pct', label: '% Chg', align: 'right' as const },
-  { key: 'volume', label: 'Volume', align: 'right' as const },
-  { key: 'market_cap', label: 'MCap', align: 'right' as const },
-  { key: 'pe_ratio', label: 'P/E', align: 'right' as const },
-  { key: 'roe', label: 'ROE', align: 'right' as const },
-  { key: 'score', label: 'Score', align: 'right' as const },
-];
-
-const PAGE_SIZE = 50;
-
-// EMA measures that require server-side data
-const EMA_MEASURES = new Set(['ema9', 'ema20', 'ema50', 'ema100', 'ema200', 'sma20', 'sma50', 'sma200']);
-
-function scanUsesEMA(conditions: Omit<Condition, 'id'>[]): boolean {
-  return conditions.some(c => EMA_MEASURES.has(c.measure) || EMA_MEASURES.has(c.compareMeasure));
 }
 
 function getStockValue(stock: Stock, key: string, emaData?: Record<string, any>): number | null {
