@@ -706,13 +706,15 @@ export default function TradingAgent() {
       <ModeSelector mode={mode} setMode={setMode} disabled={loading} />
 
       {/* Input */}
-      <SymbolInput
-        symbol={symbol}
-        setSymbol={setSymbol}
-        onSubmit={runAgent}
-        disabled={loading}
-        placeholder={mode === 'invest' ? 'e.g. RELIANCE, TCS' : 'e.g. NIFTY 50'}
-      />
+      <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-border/15 p-3 sm:p-4 mb-4">
+        <div className="flex flex-col gap-2 sm:gap-3">
+          <SymbolInput
+            symbol={symbol}
+            setSymbol={setSymbol}
+            onSubmit={runAgent}
+            disabled={loading}
+            placeholder={mode === 'invest' ? 'e.g. RELIANCE, TCS' : 'e.g. NIFTY 50'}
+          />
           <div className="flex items-center gap-2">
             {mode !== 'invest' && mode !== 'options' && (
               <>
