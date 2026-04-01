@@ -333,7 +333,7 @@ export const DEFAULT_SCANS: ScanPreset[] = [
       { measure: 'change_pct', operator: '>', compareType: 'number', value: '1', compareMeasure: '', multiplier: 1 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.5 },
     ] },
-  { id: 'vw5', name: 'VWAP Proxy Rejection Short', description: 'Failed to hold above session avg – short setup (proxy – no real VWAP)', icon: '⬇️', category: 'vwap',
+  { id: 'vw5', name: 'VWAP Rejection Short', description: 'Failed to hold above session avg – short setup', icon: '⬇️', category: 'vwap',
     conditions: [
       { measure: 'open', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.002 },
       { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 0.998 },
