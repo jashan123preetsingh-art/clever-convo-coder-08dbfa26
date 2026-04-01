@@ -106,7 +106,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
       <div className="flex flex-1 overflow-hidden">
         <Sidebar navItems={NAV_ITEMS} isAdmin={isAdmin} />
 
-        <main id="main-content" className="flex-1 overflow-y-auto bg-background touch-auto">
+        <main id="main-content" className="flex-1 overflow-y-auto bg-background perf-scroll touch-auto">
           <RouteErrorBoundary>
             <div className="min-h-full">
               {children}

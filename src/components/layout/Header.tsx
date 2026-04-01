@@ -1,6 +1,5 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, memo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Menu, X, Sun, Moon, Settings, LogOut } from 'lucide-react';
 import { useStockSearch } from '@/hooks/useStockData';
 import type { IndexData, SearchResult } from '@/types/stock';
@@ -26,7 +25,7 @@ interface HeaderProps {
   alertBell: React.ReactNode;
 }
 
-export default function Header({
+function Header({
   searchInput, setSearchInput, showSearch, setShowSearch,
   indices, marketOpen, time, theme, toggleTheme,
   userMenuOpen, setUserMenuOpen, mobileMenuOpen, setMobileMenuOpen,
@@ -48,14 +47,14 @@ export default function Header({
   }, [navigate, setSearchInput, setShowSearch]);
 
   return (
-    <header className="h-12 md:h-12 bg-gradient-to-r from-card/90 via-card/70 to-card/90 glass border-b border-border/20 flex items-center justify-between px-3 md:px-5 flex-shrink-0 z-30">
+    <header className="h-12 md:h-12 bg-card/90 border-b border-border/20 flex items-center justify-between px-3 md:px-5 flex-shrink-0 z-30">
       <div className="flex items-center gap-3 md:gap-5">
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} className="md:hidden p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground transition-colors">
+        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} className="md:hidden p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground transition-colors duration-150">
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
         <Link to="/" className="flex items-center gap-2 md:gap-3 group">
-          <div className="w-7 h-7 md:w-8 md:h-8 rounded-xl bg-gradient-to-br from-primary to-[hsl(var(--terminal-cyan))] flex items-center justify-center shadow-lg shadow-primary/15 group-hover:shadow-primary/25 transition-shadow">
+          <div className="w-7 h-7 md:w-8 md:h-8 rounded-xl bg-gradient-to-br from-primary to-[hsl(var(--terminal-cyan))] flex items-center justify-center shadow-lg shadow-primary/15">
             <span className="text-[9px] md:text-[10px] font-black text-primary-foreground tracking-tight">TA</span>
           </div>
           <div className="hidden sm:flex flex-col">
@@ -68,23 +67,22 @@ export default function Header({
 
         {/* Search */}
         <div className="relative z-[70]">
-          <div className="flex items-center bg-secondary/40 border border-border/30 rounded-xl px-3 md:px-3.5 py-2 gap-2 focus-within:border-primary/30 focus-within:bg-secondary/60 focus-within:shadow-[0_0_20px_-5px_hsl(var(--primary)/0.1)] transition-all duration-300">
+          <div className="flex items-center bg-secondary/40 border border-border/30 rounded-xl px-3 md:px-3.5 py-2 gap-2 focus-within:border-primary/30 focus-within:bg-secondary/60 transition-colors duration-150">
             <Search className="w-3.5 h-3.5 text-muted-foreground" />
             <input type="text" placeholder="Search stocks..."
               value={searchInput}
               onChange={(e) => { setSearchInput(e.target.value); setShowSearch(true); }}
               onFocus={() => setShowSearch(true)}
-              className="bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground/60 w-20 sm:w-40 focus:w-40 sm:focus:w-56 focus:outline-none transition-all duration-300" />
+              className="bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground/60 w-20 sm:w-40 focus:w-40 sm:focus:w-56 focus:outline-none transition-[width] duration-200" />
             <kbd className="hidden lg:inline text-[8px] text-muted-foreground/60 bg-background/40 px-1.5 py-0.5 rounded-md border border-border/30 font-mono">/</kbd>
           </div>
           {showSearch && searchInput.length >= 1 && (
-            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-              className="absolute top-full left-0 mt-2 w-72 sm:w-80 bg-card/95 glass border border-border/40 rounded-2xl shadow-2xl z-[80] overflow-hidden max-h-[60vh] overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 w-72 sm:w-80 bg-card border border-border/40 rounded-2xl shadow-2xl z-[80] overflow-hidden max-h-[60vh] overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150">
               {combinedResults.length > 0 ? combinedResults.map((stock, i) => (
                 <button key={`${stock.symbol}-${i}`} type="button" onMouseDown={(e) => { e.preventDefault(); handleSearchSelect(stock.symbol); }}
-                  className="w-full text-left flex items-center justify-between px-4 py-3 hover:bg-primary/5 transition-colors border-b border-border/10 last:border-0 group">
+                  className="w-full text-left flex items-center justify-between px-4 py-3 hover:bg-primary/5 transition-colors duration-100 border-b border-border/10 last:border-0 group">
                   <div>
-                    <p className="text-[11px] font-bold text-foreground group-hover:text-primary transition-colors">{stock.symbol}</p>
+                    <p className="text-[11px] font-bold text-foreground group-hover:text-primary transition-colors duration-100">{stock.symbol}</p>
                     <p className="text-[9px] text-muted-foreground truncate max-w-[160px]">{stock.name}</p>
                   </div>
                   <span className="text-[8px] text-muted-foreground/60 bg-secondary/60 px-2 py-0.5 rounded-md">{stock.exchange || 'NSE'}</span>
@@ -92,7 +90,7 @@ export default function Header({
               )) : (
                 <div className="px-4 py-4 text-[10px] text-muted-foreground">No matching stocks found</div>
               )}
-            </motion.div>
+            </div>
           )}
         </div>
 
@@ -115,7 +113,7 @@ export default function Header({
       <div className="flex items-center gap-2 md:gap-3">
         <button onClick={() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
           aria-label="Open command palette"
-          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/30 border border-border/20 hover:border-border/40 hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-all duration-200">
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/30 border border-border/20 hover:border-border/40 hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors duration-150">
           <Search className="w-3 h-3" />
           <span className="text-[9px] font-mono">⌘K</span>
         </button>
@@ -124,13 +122,13 @@ export default function Header({
 
         <button onClick={toggleTheme}
           aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="w-8 h-8 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-all duration-200 flex items-center justify-center"
+          className="w-8 h-8 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-colors duration-150 flex items-center justify-center"
           title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}>
           {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
 
         <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary/20 border border-border/20">
-          <span className={`w-2 h-2 rounded-full ${marketOpen ? 'bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.5)]' : 'bg-muted-foreground/40'}`} />
+          <span className={`w-2 h-2 rounded-full ${marketOpen ? 'bg-primary' : 'bg-muted-foreground/40'}`} />
           <span className={`text-[9px] font-bold tracking-wider ${marketOpen ? 'text-primary' : 'text-muted-foreground'}`}>
             {marketOpen ? 'LIVE' : 'CLOSED'}
           </span>
@@ -140,38 +138,37 @@ export default function Header({
         {/* User avatar */}
         <div className="relative">
           <button onClick={() => setUserMenuOpen(!userMenuOpen)} aria-label="User menu"
-            className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/15 flex items-center justify-center text-primary text-[11px] font-bold hover:border-primary/30 hover:shadow-[0_0_12px_hsl(var(--primary)/0.1)] transition-all duration-200">
+            className="w-8 h-8 rounded-xl bg-primary/15 border border-primary/15 flex items-center justify-center text-primary text-[11px] font-bold hover:border-primary/30 transition-colors duration-150">
             {(profile?.full_name || user?.email || '?')[0].toUpperCase()}
           </button>
-          <AnimatePresence>
-            {userMenuOpen && (
-              <motion.div initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -4, scale: 0.97 }}
-                className="absolute right-0 top-full mt-2 w-52 bg-card/95 glass border border-border/40 rounded-2xl shadow-2xl z-[90] overflow-hidden">
-                <div className="px-4 py-3 border-b border-border/20">
-                  <p className="text-[12px] font-bold text-foreground truncate">{profile?.full_name || 'User'}</p>
-                  <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    <span className={`text-[8px] px-2 py-0.5 rounded-md font-bold ${profile?.plan === 'premium' ? 'bg-accent/10 text-accent' : profile?.plan === 'pro' ? 'bg-[hsl(var(--terminal-blue)/0.1)] text-[hsl(var(--terminal-blue))]' : 'bg-secondary text-muted-foreground'}`}>
-                      {(profile?.plan || 'free').toUpperCase()}
-                    </span>
-                    {isAdmin && <span className="text-[8px] px-2 py-0.5 rounded-md bg-destructive/10 text-destructive font-bold">ADMIN</span>}
-                  </div>
+          {userMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-52 bg-card border border-border/40 rounded-2xl shadow-2xl z-[90] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="px-4 py-3 border-b border-border/20">
+                <p className="text-[12px] font-bold text-foreground truncate">{profile?.full_name || 'User'}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{user?.email}</p>
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <span className={`text-[8px] px-2 py-0.5 rounded-md font-bold ${profile?.plan === 'premium' ? 'bg-accent/10 text-accent' : profile?.plan === 'pro' ? 'bg-[hsl(var(--terminal-blue)/0.1)] text-[hsl(var(--terminal-blue))]' : 'bg-secondary text-muted-foreground'}`}>
+                    {(profile?.plan || 'free').toUpperCase()}
+                  </span>
+                  {isAdmin && <span className="text-[8px] px-2 py-0.5 rounded-md bg-destructive/10 text-destructive font-bold">ADMIN</span>}
                 </div>
-                {isAdmin && (
-                  <button onClick={() => { navigate('/admin'); setUserMenuOpen(false); }}
-                    className="w-full text-left px-4 py-2.5 text-[11px] text-foreground hover:bg-primary/5 transition-colors flex items-center gap-2.5">
-                    <Settings className="w-3.5 h-3.5" /> Admin Panel
-                  </button>
-                )}
-                <button onClick={() => { signOut(); setUserMenuOpen(false); }}
-                  className="w-full text-left px-4 py-2.5 text-[11px] text-destructive hover:bg-destructive/5 transition-colors flex items-center gap-2.5">
-                  <LogOut className="w-3.5 h-3.5" /> Sign Out
+              </div>
+              {isAdmin && (
+                <button onClick={() => { navigate('/admin'); setUserMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-[11px] text-foreground hover:bg-primary/5 transition-colors duration-100 flex items-center gap-2.5">
+                  <Settings className="w-3.5 h-3.5" /> Admin Panel
                 </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              )}
+              <button onClick={() => { signOut(); setUserMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 text-[11px] text-destructive hover:bg-destructive/5 transition-colors duration-100 flex items-center gap-2.5">
+                <LogOut className="w-3.5 h-3.5" /> Sign Out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
   );
 }
+
+export default memo(Header);

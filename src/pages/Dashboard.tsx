@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
 import { useFiiDiiData, useMarketBreadth, useBatchQuotes, useMarketMetrics } from '@/hooks/useStockData';
@@ -34,7 +33,7 @@ async function fetchLiveNews() {
   return data.news as { title: string; source: string; category: string; published_at: string; url: string }[];
 }
 
-const fadeUp = { hidden: { opacity: 0, y: 6 }, visible: { opacity: 1, y: 0 } };
+
 
 export default function Dashboard() {
   const { indices, hasLiveData, isUsingMockData, isError } = useIndicesWithFallback();
@@ -133,8 +132,7 @@ export default function Dashboard() {
       <DataStatusBanner isUsingMockData={isUsingMockData} isError={isError} />
 
       {/* Welcome Header */}
-      <motion.div variants={fadeUp} initial="hidden" animate="visible"
-        className="relative rounded-xl bg-card/40 border border-border/10 p-4 sm:p-6 overflow-hidden">
+      <div className="relative rounded-xl bg-card/40 border border-border/10 p-4 sm:p-6 overflow-hidden animate-in fade-in slide-in-from-bottom-1 duration-300">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-transparent pointer-events-none" />
         <div className="relative flex items-center justify-between gap-3">
           <div className="min-w-0">
@@ -152,7 +150,7 @@ export default function Dashboard() {
             Scanner <span className="opacity-60">→</span>
           </Link>
         </div>
-      </motion.div>
+      </div>
 
       {/* Index Ticker Strip */}
       <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
