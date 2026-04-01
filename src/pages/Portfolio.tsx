@@ -389,6 +389,139 @@ const PositionRow = React.memo(function PositionRow({
   );
 }, (prev, next) => prev.pos === next.pos && prev.ltp === next.ltp && prev.displaySymbol === next.displaySymbol);
 
+const PORTFOLIO_AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portfolio-ai`;
+
+function PortfolioAI({
+  positions,
+  quoteMap,
+  liveSymbolMap,
+}: {
+  positions: PortfolioPosition[];
+  quoteMap: Record<string, number>;
+  liveSymbolMap: Record<string, string>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const runAnalysis = useCallback(async () => {
+    if (positions.length === 0) {
+      toast.error('Add positions first to get AI analysis');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setOpen(true);
+
+    try {
+      const quotes: Record<string, number> = {};
+      positions.forEach((p) => {
+        const sym = liveSymbolMap[p.id] ?? normalizeSymbol(p.symbol);
+        if (quoteMap[sym]) quotes[sym] = quoteMap[sym];
+      });
+
+      const payload = {
+        positions: positions.map((p) => ({
+          symbol: liveSymbolMap[p.id] ?? normalizeSymbol(p.symbol),
+          entry_price: p.entry_price,
+          quantity: p.quantity,
+          trade_type: p.trade_type,
+        })),
+        quotes,
+      };
+
+      const resp = await fetch(PORTFOLIO_AI_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (resp.status === 429) {
+        setError('AI is rate limited. Try again in a moment.');
+        return;
+      }
+      if (resp.status === 402) {
+        setError('AI credits exhausted. Please add funds.');
+        return;
+      }
+      if (!resp.ok) {
+        setError('Analysis failed. Try again.');
+        return;
+      }
+
+      const data = await resp.json();
+      setAnalysis(data.analysis || 'No analysis available.');
+    } catch {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [positions, quoteMap, liveSymbolMap]);
+
+  if (positions.length === 0) return null;
+
+  return (
+    <div className="rounded-xl bg-gradient-to-r from-card/50 to-card/30 border border-border/15 overflow-hidden">
+      <button
+        onClick={() => {
+          if (!open && !analysis) runAnalysis();
+          else setOpen(!open);
+        }}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-primary/[0.03] transition-all"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <div className="text-left">
+            <p className="text-[10px] font-bold text-foreground">AI Portfolio Analysis</p>
+            <p className="text-[8px] text-muted-foreground/60">Quick insights on your holdings</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {analysis && (
+            <button
+              onClick={(e) => { e.stopPropagation(); runAnalysis(); }}
+              className="p-1 rounded-md hover:bg-secondary/40 text-muted-foreground/50 hover:text-foreground transition-all"
+              title="Refresh analysis"
+            >
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+          {open ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground/50" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/50" />}
+        </div>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4 border-t border-border/10">
+          {loading ? (
+            <div className="flex items-center gap-2 py-4">
+              <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              <p className="text-[10px] text-muted-foreground">Analyzing your portfolio...</p>
+            </div>
+          ) : error ? (
+            <div className="py-3">
+              <p className="text-[10px] text-destructive">{error}</p>
+              <button onClick={runAnalysis} className="mt-2 text-[9px] font-bold text-primary hover:underline">
+                Retry
+              </button>
+            </div>
+          ) : analysis ? (
+            <div className="py-3 prose prose-sm prose-invert max-w-none [&>*]:text-[10px] [&>*]:leading-relaxed [&_strong]:text-foreground [&_li]:text-[10px] [&_h2]:text-[11px] [&_h2]:font-bold [&_h2]:mt-3 [&_h2]:mb-1 [&_h3]:text-[10px] [&_h3]:font-bold [&_h3]:mt-2 [&_h3]:mb-1 [&_ul]:pl-3 [&_ul]:my-1 [&_p]:my-1 [&_p]:text-muted-foreground [&_li]:text-muted-foreground">
+              <ReactMarkdown>{analysis}</ReactMarkdown>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Portfolio() {
   const { openPositions, closedPositions, isLoading, addPosition, closePosition, deletePosition } = usePortfolio();
   const [tab, setTab] = useState<'open' | 'closed'>('open');
