@@ -555,7 +555,7 @@ export default function StockDetail() {
                   </div>
                 </div>
 
-                {/* 2. Multi-TF Support & Resistance */}
+                {/* 2. Multi-TF Support & Resistance — ordered 4H, 1D, 1W, 1M, 1Y */}
                 <div className="t-card p-4">
                   <SectionTitle icon="🎯">Multi-Timeframe S/R Levels</SectionTitle>
                   {multiTFLevels ? (
@@ -563,32 +563,40 @@ export default function StockDetail() {
                       <div>
                         <p className="text-[8px] text-primary/70 font-bold uppercase tracking-wider mb-2">Resistance</p>
                         <div className="space-y-1">
+                          {multiTFLevels.yearly && <MultiTFLevel label="R2" value={multiTFLevels.yearly.r2} ltp={ltp} type="resistance" tf="1Y" />}
+                          {multiTFLevels.yearly && <MultiTFLevel label="R1" value={multiTFLevels.yearly.r1} ltp={ltp} type="resistance" tf="1Y" />}
+                          {multiTFLevels.monthly && <MultiTFLevel label="R2" value={multiTFLevels.monthly.r2} ltp={ltp} type="resistance" tf="1M" />}
+                          {multiTFLevels.monthly && <MultiTFLevel label="R1" value={multiTFLevels.monthly.r1} ltp={ltp} type="resistance" tf="1M" />}
                           {multiTFLevels.weekly && <MultiTFLevel label="R2" value={multiTFLevels.weekly.r2} ltp={ltp} type="resistance" tf="1W" />}
                           {multiTFLevels.weekly && <MultiTFLevel label="R1" value={multiTFLevels.weekly.r1} ltp={ltp} type="resistance" tf="1W" />}
-                          {multiTFLevels.fourH && <MultiTFLevel label="R2" value={multiTFLevels.fourH.r2} ltp={ltp} type="resistance" tf="4H" />}
-                          {multiTFLevels.fourH && <MultiTFLevel label="R1" value={multiTFLevels.fourH.r1} ltp={ltp} type="resistance" tf="4H" />}
                           {multiTFLevels.daily && <MultiTFLevel label="R2" value={multiTFLevels.daily.r2} ltp={ltp} type="resistance" tf="1D" />}
                           {multiTFLevels.daily && <MultiTFLevel label="R1" value={multiTFLevels.daily.r1} ltp={ltp} type="resistance" tf="1D" />}
+                          {multiTFLevels.fourH && <MultiTFLevel label="R2" value={multiTFLevels.fourH.r2} ltp={ltp} type="resistance" tf="4H" />}
+                          {multiTFLevels.fourH && <MultiTFLevel label="R1" value={multiTFLevels.fourH.r1} ltp={ltp} type="resistance" tf="4H" />}
                         </div>
                       </div>
                       <div>
                         <p className="text-[8px] text-destructive/70 font-bold uppercase tracking-wider mb-2">Support</p>
                         <div className="space-y-1">
-                          {multiTFLevels.daily && <MultiTFLevel label="S1" value={multiTFLevels.daily.s1} ltp={ltp} type="support" tf="1D" />}
-                          {multiTFLevels.daily && <MultiTFLevel label="S2" value={multiTFLevels.daily.s2} ltp={ltp} type="support" tf="1D" />}
                           {multiTFLevels.fourH && <MultiTFLevel label="S1" value={multiTFLevels.fourH.s1} ltp={ltp} type="support" tf="4H" />}
                           {multiTFLevels.fourH && <MultiTFLevel label="S2" value={multiTFLevels.fourH.s2} ltp={ltp} type="support" tf="4H" />}
+                          {multiTFLevels.daily && <MultiTFLevel label="S1" value={multiTFLevels.daily.s1} ltp={ltp} type="support" tf="1D" />}
+                          {multiTFLevels.daily && <MultiTFLevel label="S2" value={multiTFLevels.daily.s2} ltp={ltp} type="support" tf="1D" />}
                           {multiTFLevels.weekly && <MultiTFLevel label="S1" value={multiTFLevels.weekly.s1} ltp={ltp} type="support" tf="1W" />}
                           {multiTFLevels.weekly && <MultiTFLevel label="S2" value={multiTFLevels.weekly.s2} ltp={ltp} type="support" tf="1W" />}
+                          {multiTFLevels.monthly && <MultiTFLevel label="S1" value={multiTFLevels.monthly.s1} ltp={ltp} type="support" tf="1M" />}
+                          {multiTFLevels.monthly && <MultiTFLevel label="S2" value={multiTFLevels.monthly.s2} ltp={ltp} type="support" tf="1M" />}
+                          {multiTFLevels.yearly && <MultiTFLevel label="S1" value={multiTFLevels.yearly.s1} ltp={ltp} type="support" tf="1Y" />}
+                          {multiTFLevels.yearly && <MultiTFLevel label="S2" value={multiTFLevels.yearly.s2} ltp={ltp} type="support" tf="1Y" />}
                         </div>
                       </div>
                     </div>
                   ) : <p className="text-[10px] text-muted-foreground">Loading S/R data...</p>}
                 </div>
 
-                {/* 3. EMAs */}
+                {/* 3. Daily EMAs */}
                 <div className="t-card p-4">
-                  <SectionTitle icon="📈">Moving Averages (EMA / SMA)</SectionTitle>
+                  <SectionTitle icon="📈">Moving Averages · Daily (EMA / SMA)</SectionTitle>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
                     {[
                       { l: 'EMA 9', v: technicals.ema_9 }, { l: 'EMA 20', v: technicals.ema_20 },
