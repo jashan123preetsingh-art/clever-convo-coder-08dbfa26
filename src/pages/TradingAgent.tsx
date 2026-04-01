@@ -822,7 +822,7 @@ export default function TradingAgent() {
       </div>
 
       {/* Chart upload section - only for scalp/swing */}
-      {mode !== 'invest' && mode !== 'options' && (
+      {mode !== 'invest' && (
         <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-border/15 p-3 sm:p-4 mb-4">
           <div className="flex items-center gap-2 mb-2 sm:mb-3">
             <span className="text-sm sm:text-base">📸</span>
