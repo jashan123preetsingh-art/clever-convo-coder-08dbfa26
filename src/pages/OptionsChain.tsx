@@ -89,38 +89,98 @@ export default function OptionsChain() {
   // ── Live API data ──
   const { data: apiData, isLoading, isError, dataUpdatedAt } = useOptionsChain(symbol);
 
-  // Generate fallback mock chain when API returns no data
+  // Generate realistic fallback chain using Black-Scholes approximation
   const fallbackData = useMemo(() => {
     const spotPrices: Record<string, number> = {
       NIFTY: 22650, BANKNIFTY: 51400, RELIANCE: 1280, TCS: 3450, HDFCBANK: 1820,
       INFY: 1520, ICICIBANK: 1350, SBIN: 780, BAJFINANCE: 8200, TATAMOTORS: 650, ITC: 430, LT: 3400,
     };
+    const lotSizes: Record<string, number> = {
+      NIFTY: 25, BANKNIFTY: 15, RELIANCE: 250, TCS: 150, HDFCBANK: 550,
+      INFY: 400, ICICIBANK: 700, SBIN: 1500, BAJFINANCE: 125, TATAMOTORS: 1400, ITC: 1600, LT: 150,
+    };
     const spot = spotPrices[symbol] || 1000;
-    const strikeDiff = symbol === 'NIFTY' ? 50 : symbol === 'BANKNIFTY' ? 100 : Math.max(10, Math.round(spot * 0.01 / 5) * 5);
+    const strikeDiff = symbol === 'NIFTY' ? 50 : symbol === 'BANKNIFTY' ? 100 : Math.max(5, Math.round(spot * 0.01 / 5) * 5);
     const atmStrike = Math.round(spot / strikeDiff) * strikeDiff;
+    const T = 7 / 365; // ~7 days to expiry (weekly)
+    const r = 0.065; // risk-free rate
+    const baseIV = symbol === 'NIFTY' ? 0.13 : symbol === 'BANKNIFTY' ? 0.16 : 0.25;
+
+    // Simple Black-Scholes approximation
+    const normCDF = (x: number) => { const t = 1 / (1 + 0.2316419 * Math.abs(x)); const d = 0.3989423 * Math.exp(-x * x / 2); const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return x > 0 ? 1 - p : p; };
+    const bsCall = (S: number, K: number, vol: number) => {
+      if (vol <= 0 || T <= 0) return Math.max(S - K, 0);
+      const d1 = (Math.log(S / K) + (r + vol * vol / 2) * T) / (vol * Math.sqrt(T));
+      const d2 = d1 - vol * Math.sqrt(T);
+      return S * normCDF(d1) - K * Math.exp(-r * T) * normCDF(d2);
+    };
+    const bsPut = (S: number, K: number, vol: number) => bsCall(S, K, vol) - S + K * Math.exp(-r * T);
+
+    // Seed-based pseudo-random for consistency within symbol
+    let seed = symbol.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const seededRand = () => { seed = (seed * 16807 + 0) % 2147483647; return (seed - 1) / 2147483646; };
+
     const strikes: any[] = [];
     for (let i = -20; i <= 20; i++) {
       const strike = atmStrike + i * strikeDiff;
       if (strike <= 0) continue;
       const dist = Math.abs(i);
-      const ceOI = Math.round((20000 + Math.random() * 80000) * (1 + dist * 0.15));
-      const peOI = Math.round((20000 + Math.random() * 80000) * (1 + dist * 0.1));
-      const ceIV = 12 + Math.random() * 8 + dist * 0.5;
-      const peIV = 12 + Math.random() * 8 + dist * 0.5;
-      const ceLTP = Math.max(0.05, strike < spot ? (spot - strike) + ceIV * 0.5 : Math.max(0.05, (20 - dist * 2) + Math.random() * 5));
-      const peLTP = Math.max(0.05, strike > spot ? (strike - spot) + peIV * 0.5 : Math.max(0.05, (20 - dist * 2) + Math.random() * 5));
+      // IV smile: higher IV for OTM options
+      const ivSmile = baseIV * (1 + 0.008 * dist * dist);
+      const ceIV = ivSmile * (0.95 + seededRand() * 0.1);
+      const peIV = ivSmile * (0.95 + seededRand() * 0.1);
+
+      const ceLTP = Math.max(0.05, Math.round(bsCall(spot, strike, ceIV) * 100) / 100);
+      const peLTP = Math.max(0.05, Math.round(bsPut(spot, strike, peIV) * 100) / 100);
+
+      // Realistic OI: peaks at round numbers, higher for OTM, bell-curve near ATM
+      const roundBonus = strike % (strikeDiff * 5) === 0 ? 2.5 : 1;
+      const ceOIBase = dist <= 2 ? 80000 : dist <= 5 ? 120000 : dist <= 10 ? 60000 : 20000;
+      const peOIBase = dist <= 2 ? 70000 : dist <= 5 ? 110000 : dist <= 10 ? 55000 : 18000;
+      // Calls have more OI above spot, puts below
+      const ceBias = i > 0 ? 1.5 : 0.6;
+      const peBias = i < 0 ? 1.5 : 0.6;
+      const ceOI = Math.round(ceOIBase * ceBias * roundBonus * (0.7 + seededRand() * 0.6));
+      const peOI = Math.round(peOIBase * peBias * roundBonus * (0.7 + seededRand() * 0.6));
+      const ceVol = Math.round(ceOI * (0.05 + seededRand() * 0.15));
+      const peVol = Math.round(peOI * (0.05 + seededRand() * 0.15));
+
       strikes.push({
         strike,
-        ce: { oi: ceOI, chg_oi: Math.round((Math.random() - 0.4) * 5000), volume: Math.round(Math.random() * 50000), iv: Math.round(ceIV * 100) / 100, ltp: Math.round(ceLTP * 100) / 100, change: Math.round((Math.random() - 0.5) * 20 * 100) / 100, bid: 0, ask: 0 },
-        pe: { oi: peOI, chg_oi: Math.round((Math.random() - 0.4) * 5000), volume: Math.round(Math.random() * 50000), iv: Math.round(peIV * 100) / 100, ltp: Math.round(peLTP * 100) / 100, change: Math.round((Math.random() - 0.5) * 20 * 100) / 100, bid: 0, ask: 0 },
+        ce: { oi: ceOI, chg_oi: Math.round((seededRand() - 0.45) * ceOI * 0.05), volume: ceVol, iv: Math.round(ceIV * 10000) / 100, ltp: ceLTP, change: Math.round((seededRand() - 0.5) * ceLTP * 0.15 * 100) / 100, bid: Math.round((ceLTP * 0.98) * 100) / 100, ask: Math.round((ceLTP * 1.02) * 100) / 100 },
+        pe: { oi: peOI, chg_oi: Math.round((seededRand() - 0.45) * peOI * 0.05), volume: peVol, iv: Math.round(peIV * 10000) / 100, ltp: peLTP, change: Math.round((seededRand() - 0.5) * peLTP * 0.15 * 100) / 100, bid: Math.round((peLTP * 0.98) * 100) / 100, ask: Math.round((peLTP * 1.02) * 100) / 100 },
       });
     }
+
+    // Max Pain calculation
+    let minPain = Infinity, maxPainStrike = atmStrike;
+    for (const row of strikes) {
+      let pain = 0;
+      for (const r of strikes) {
+        if (r.strike < row.strike) pain += r.ce.oi * (row.strike - r.strike);
+        if (r.strike > row.strike) pain += r.pe.oi * (r.strike - row.strike);
+      }
+      if (pain < minPain) { minPain = pain; maxPainStrike = row.strike; }
+    }
+
     const totalCallOI = strikes.reduce((s, r) => s + r.ce.oi, 0);
     const totalPutOI = strikes.reduce((s, r) => s + r.pe.oi, 0);
+    const totalCallVol = strikes.reduce((s, r) => s + r.ce.volume, 0);
+    const totalPutVol = strikes.reduce((s, r) => s + r.pe.volume, 0);
+
+    // Generate realistic expiry dates (next 4 Thursdays)
+    const expiries: string[] = [];
+    const d = new Date();
+    for (let w = 0; w < 4; w++) {
+      const target = new Date(d);
+      target.setDate(d.getDate() + ((4 - d.getDay() + 7) % 7) + w * 7);
+      expiries.push(target.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }));
+    }
+
     return {
-      chain: strikes, underlyingValue: spot, expiryDates: [],
-      timestamp: new Date().toLocaleString(),
-      analytics: { totalCallOI, totalPutOI, pcr: Math.round(totalPutOI / totalCallOI * 100) / 100, maxPain: atmStrike, totalCallVol: 0, totalPutVol: 0 },
+      chain: strikes, underlyingValue: spot, expiryDates: expiries,
+      timestamp: new Date().toLocaleString('en-IN'),
+      analytics: { totalCallOI, totalPutOI, pcr: Math.round(totalPutOI / totalCallOI * 100) / 100, maxPain: maxPainStrike, totalCallVol, totalPutVol },
       live: false,
     };
   }, [symbol]);
