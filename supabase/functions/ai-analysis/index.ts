@@ -46,24 +46,25 @@ serve(async (req) => {
 
 Return ONLY valid JSON. Do NOT include fundamentals in the scoring.`;
 
+    const safe = (v: any, d = 'N/A') => (v != null && v !== undefined && !isNaN(v)) ? v : d;
     const userPrompt = `Analyze this stock using Price Action + S/D + S/R + EMA + Volume framework:
 
-STOCK: ${quote?.symbol} (${quote?.name})
-PRICE: ₹${quote?.ltp} | Change: ${quote?.change_pct?.toFixed(2)}%
-52W Range: ₹${quote?.week_52_low} - ₹${quote?.week_52_high}
+STOCK: ${quote?.symbol || 'Unknown'} (${quote?.name || 'Unknown'})
+PRICE: ₹${safe(quote?.ltp)} | Change: ${safe(quote?.change_pct) !== 'N/A' ? Number(quote.change_pct).toFixed(2) + '%' : 'N/A'}
+52W Range: ₹${safe(quote?.week_52_low)} - ₹${safe(quote?.week_52_high)}
 
 TECHNICALS:
-- RSI(14): ${technicals?.rsi_14}
-- EMA 9: ${technicals?.ema_9} | EMA 20: ${technicals?.ema_20} | EMA 50: ${technicals?.ema_50} | EMA 200: ${technicals?.ema_200}
-- SMA 20: ${technicals?.sma_20} | SMA 50: ${technicals?.sma_50} | SMA 200: ${technicals?.sma_200}
-- Trend: ${technicals?.trend} | Strength: ${technicals?.trend_strength}
-- Support: S1=${technicals?.s1} S2=${technicals?.s2} S3=${technicals?.s3}
-- Resistance: R1=${technicals?.r1} R2=${technicals?.r2} R3=${technicals?.r3}
-- Pivot: ${technicals?.pivot}
-- Bollinger: ${technicals?.bollinger_lower} / ${technicals?.bollinger_middle} / ${technicals?.bollinger_upper}
-- Volume Ratio: ${technicals?.volume_ratio}x avg | Avg Vol 20D: ${technicals?.avg_volume_20}
+- RSI(14): ${safe(technicals?.rsi_14)}
+- EMA 9: ${safe(technicals?.ema_9)} | EMA 20: ${safe(technicals?.ema_20)} | EMA 50: ${safe(technicals?.ema_50)} | EMA 200: ${safe(technicals?.ema_200)}
+- SMA 20: ${safe(technicals?.sma_20)} | SMA 50: ${safe(technicals?.sma_50)} | SMA 200: ${safe(technicals?.sma_200)}
+- Trend: ${safe(technicals?.trend)} | Strength: ${safe(technicals?.trend_strength)}
+- Support: S1=${safe(technicals?.s1)} S2=${safe(technicals?.s2)} S3=${safe(technicals?.s3)}
+- Resistance: R1=${safe(technicals?.r1)} R2=${safe(technicals?.r2)} R3=${safe(technicals?.r3)}
+- Pivot: ${safe(technicals?.pivot)}
+- Bollinger: ${safe(technicals?.bollinger_lower)} / ${safe(technicals?.bollinger_middle)} / ${safe(technicals?.bollinger_upper)}
+- Volume Ratio: ${safe(technicals?.volume_ratio)}x avg | Avg Vol 20D: ${safe(technicals?.avg_volume_20)}
 - Candle Patterns: ${technicals?.candle_patterns?.join(", ") || "None"}
-- ATR(14): ${technicals?.atr_14}
+- ATR(14): ${safe(technicals?.atr_14)}
 
 Return this exact JSON structure:
 {
