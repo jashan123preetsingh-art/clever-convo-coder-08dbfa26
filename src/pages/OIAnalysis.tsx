@@ -101,10 +101,12 @@ export default function OIAnalysis() {
   // Fetch live OI from NSE, fallback to mock
   const { data: liveOI, isLoading: oiLoading } = useOptionsChain(activeSymbol);
   const data = useMemo(() => {
-    if (liveOI?.chain?.length > 0 && liveOI.live) return liveOI;
+    // Accept both live Yahoo data AND VIX-estimated data (live: false but valid chain)
+    if (liveOI?.chain?.length > 0) return liveOI;
     return generateOptionsChain(activeSymbol);
   }, [activeSymbol, liveOI, tick]);
-  const isLive = liveOI?.live === true && liveOI?.chain?.length > 0;
+  const isLive = liveOI?.chain?.length > 0;
+  const dataSource = liveOI?.source || 'mock';
   const { chain, underlyingValue, analytics } = data;
 
   // Build OI distribution chart data
