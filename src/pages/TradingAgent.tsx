@@ -717,7 +717,7 @@ export default function TradingAgent() {
         return;
       }
 
-      setResult(data);
+      setResult({ ...data, mode: data.mode || mode });
       setCurrentStep(steps.length);
       
       if (data.cached) {
@@ -946,9 +946,9 @@ export default function TradingAgent() {
       <AnimatePresence>
         {result && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-            <VerdictCard agents={result.agents} stockData={result.stockData} symbol={result.symbol} hasChartAnalysis={result.hasChartAnalysis} mode={result.mode} />
+            <VerdictCard agents={result.agents} stockData={result.stockData} symbol={result.symbol} hasChartAnalysis={result.hasChartAnalysis} mode={result.mode || mode} />
 
-            {MODE_CONFIG[result.mode].steps.map((step, stepIdx) => (
+            {(MODE_CONFIG[result.mode || mode]?.steps || []).map((step, stepIdx) => (
               <div key={step.key}>
                 <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <span>{step.icon}</span> {step.label}
