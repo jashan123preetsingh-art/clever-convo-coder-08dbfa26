@@ -85,12 +85,12 @@ const MODELS = {
     architect:    "google/gemini-2.5-flash",     // Final Buffett-style decision
   },
   options: {
-    oiAnalyst:    "google/gemini-2.5-flash",     // Fast OI pattern recognition
-    greeksAnalyst:"google/gemini-3-flash-preview", // Fast Greeks & IV analysis
-    technical:    "google/gemini-2.5-flash",     // Price action for strike selection
-    strategist:   "google/gemini-2.5-flash",     // Strategy construction
-    riskManager:  "google/gemini-3-flash-preview", // Risk assessment
-    trader:       "google/gemini-2.5-flash",     // Final options trade
+    oiAnalyst:    "google/gemini-2.5-pro",       // Best model for deep OI pattern recognition
+    greeksAnalyst:"google/gemini-2.5-pro",       // Best model for Greeks & IV analysis
+    technical:    "google/gemini-2.5-pro",       // Best model for strike selection
+    strategist:   "google/gemini-2.5-pro",       // Best model for strategy construction
+    riskManager:  "google/gemini-2.5-pro",       // Best model for risk assessment
+    trader:       "google/gemini-2.5-pro",       // Best model for final options trade
   },
 };
 
