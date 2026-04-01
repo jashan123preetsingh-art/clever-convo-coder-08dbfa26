@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { forwardRef } from 'react';
 import { useWatchlist } from '@/hooks/useWatchlist';
 import { useBatchQuotes } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent } from '@/utils/format';
