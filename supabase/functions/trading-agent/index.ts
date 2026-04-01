@@ -666,24 +666,37 @@ Use NSE lot sizes (NIFTY=25, BANKNIFTY=15). Keep under 800 words.`;
 // PIPELINE RUNNERS
 // ════════════════════════════════════════════════════════════
 
+function fmt(v: any, decimals = 2): string {
+  if (v == null || typeof v !== 'number' || isNaN(v)) return 'N/A';
+  return v.toFixed(decimals);
+}
+
+function fmtInt(v: any): string {
+  if (v == null || typeof v !== 'number' || isNaN(v)) return 'N/A';
+  return v.toLocaleString();
+}
+
 function buildDataContext(stockData: any, mode: string): string {
   if (!stockData) return "";
 
-  const base = `Price: ₹${stockData.price?.toFixed(2)}, Change: ${stockData.changePct?.toFixed(2)}%
-EMA 9: ₹${stockData.ema9?.toFixed(2) || 'N/A'}, EMA 20: ₹${stockData.ema20?.toFixed(2) || 'N/A'}, EMA 50: ₹${stockData.ema50?.toFixed(2) || 'N/A'}, EMA 200: ₹${stockData.ema200?.toFixed(2) || 'N/A'}
-SMA 20: ₹${stockData.sma20?.toFixed(2)}, SMA 50: ₹${stockData.sma50?.toFixed(2)}
-Pivot: ₹${stockData.pivot?.toFixed(2)}, S1: ₹${stockData.s1?.toFixed(2)}, S2: ₹${stockData.s2?.toFixed(2)}, R1: ₹${stockData.r1?.toFixed(2)}, R2: ₹${stockData.r2?.toFixed(2)}
-Bollinger: ₹${stockData.bollingerLower?.toFixed(2)} / ₹${stockData.bollingerMid?.toFixed(2)} / ₹${stockData.bollingerUpper?.toFixed(2)}
-Volume: ${stockData.volume?.toLocaleString()}, Avg Vol: ${stockData.avgVolume?.toLocaleString()}, Vol Ratio: ${stockData.volRatio}x
-ATR(14): ₹${stockData.atr14?.toFixed(2)}, 52W: ₹${stockData.low52?.toFixed(2)} - ₹${stockData.high52?.toFixed(2)}
+  const price = stockData.price;
+  if (price == null || price <= 0) return "Price data unavailable — analysis may be limited.";
+
+  const base = `Price: ₹${fmt(price)}, Change: ${fmt(stockData.changePct)}%
+EMA 9: ₹${fmt(stockData.ema9)}, EMA 20: ₹${fmt(stockData.ema20)}, EMA 50: ₹${fmt(stockData.ema50)}, EMA 200: ₹${fmt(stockData.ema200)}
+SMA 20: ₹${fmt(stockData.sma20)}, SMA 50: ₹${fmt(stockData.sma50)}
+Pivot: ₹${fmt(stockData.pivot)}, S1: ₹${fmt(stockData.s1)}, S2: ₹${fmt(stockData.s2)}, R1: ₹${fmt(stockData.r1)}, R2: ₹${fmt(stockData.r2)}
+Bollinger: ₹${fmt(stockData.bollingerLower)} / ₹${fmt(stockData.bollingerMid)} / ₹${fmt(stockData.bollingerUpper)}
+Volume: ${fmtInt(stockData.volume)}, Avg Vol: ${fmtInt(stockData.avgVolume)}, Vol Ratio: ${stockData.volRatio ?? 'N/A'}x
+ATR(14): ₹${fmt(stockData.atr14)}, 52W: ₹${fmt(stockData.low52)} - ₹${fmt(stockData.high52)}
 S/D Zones: ${stockData.supplyDemandZones?.join(", ") || "None detected"}
 Swing S/R: ${stockData.swingPoints?.join(", ") || "None"}`;
 
   if (mode === "scalp") {
     return `${base}
-PDH: ₹${stockData.pdh?.toFixed(2)}, PDL: ₹${stockData.pdl?.toFixed(2)}, PDC: ₹${stockData.pdc?.toFixed(2)}
+PDH: ₹${fmt(stockData.pdh)}, PDL: ₹${fmt(stockData.pdl)}, PDC: ₹${fmt(stockData.pdc)}
 Last 5 Candles:
-${stockData.recentCandles?.slice(-5)?.map((c: any, i: number) => `  [${i+1}] O:₹${c.o?.toFixed(2)} H:₹${c.h?.toFixed(2)} L:₹${c.l?.toFixed(2)} C:₹${c.c?.toFixed(2)} V:${(c.v || 0).toLocaleString()}`).join("\n") || "N/A"}`;
+${stockData.recentCandles?.slice(-5)?.map((c: any, i: number) => `  [${i+1}] O:₹${fmt(c.o)} H:₹${fmt(c.h)} L:₹${fmt(c.l)} C:₹${fmt(c.c)} V:${fmtInt(c.v || 0)}`).join("\n") || "N/A"}`;
   }
 
   return base;
@@ -859,8 +872,16 @@ serve(async (req) => {
     console.log(`TradingAgents [${mode}] started for ${symbol}${chartImage ? ' (chart)' : ''}`);
 
     const dataRange = mode === "invest" ? "1y" : "3mo";
-    const stockData = await fetchStockData(symbol, dataRange);
-    const dataCtx = stockData ? `Stock: ${symbol}\n${buildDataContext(stockData, mode)}` : `Stock: ${symbol} (limited data)`;
+    let stockData = await fetchStockData(symbol, dataRange);
+    // Retry with 1y range if 3mo fails
+    if (!stockData && dataRange === "3mo") {
+      stockData = await fetchStockData(symbol, "1y");
+    }
+    if (stockData && (stockData.price == null || stockData.price <= 0)) {
+      console.warn(`Invalid price for ${symbol}, stockData.price = ${stockData.price}`);
+      stockData = null;
+    }
+    const dataCtx = stockData ? `Stock: ${symbol}\n${buildDataContext(stockData, mode)}` : `Stock: ${symbol} (limited data — use your knowledge of ${symbol} on NSE India)`;
 
     let result;
     if (mode === "scalp") {
