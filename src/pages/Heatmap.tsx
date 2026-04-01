@@ -265,7 +265,7 @@ export default function Heatmap() {
                 <g key={sec.sector}>
                   {sec.w > 80 && sec.h > 30 && (
                     <text x={sec.x + 5} y={sec.y + 12}
-                      fill="rgba(255,255,255,0.35)" fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif">
+                      fill={isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)'} fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif">
                       {sec.sector} ›
                     </text>
                   )}
