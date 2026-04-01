@@ -354,16 +354,16 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
       </footer>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden flex-shrink-0 bg-card/80 glass border-t border-border/30 flex items-center justify-around px-1 py-2 safe-area-bottom">
+      <nav className="md:hidden flex-shrink-0 bg-gradient-to-t from-card/95 to-card/70 glass border-t border-border/20 flex items-center justify-around px-1 py-2 safe-area-bottom">
         {NAV_ITEMS.slice(0, 5).map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
           return (
             <Link key={item.path} to={item.path}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all min-w-0 relative
-                ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-              {isActive && <motion.div layoutId="mobile-nav" className="absolute -top-2 w-8 h-0.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]" />}
-              <span className="text-[15px]">{item.icon}</span>
-              <span className="text-[8px] font-medium truncate">{item.label}</span>
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all min-w-0 relative
+                ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+              {isActive && <motion.div layoutId="mobile-nav" className="absolute -top-2 w-8 h-0.5 rounded-full bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))] shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />}
+              <span className={`text-[15px] ${isActive ? 'drop-shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : ''}`}>{item.icon}</span>
+              <span className={`text-[8px] font-medium truncate ${isActive ? 'font-bold' : ''}`}>{item.label}</span>
             </Link>
           );
         })}
