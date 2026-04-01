@@ -306,7 +306,7 @@ export const DEFAULT_SCANS: ScanPreset[] = [
     ] },
 
   // ─── VWAP PROXY ───
-  { id: 'vw1', name: 'VWAP Proxy Bounce – Bullish', description: 'Price dipped below session avg & bounced back (proxy – no real VWAP)', icon: '📐', category: 'vwap',
+  { id: 'vw1', name: 'VWAP Bounce – Bullish', description: 'Price dipped below session avg & bounced back', icon: '📐', category: 'vwap',
     conditions: [
       { measure: 'low', operator: '<', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 0.995 },
       { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.003 },
