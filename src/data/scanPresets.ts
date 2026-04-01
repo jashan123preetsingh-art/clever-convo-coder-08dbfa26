@@ -392,7 +392,7 @@ export const CATEGORIES = [
   { key: 'candle', label: 'Candlestick', icon: '🕯️', color: 'text-[hsl(var(--terminal-purple))]' },
   { key: 'intraday', label: 'Intraday', icon: '📈', color: 'text-[hsl(var(--terminal-cyan))]' },
   { key: 'volume', label: 'Volume', icon: '🌊', color: 'text-[hsl(var(--terminal-blue))]' },
-  { key: 'vwap', label: 'VWAP Proxy', icon: '📐', color: 'text-[hsl(var(--terminal-amber))]' },
+  { key: 'vwap', label: 'VWAP', icon: '📐', color: 'text-[hsl(var(--terminal-amber))]' },
   { key: 'swing', label: 'Swing', icon: '🔄', color: 'text-accent' },
   { key: 'quality', label: 'Quality', icon: '💎', color: 'text-[hsl(var(--terminal-purple))]' },
   { key: 'value', label: 'Value', icon: '🏷️', color: 'text-primary' },

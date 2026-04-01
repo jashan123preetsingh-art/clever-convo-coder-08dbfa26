@@ -331,17 +331,17 @@ export default function Dashboard() {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">±1σ Move</p>
-                  <p className="text-xl font-black text-primary font-data">±{move}</p>
-                  <p className="text-[8px] text-muted-foreground/40">{(move / item.ltp * 100).toFixed(1)}%</p>
+                  <p className="text-xl font-black text-primary font-data">{move != null ? `±${move}` : '—'}</p>
+                  <p className="text-[8px] text-muted-foreground/40">{move != null && item.ltp ? `${(move / item.ltp * 100).toFixed(1)}%` : 'Loading...'}</p>
                 </div>
                 <div>
                   <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">ATM Straddle</p>
-                  <p className="text-xl font-black text-foreground font-data">₹{straddle}</p>
-                  <p className="text-[8px] text-muted-foreground/40">{item.metrics ? 'Live' : 'Estimated'}</p>
+                  <p className="text-xl font-black text-foreground font-data">{straddle != null ? `₹${straddle}` : '—'}</p>
+                  <p className="text-[8px] text-muted-foreground/40">{item.metrics ? 'Live' : 'Loading...'}</p>
                 </div>
                 <div>
                   <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">ATM IV</p>
-                  <p className="text-xl font-black text-accent font-data">{iv ? `${iv.toFixed(1)}%` : '—'}</p>
+                  <p className="text-xl font-black text-accent font-data">{iv != null ? `${iv.toFixed(1)}%` : '—'}</p>
                   <p className="text-[8px] text-muted-foreground/40">{item.metrics ? 'Implied' : 'Loading...'}</p>
                 </div>
               </div>
