@@ -160,9 +160,10 @@ function HeatmapSkeleton() {
 export default function Heatmap() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const [maxPerSector, setMaxPerSector] = useState(12);
   const mockStocks = useMemo(() => getAllStocks(), []);
 
-  // Only fetch top 120 stocks by market cap (covers 95%+ of heatmap visual area)
+  // Only fetch top 120 stocks by market cap
   const topSymbols = useMemo(() => {
     return [...mockStocks]
       .sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0))
@@ -170,7 +171,6 @@ export default function Heatmap() {
       .map(s => s.symbol);
   }, [mockStocks]);
 
-  // Use React Query with caching — fetches in batches of 20 internally
   const { data: liveQuotes, isLoading } = useBatchQuotes(topSymbols);
 
   const liveMap = useMemo(() => {
@@ -184,7 +184,7 @@ export default function Heatmap() {
   }, [liveQuotes]);
 
   // Merge live + mock data
-  const stocks: TreeNode[] = useMemo(() => {
+  const allStocks: TreeNode[] = useMemo(() => {
     return mockStocks.map(s => {
       const live = liveMap.get(s.symbol);
       return {
@@ -198,22 +198,31 @@ export default function Heatmap() {
     }).sort((a, b) => b.market_cap - a.market_cap);
   }, [mockStocks, liveMap]);
 
-  // Group by sector
+  // Group by sector, keep only top N stocks per sector by market cap
   const sectorGroups = useMemo(() => {
     const groups: Record<string, { stocks: TreeNode[]; totalMcap: number }> = {};
-    for (const s of stocks) {
+    for (const s of allStocks) {
       if (!groups[s.sector]) groups[s.sector] = { stocks: [], totalMcap: 0 };
       groups[s.sector].stocks.push(s);
       groups[s.sector].totalMcap += s.market_cap;
     }
     return Object.entries(groups)
-      .map(([sector, data]) => ({
-        sector,
-        stocks: data.stocks.sort((a, b) => b.market_cap - a.market_cap),
-        totalMcap: data.totalMcap,
-      }))
+      .map(([sector, data]) => {
+        const sortedStocks = data.stocks.sort((a, b) => b.market_cap - a.market_cap);
+        const topStocks = sortedStocks.slice(0, maxPerSector);
+        const topMcap = topStocks.reduce((s, st) => s + st.market_cap, 0);
+        return {
+          sector,
+          stocks: topStocks,
+          totalMcap: topMcap,
+          fullCount: data.stocks.length,
+        };
+      })
+      .filter(g => g.stocks.length > 0)
       .sort((a, b) => b.totalMcap - a.totalMcap);
-  }, [stocks]);
+  }, [allStocks, maxPerSector]);
+
+  const displayedCount = sectorGroups.reduce((s, g) => s + g.stocks.length, 0);
 
   const WIDTH = 1600;
   const HEIGHT = 750;
