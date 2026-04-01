@@ -423,8 +423,8 @@ export default function Dashboard() {
         {/* News */}
         <div className="col-span-12 lg:col-span-6">
           <div className="rounded-2xl bg-card/40 border border-border/15 overflow-hidden hover:border-border/25 transition-all">
-            <SectionHeader title="Market News" link="/news" linkText="All News" />
-            {NEWS.slice(0, 6).map((article, i) => (
+            <SectionHeader title="Market News" badge={liveNews ? 'LIVE' : ''} link="/news" linkText="All News" />
+            {newsItems.slice(0, 6).map((article, i) => (
               <div key={i} className="py-3 px-4 hover:bg-primary/3 transition-all cursor-pointer">
                 <p className="text-[10px] text-foreground leading-relaxed line-clamp-2 font-medium">{article.title}</p>
                 <div className="flex items-center gap-2 mt-1.5">
