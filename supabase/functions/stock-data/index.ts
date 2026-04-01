@@ -408,103 +408,136 @@ async function searchStocks(query: string) {
 // ── Live NSE Options Chain (OI data) ──────────────────────
 async function fetchNSEOptionsChain(symbol: string) {
   const nseSymbol = symbol.toUpperCase().trim();
-  try {
-    // Get NSE session cookies first
-    const session = await fetch("https://www.nseindia.com", {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-    });
-    const cookies = session.headers.get("set-cookie") || "";
+  
+  // Try multiple approaches to get NSE data
+  const userAgents = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+  ];
 
-    const endpoint = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"].includes(nseSymbol)
-      ? `https://www.nseindia.com/api/option-chain-indices?symbol=${nseSymbol}`
-      : `https://www.nseindia.com/api/option-chain-equities?symbol=${nseSymbol}`;
+  for (const ua of userAgents) {
+    try {
+      // Step 1: Initialize session with NSE main page
+      const sessionResp = await fetch("https://www.nseindia.com/option-chain", {
+        headers: {
+          "User-Agent": ua,
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Connection": "keep-alive",
+          "Upgrade-Insecure-Requests": "1",
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+          "Sec-Fetch-Site": "none",
+          "Cache-Control": "max-age=0",
+        },
+        redirect: "follow",
+      });
 
-    const resp = await fetch(endpoint, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-        "Referer": "https://www.nseindia.com/",
-        "Cookie": cookies,
-      },
-    });
+      // Extract all cookies
+      const rawCookies: string[] = [];
+      sessionResp.headers.forEach((value, key) => {
+        if (key.toLowerCase() === "set-cookie") {
+          const cookiePart = value.split(";")[0];
+          rawCookies.push(cookiePart);
+        }
+      });
+      const cookieString = rawCookies.join("; ");
 
-    if (!resp.ok) {
-      console.error(`NSE OC fetch failed: ${resp.status}`);
-      return null;
-    }
-
-    const data = await resp.json();
-    const records = data?.records;
-    const filtered = data?.filtered;
-    if (!records || !filtered) return null;
-
-    const underlyingValue = records.underlyingValue || 0;
-    const expiryDates = records.expiryDates || [];
-    const strikePrices = records.strikePrices || [];
-    const timestamp = records.timestamp || "";
-
-    // Build chain from filtered data (current expiry)
-    const chain = (filtered.data || []).map((row: any) => ({
-      strike: row.strikePrice,
-      ce: row.CE ? {
-        oi: row.CE.openInterest || 0,
-        chg_oi: row.CE.changeinOpenInterest || 0,
-        volume: row.CE.totalTradedVolume || 0,
-        iv: row.CE.impliedVolatility || 0,
-        ltp: row.CE.lastPrice || 0,
-        change: row.CE.change || 0,
-        bid: row.CE.bidprice || 0,
-        ask: row.CE.askPrice || 0,
-      } : { oi: 0, chg_oi: 0, volume: 0, iv: 0, ltp: 0, change: 0, bid: 0, ask: 0 },
-      pe: row.PE ? {
-        oi: row.PE.openInterest || 0,
-        chg_oi: row.PE.changeinOpenInterest || 0,
-        volume: row.PE.totalTradedVolume || 0,
-        iv: row.PE.impliedVolatility || 0,
-        ltp: row.PE.lastPrice || 0,
-        change: row.PE.change || 0,
-        bid: row.PE.bidprice || 0,
-        ask: row.PE.askPrice || 0,
-      } : { oi: 0, chg_oi: 0, volume: 0, iv: 0, ltp: 0, change: 0, bid: 0, ask: 0 },
-    }));
-
-    // Analytics
-    const totalCallOI = filtered.CE?.totOI || chain.reduce((s: number, r: any) => s + r.ce.oi, 0);
-    const totalPutOI = filtered.PE?.totOI || chain.reduce((s: number, r: any) => s + r.pe.oi, 0);
-    const totalCallVol = filtered.CE?.totVol || chain.reduce((s: number, r: any) => s + r.ce.volume, 0);
-    const totalPutVol = filtered.PE?.totVol || chain.reduce((s: number, r: any) => s + r.pe.volume, 0);
-    const pcr = totalCallOI > 0 ? round(totalPutOI / totalCallOI) : 0;
-
-    // Max Pain calculation
-    let minPain = Infinity, maxPainStrike = underlyingValue;
-    for (const row of chain) {
-      let pain = 0;
-      for (const r of chain) {
-        if (r.strike < row.strike) pain += r.ce.oi * (row.strike - r.strike);
-        if (r.strike > row.strike) pain += r.pe.oi * (r.strike - row.strike);
+      if (!cookieString) {
+        console.warn("No cookies from NSE session, trying next UA");
+        continue;
       }
-      if (pain < minPain) { minPain = pain; maxPainStrike = row.strike; }
-    }
 
-    return {
-      chain,
-      underlyingValue,
-      expiryDates,
-      timestamp,
-      analytics: {
-        totalCallOI, totalPutOI, totalCallVol, totalPutVol,
-        pcr, maxPain: maxPainStrike,
-      },
-      live: true,
-    };
-  } catch (e) {
-    console.error("NSE Options Chain error:", e);
-    return null;
+      // Small delay to mimic browser
+      await new Promise(r => setTimeout(r, 300));
+
+      // Step 2: Fetch the actual option chain API
+      const endpoint = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"].includes(nseSymbol)
+        ? `https://www.nseindia.com/api/option-chain-indices?symbol=${nseSymbol}`
+        : `https://www.nseindia.com/api/option-chain-equities?symbol=${nseSymbol}`;
+
+      const resp = await fetch(endpoint, {
+        headers: {
+          "User-Agent": ua,
+          "Accept": "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Referer": "https://www.nseindia.com/option-chain",
+          "Cookie": cookieString,
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+
+      if (!resp.ok) {
+        console.error(`NSE OC fetch failed: ${resp.status} with UA ${ua.substring(0, 30)}`);
+        continue;
+      }
+
+      const data = await resp.json();
+      const records = data?.records;
+      const filtered = data?.filtered;
+      if (!records || !filtered) continue;
+
+      const underlyingValue = records.underlyingValue || 0;
+      const expiryDates = records.expiryDates || [];
+      const timestamp = records.timestamp || "";
+
+      const chain = (filtered.data || []).map((row: any) => ({
+        strike: row.strikePrice,
+        ce: row.CE ? {
+          oi: row.CE.openInterest || 0,
+          chg_oi: row.CE.changeinOpenInterest || 0,
+          volume: row.CE.totalTradedVolume || 0,
+          iv: row.CE.impliedVolatility || 0,
+          ltp: row.CE.lastPrice || 0,
+          change: row.CE.change || 0,
+          bid: row.CE.bidprice || 0,
+          ask: row.CE.askPrice || 0,
+        } : { oi: 0, chg_oi: 0, volume: 0, iv: 0, ltp: 0, change: 0, bid: 0, ask: 0 },
+        pe: row.PE ? {
+          oi: row.PE.openInterest || 0,
+          chg_oi: row.PE.changeinOpenInterest || 0,
+          volume: row.PE.totalTradedVolume || 0,
+          iv: row.PE.impliedVolatility || 0,
+          ltp: row.PE.lastPrice || 0,
+          change: row.PE.change || 0,
+          bid: row.PE.bidprice || 0,
+          ask: row.PE.askPrice || 0,
+        } : { oi: 0, chg_oi: 0, volume: 0, iv: 0, ltp: 0, change: 0, bid: 0, ask: 0 },
+      }));
+
+      const totalCallOI = filtered.CE?.totOI || chain.reduce((s: number, r: any) => s + r.ce.oi, 0);
+      const totalPutOI = filtered.PE?.totOI || chain.reduce((s: number, r: any) => s + r.pe.oi, 0);
+      const totalCallVol = filtered.CE?.totVol || chain.reduce((s: number, r: any) => s + r.ce.volume, 0);
+      const totalPutVol = filtered.PE?.totVol || chain.reduce((s: number, r: any) => s + r.pe.volume, 0);
+      const pcr = totalCallOI > 0 ? round(totalPutOI / totalCallOI) : 0;
+
+      let minPain = Infinity, maxPainStrike = underlyingValue;
+      for (const row of chain) {
+        let pain = 0;
+        for (const r of chain) {
+          if (r.strike < row.strike) pain += r.ce.oi * (row.strike - r.strike);
+          if (r.strike > row.strike) pain += r.pe.oi * (r.strike - row.strike);
+        }
+        if (pain < minPain) { minPain = pain; maxPainStrike = row.strike; }
+      }
+
+      return {
+        chain, underlyingValue, expiryDates, timestamp,
+        analytics: { totalCallOI, totalPutOI, totalCallVol, totalPutVol, pcr, maxPain: maxPainStrike },
+        live: true,
+      };
+    } catch (e) {
+      console.error(`NSE OC attempt failed with UA: ${e}`);
+      continue;
+    }
   }
+
+  console.error("All NSE Options Chain attempts failed");
+  return null;
 }
 
 async function getIndices() {
