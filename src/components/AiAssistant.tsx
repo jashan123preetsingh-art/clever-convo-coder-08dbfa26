@@ -19,7 +19,7 @@ const SUGGESTIONS = [
   'Best options strategy for current market?',
   "What does today's FII/DII data indicate?",
   'Support/resistance for BankNifty today',
-  '📸 Upload a chart for analysis',
+  'What sectors are strong today?',
 ];
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
@@ -40,43 +40,15 @@ function getDisplayContent(content: MessageContent): string {
   return textPart && 'text' in textPart ? textPart.text : '';
 }
 
-function compressImage(file: File, maxSize = 800): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-        if (width > maxSize || height > maxSize) {
-          const ratio = Math.min(maxSize / width, maxSize / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-      img.onerror = reject;
-      img.src = reader.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function AiAssistant() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [liveData, setLiveData] = useState<LiveContext>({ indices: [], fiiDii: [], stockData: null });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
 
   const fetchContextData = useCallback(async () => {
@@ -103,31 +75,6 @@ export default function AiAssistant() {
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [messages, open]);
   useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
 
-  // Clipboard paste support for images
-  useEffect(() => {
-    if (!open) return;
-    const handlePaste = async (e: ClipboardEvent) => {
-      const items = e.clipboardData?.items;
-      if (!items) return;
-      for (const item of Array.from(items)) {
-        if (item.type.startsWith('image/')) {
-          e.preventDefault();
-          const file = item.getAsFile();
-          if (!file) continue;
-          try {
-            const compressed = await compressImage(file);
-            setPendingImage(compressed);
-            if (inputRef.current) inputRef.current.focus();
-          } catch (err) {
-            console.error('Paste image error:', err);
-          }
-          break;
-        }
-      }
-    };
-    window.addEventListener('paste', handlePaste);
-    return () => window.removeEventListener('paste', handlePaste);
-  }, [open]);
 
   const getContext = () => {
     const path = location.pathname;
@@ -141,44 +88,13 @@ export default function AiAssistant() {
     };
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) return;
-    try {
-      const compressed = await compressImage(file);
-      setPendingImage(compressed);
-      if (inputRef.current) inputRef.current.focus();
-    } catch (err) {
-      console.error('Image compression error:', err);
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
   const sendMessage = useCallback(async (text: string) => {
-    if ((!text.trim() && !pendingImage) || loading) return;
+    if (!text.trim() || loading) return;
 
-    const hasImage = !!pendingImage;
-    const userText = text.trim() || (hasImage ? 'Analyze this chart' : '');
-
-    let userContent: MessageContent;
-    let imagePreview: string | undefined;
-
-    if (hasImage) {
-      userContent = [
-        { type: 'text', text: userText },
-        { type: 'image_url', image_url: { url: pendingImage! } },
-      ];
-      imagePreview = pendingImage!;
-    } else {
-      userContent = userText;
-    }
-
-    const userMsg: Message = { role: 'user', content: userContent, imagePreview };
+    const userMsg: Message = { role: 'user', content: text.trim() };
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
     setInput('');
-    setPendingImage(null);
     setLoading(true);
 
     if (location.pathname.startsWith('/stock/')) await fetchContextData();
@@ -242,7 +158,7 @@ export default function AiAssistant() {
     } finally {
       setLoading(false);
     }
-  }, [messages, loading, pendingImage, location.pathname, fetchContextData, liveData]);
+  }, [messages, loading, location.pathname, fetchContextData, liveData]);
 
   const hasLiveData = liveData.indices.length > 0;
 
@@ -287,7 +203,7 @@ export default function AiAssistant() {
                 <div className="flex items-center gap-1.5">
                   <span className={`w-1.5 h-1.5 rounded-full ${hasLiveData ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
                   <p className="text-[9px] text-muted-foreground">
-                    {hasLiveData ? 'Live Data · Chart Analysis' : 'Connecting...'}
+                    {hasLiveData ? 'Live Data' : 'Connecting...'}
                   </p>
                 </div>
               </div>
@@ -318,17 +234,11 @@ export default function AiAssistant() {
                   <div className="text-center space-y-1">
                     <p className="text-[11px] text-muted-foreground">Powered by live market data</p>
                     <p className="text-[13px] font-semibold text-foreground">Stocks, Options, Charts & More</p>
-                    <p className="text-[9px] text-primary/70 font-medium mt-1">📸 Upload or paste (Ctrl+V) any chart for instant technical analysis</p>
+                    <p className="text-[9px] text-muted-foreground/70 font-medium mt-1">Use the Trading Agent page for chart analysis</p>
                   </div>
                   <div className="grid grid-cols-2 gap-1.5 mt-3">
                     {SUGGESTIONS.map((s, i) => (
-                      <button key={i} onClick={() => {
-                        if (s.includes('📸')) {
-                          fileInputRef.current?.click();
-                        } else {
-                          sendMessage(s);
-                        }
-                      }}
+                      <button key={i} onClick={() => sendMessage(s)}
                         className="text-left text-[9px] text-muted-foreground hover:text-foreground bg-secondary/40 hover:bg-secondary/70 rounded-lg px-2.5 py-2 transition-colors border border-border/30">
                         {s}
                       </button>
@@ -343,12 +253,6 @@ export default function AiAssistant() {
                       ? 'bg-primary/15 text-foreground border border-primary/15'
                       : 'bg-secondary/40 text-foreground border border-border/20'
                   }`}>
-                    {/* Show uploaded image thumbnail */}
-                    {msg.imagePreview && (
-                      <div className="mb-2 rounded-lg overflow-hidden border border-border/20">
-                        <img src={msg.imagePreview} alt="Uploaded chart" className="w-full max-h-40 object-contain bg-background/50" />
-                      </div>
-                    )}
                     {msg.role === 'assistant' ? (
                       <div className="prose prose-sm prose-invert max-w-none [&>*]:text-[11px] [&>*]:leading-relaxed [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_h1]:text-[13px] [&_h2]:text-[12px] [&_h3]:text-[11px] [&_code]:text-[10px] [&_code]:bg-background/50 [&_code]:px-1 [&_code]:rounded [&_strong]:text-primary [&_a]:text-[hsl(var(--terminal-cyan))]">
                         <ReactMarkdown>{(typeof msg.content === 'string' ? msg.content : getDisplayContent(msg.content)) || '...'}</ReactMarkdown>
@@ -370,43 +274,20 @@ export default function AiAssistant() {
               )}
             </div>
 
-            {/* Pending image preview */}
-            {pendingImage && (
-              <div className="px-3 py-2 border-t border-border/30 bg-secondary/20">
-                <div className="flex items-center gap-2">
-                  <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-border/30">
-                    <img src={pendingImage} alt="Chart to analyze" className="w-full h-full object-cover" />
-                    <button onClick={() => setPendingImage(null)}
-                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center text-[8px] font-bold shadow-sm">
-                      ×
-                    </button>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground flex-1">Chart attached — add a question or send directly</p>
-                </div>
-              </div>
-            )}
 
             {/* Input */}
             <div className="p-3 border-t border-border/40 bg-card/80">
               <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex gap-2 items-end">
-                <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageUpload} />
-                <button type="button" onClick={() => fileInputRef.current?.click()}
-                  className="flex-shrink-0 w-9 h-9 rounded-lg bg-secondary/40 border border-border/30 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all"
-                  title="Upload chart screenshot">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </button>
                 <input
                   ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder={pendingImage ? "Ask about this chart..." : "Ask about stocks, options, charts..."}
+                  placeholder="Ask about stocks, options, markets..."
                   disabled={loading}
                   className="flex-1 bg-secondary/40 border border-border/30 rounded-lg px-3 py-2 text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-colors disabled:opacity-50"
                 />
-                <button type="submit" disabled={loading || (!input.trim() && !pendingImage)}
+                <button type="submit" disabled={loading || !input.trim()}
                   className="flex-shrink-0 px-3 py-2 bg-primary/15 hover:bg-primary/25 text-primary border border-primary/20 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                   Send
                 </button>
