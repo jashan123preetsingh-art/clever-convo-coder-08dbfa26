@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { INDICES, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
-import { useIndices, useFiiDiiData, useMarketBreadth } from '@/hooks/useStockData';
+import { useIndices, useFiiDiiData, useMarketBreadth, useBatchQuotes } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
 import MarketBrief from '@/components/MarketBrief';
 import WatchlistWidget from '@/components/WatchlistWidget';
@@ -115,7 +115,7 @@ export default function Dashboard() {
     return liveBreadth.stocks.filter((stock: any) => stock && typeof stock.ltp === 'number' && stock.ltp > 0);
   }, [liveBreadth]);
 
-  const { gainers, losers, active, sectors, advances, declines, unchanged } = useMemo(() => {
+  const { baseGainers, baseLosers, baseActive, sectors, advances, declines, unchanged } = useMemo(() => {
     const fallbackStocks = getAllStocks();
     const sourceStocks = liveStocks.length > 0 ? liveStocks : fallbackStocks;
     const sortedByGains = [...sourceStocks].sort((a: any, b: any) => (b.change_pct ?? 0) - (a.change_pct ?? 0));
@@ -123,15 +123,55 @@ export default function Dashboard() {
     const sortedByVolume = [...sourceStocks].sort((a: any, b: any) => (b.volume ?? 0) - (a.volume ?? 0));
     const s = getSectorPerformance();
     return {
-      gainers: sortedByGains,
-      losers: sortedByLosses,
-      active: sortedByVolume,
+      baseGainers: sortedByGains.slice(0, 10),
+      baseLosers: sortedByLosses.slice(0, 10),
+      baseActive: sortedByVolume.slice(0, 10),
       sectors: s,
       advances: breadthParsed?.advances ?? sourceStocks.filter((st: any) => st.change_pct > 0).length,
       declines: breadthParsed?.declines ?? sourceStocks.filter((st: any) => st.change_pct < 0).length,
       unchanged: breadthParsed?.unchanged ?? sourceStocks.filter((st: any) => st.change_pct === 0).length,
     };
   }, [breadthParsed, liveStocks]);
+
+  // Hydrate displayed stocks with live Yahoo quotes
+  const hydrateSymbols = useMemo(() => {
+    const syms = new Set<string>();
+    [...baseGainers, ...baseLosers, ...baseActive].forEach((s: any) => syms.add(s.symbol));
+    return Array.from(syms).slice(0, 20);
+  }, [baseGainers, baseLosers, baseActive]);
+
+  const { data: liveQuotes } = useBatchQuotes(hydrateSymbols);
+
+  const liveQuoteMap = useMemo(() => {
+    const m: Record<string, any> = {};
+    if (Array.isArray(liveQuotes)) {
+      liveQuotes.forEach((q: any) => {
+        if (q?.data && q.symbol) m[q.symbol] = q.data;
+      });
+    }
+    return m;
+  }, [liveQuotes]);
+
+  function hydrate(stocks: any[]) {
+    return stocks.map((s: any) => {
+      const live = liveQuoteMap[s.symbol];
+      if (!live) return s;
+      return {
+        ...s,
+        ltp: live.ltp ?? s.ltp,
+        change: live.change ?? s.change,
+        change_pct: live.change_pct ?? s.change_pct,
+        open: live.open ?? s.open,
+        high: live.high ?? s.high,
+        low: live.low ?? s.low,
+        volume: live.volume ?? s.volume,
+      };
+    });
+  }
+
+  const gainers = useMemo(() => hydrate(baseGainers), [baseGainers, liveQuoteMap]);
+  const losers = useMemo(() => hydrate(baseLosers), [baseLosers, liveQuoteMap]);
+  const active = useMemo(() => hydrate(baseActive), [baseActive, liveQuoteMap]);
 
   const niftyLtp = indices.find((i: any) => i.symbol === 'NIFTY 50')?.ltp || 22800;
   const expectedMove = Math.round(niftyLtp * 0.014);
