@@ -118,6 +118,9 @@ async function fetchStockData(symbol: string, range = "3mo") {
     if (!result) return null;
     const meta = result.meta;
     const closes = result.indicators?.quote?.[0]?.close || [];
+    const highs = result.indicators?.quote?.[0]?.high || [];
+    const lows = result.indicators?.quote?.[0]?.low || [];
+    const opens = result.indicators?.quote?.[0]?.open || [];
     const volumes = result.indicators?.quote?.[0]?.volume || [];
     const lastClose = closes[closes.length - 1];
     const prevClose = closes[closes.length - 2];
@@ -128,11 +131,53 @@ async function fetchStockData(symbol: string, range = "3mo") {
     const avgVol = volumes.slice(-10).reduce((a: number, b: number) => a + (b || 0), 0) / 10;
     const high52 = Math.max(...closes.filter((c: any) => c));
     const low52 = Math.min(...closes.filter((c: any) => c && c > 0));
+
+    // Intraday-relevant: recent OHLCV candles, ATR, volume ratio, swing points
+    const recentCandles = [];
+    for (let i = Math.max(0, closes.length - 10); i < closes.length; i++) {
+      recentCandles.push({ o: opens[i], h: highs[i], l: lows[i], c: closes[i], v: volumes[i] });
+    }
+    // ATR (14-period)
+    const atrPeriod = Math.min(14, closes.length - 1);
+    let atrSum = 0;
+    for (let i = closes.length - atrPeriod; i < closes.length; i++) {
+      const tr = Math.max(
+        (highs[i] || 0) - (lows[i] || 0),
+        Math.abs((highs[i] || 0) - (closes[i - 1] || 0)),
+        Math.abs((lows[i] || 0) - (closes[i - 1] || 0))
+      );
+      atrSum += tr;
+    }
+    const atr14 = atrSum / atrPeriod;
+    
+    // Volume ratio (today vs 10-day avg)
+    const todayVol = volumes[volumes.length - 1] || 0;
+    const volRatio = avgVol > 0 ? (todayVol / avgVol).toFixed(2) : "N/A";
+
+    // PDH, PDL, PDC (Previous Day High/Low/Close)
+    const pdh = highs[highs.length - 2] || 0;
+    const pdl = lows[lows.length - 2] || 0;
+    const pdc = closes[closes.length - 2] || 0;
+
+    // Recent swing highs/lows (last 20 candles)
+    const swingPoints: string[] = [];
+    for (let i = Math.max(2, closes.length - 18); i < closes.length - 2; i++) {
+      if (highs[i] > highs[i-1] && highs[i] > highs[i-2] && highs[i] > highs[i+1] && highs[i] > highs[i+2]) {
+        swingPoints.push(`SwingHigh: ₹${highs[i]?.toFixed(2)}`);
+      }
+      if (lows[i] < lows[i-1] && lows[i] < lows[i-2] && lows[i] < lows[i+1] && lows[i] < lows[i+2]) {
+        swingPoints.push(`SwingLow: ₹${lows[i]?.toFixed(2)}`);
+      }
+    }
+
     return {
       symbol, price: lastClose, change, changePct, prevClose,
       high: meta.regularMarketDayHigh, low: meta.regularMarketDayLow,
-      volume: volumes[volumes.length - 1], avgVolume: avgVol,
+      volume: todayVol, avgVolume: avgVol,
       sma20, sma50, high52, low52,
+      atr14, volRatio, pdh, pdl, pdc,
+      swingPoints: swingPoints.slice(-6),
+      recentCandles,
       recentCloses: closes.slice(-20), recentVolumes: volumes.slice(-10),
     };
   } catch { return null; }
