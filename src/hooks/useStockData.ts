@@ -51,13 +51,23 @@ export function useFullStockData(symbol: string) {
   });
 }
 
-export function useBatchQuotes(symbols: string[]) {
+interface BatchQuotesOptions {
+  staleTime?: number;
+  refetchInterval?: number;
+  enabled?: boolean;
+}
+
+export function useBatchQuotes(symbols: string[], options: BatchQuotesOptions = {}) {
+  const normalizedSymbols = [...new Set(symbols.map((s) => s.trim().toUpperCase()).filter(Boolean))].sort();
+
   return useQuery({
-    queryKey: ["batch-quotes", symbols.join(",")],
-    queryFn: () => stockApi.getBatchQuotes(symbols),
-    enabled: symbols.length > 0,
-    staleTime: 15_000,
-    refetchInterval: 15_000,
+    queryKey: ["batch-quotes", normalizedSymbols.join(",")],
+    queryFn: () => stockApi.getBatchQuotes(normalizedSymbols),
+    enabled: (options.enabled ?? true) && normalizedSymbols.length > 0,
+    staleTime: options.staleTime ?? 15_000,
+    refetchInterval: options.refetchInterval ?? 15_000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 }
