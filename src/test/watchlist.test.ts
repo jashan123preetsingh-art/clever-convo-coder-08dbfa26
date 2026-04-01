@@ -11,8 +11,8 @@ const mockChain = {
   insert: vi.fn().mockReturnThis(),
   delete: vi.fn().mockReturnThis(),
   eq: vi.fn().mockReturnThis(),
-  order: vi.fn().mockResolvedValue({ data: mockWatchlist, error: null }),
-};
+  order: vi.fn().mockResolvedValue({ data: mockWatchlist, error: null }) as any,
+} as any;
 
 const mockSupabase = {
   from: vi.fn(() => mockChain),
