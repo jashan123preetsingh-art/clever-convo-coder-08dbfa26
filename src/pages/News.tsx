@@ -4,6 +4,19 @@ import { useQuery } from '@tanstack/react-query';
 import { timeAgo } from '@/utils/format';
 import { NEWS } from '@/data/mockData';
 
+/** Strip any residual HTML tags and decode common HTML entities */
+function cleanDescription(text: string): string {
+  return text
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/<[^>]*>/g, '')
+    .trim();
+}
+
 const CATEGORIES = ['All', 'Market', 'Stocks', 'Economy', 'IPO'];
 
 const ECONOMIC_EVENTS = [
