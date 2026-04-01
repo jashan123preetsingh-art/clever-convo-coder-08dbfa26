@@ -8,6 +8,11 @@ import { Loader2, Sparkles, Target, Search } from 'lucide-react';
 
 const FNO = ['NIFTY', 'BANKNIFTY', 'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BAJFINANCE', 'TATAMOTORS', 'ITC', 'LT'];
 
+const LOT_SIZES: Record<string, number> = {
+  NIFTY: 25, BANKNIFTY: 15, RELIANCE: 250, TCS: 150, HDFCBANK: 550,
+  INFY: 400, ICICIBANK: 700, SBIN: 1500, BAJFINANCE: 125, TATAMOTORS: 1400, ITC: 1600, LT: 150,
+};
+
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 interface StrategyLeg {
@@ -220,7 +225,9 @@ export default function OptionsChain() {
 
   const activeLegs = activeView === 'custom' ? customLegs : presetLegs;
 
-  // ── Payoff calculation ──
+  const lotSize = LOT_SIZES[symbol] || 25;
+
+  // ── Payoff calculation (in ₹, lot-size aware) ──
   const payoffData = useMemo(() => {
     if (activeLegs.length === 0) return [];
     const points: { price: number; pnl: number }[] = [];
@@ -230,17 +237,17 @@ export default function OptionsChain() {
       activeLegs.forEach(leg => {
         const intrinsic = leg.type === 'CE' ? Math.max(price - leg.strike, 0) : Math.max(leg.strike - price, 0);
         const legPnl = leg.action === 'BUY' ? intrinsic - leg.premium : leg.premium - intrinsic;
-        pnl += legPnl * leg.lots;
+        pnl += legPnl * leg.lots * lotSize;
       });
-      points.push({ price: Math.round(price), pnl: Math.round(pnl * 100) / 100 });
+      points.push({ price: Math.round(price), pnl: Math.round(pnl) });
     }
     return points;
-  }, [activeLegs, underlyingValue, strikeDiff]);
+  }, [activeLegs, underlyingValue, strikeDiff, lotSize]);
 
   const maxProfit = payoffData.length > 0 ? Math.max(...payoffData.map(p => p.pnl)) : 0;
   const maxLoss = payoffData.length > 0 ? Math.min(...payoffData.map(p => p.pnl)) : 0;
   const breakevens = payoffData.filter((p, i) => i > 0 && (payoffData[i - 1].pnl * p.pnl < 0)).map(p => p.price);
-  const netPremium = activeLegs.reduce((sum, l) => sum + (l.action === 'BUY' ? -l.premium : l.premium), 0);
+  const netPremium = activeLegs.reduce((sum, l) => sum + (l.action === 'BUY' ? -l.premium : l.premium) * l.lots * lotSize, 0);
 
   // ── Custom leg management ──
   const addCustomLeg = useCallback(() => {
@@ -504,7 +511,7 @@ export default function OptionsChain() {
               </div>
 
               <StrategyDisplay legs={activeLegs} netPremium={netPremium} maxProfit={maxProfit} maxLoss={maxLoss}
-                breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} />
+                breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} lotSize={lotSize} symbol={symbol} />
             </div>
           )}
 
@@ -573,7 +580,7 @@ export default function OptionsChain() {
                                 className="bg-transparent border border-border rounded px-2 py-1 text-[10px] text-foreground w-14 text-right focus:outline-none focus:border-primary/50" />
                             </td>
                             <td className={`p-1.5 text-right font-semibold ${leg.action === 'BUY' ? 'text-destructive' : 'text-primary'}`}>
-                              {leg.action === 'BUY' ? '-' : '+'}₹{(leg.premium * leg.lots).toFixed(2)}
+                              {leg.action === 'BUY' ? '-' : '+'}₹{(leg.premium * leg.lots * lotSize).toFixed(0)}
                             </td>
                             <td className="p-1.5">
                               <button onClick={() => removeCustomLeg(leg.id)} className="text-destructive/60 hover:text-destructive text-sm transition-colors">✕</button>
@@ -597,7 +604,7 @@ export default function OptionsChain() {
 
               {customLegs.length > 0 && (
                 <StrategyDisplay legs={activeLegs} netPremium={netPremium} maxProfit={maxProfit} maxLoss={maxLoss}
-                  breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} />
+                  breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} lotSize={lotSize} symbol={symbol} />
               )}
             </div>
           )}
@@ -686,7 +693,7 @@ export default function OptionsChain() {
 }
 
 // ── Shared strategy display component ──
-function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, payoffData, underlyingValue, strikeDiff }: {
+function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, payoffData, underlyingValue, strikeDiff, lotSize, symbol }: {
   legs: StrategyLeg[];
   netPremium: number;
   maxProfit: number;
@@ -695,40 +702,56 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
   payoffData: { price: number; pnl: number }[];
   underlyingValue: number;
   strikeDiff: number;
+  lotSize: number;
+  symbol: string;
 }) {
   if (legs.length === 0) return null;
+
+  const fmt = (v: number) => {
+    const abs = Math.abs(v);
+    if (abs >= 100000) return `₹${(v / 100000).toFixed(2)}L`;
+    if (abs >= 1000) return `₹${(v / 1000).toFixed(1)}K`;
+    return `₹${v.toFixed(0)}`;
+  };
 
   return (
     <>
       <div className="t-card p-0 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-1.5 bg-secondary/20 border-b border-border/20">
+          <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider">Strategy Legs</span>
+          <span className="text-[8px] text-muted-foreground">Lot Size: <span className="text-foreground font-bold">{lotSize}</span> × {symbol}</span>
+        </div>
         <table className="w-full text-[10px]">
           <thead>
             <tr className="bg-secondary/30 text-muted-foreground text-[8px]">
-              <th className="p-2 text-left">Action</th><th className="p-2 text-left">Type</th><th className="p-2 text-right">Strike</th><th className="p-2 text-right">Premium</th><th className="p-2 text-right">Lots</th><th className="p-2 text-right">Cost/Credit</th>
+              <th className="p-2 text-left">Action</th><th className="p-2 text-left">Type</th><th className="p-2 text-right">Strike</th><th className="p-2 text-right">Premium</th><th className="p-2 text-right">Lots</th><th className="p-2 text-right">Value (₹)</th>
             </tr>
           </thead>
           <tbody>
-            {legs.map((leg) => (
-              <tr key={leg.id} className="border-t border-border/20">
-                <td className={`p-2 font-bold ${leg.action === 'BUY' ? 'text-primary' : 'text-destructive'}`}>{leg.action}</td>
-                <td className="p-2 text-foreground">{leg.type}</td>
-                <td className="p-2 text-right text-foreground font-medium">{formatNumber(leg.strike)}</td>
-                <td className="p-2 text-right text-foreground">₹{leg.premium.toFixed(2)}</td>
-                <td className="p-2 text-right text-muted-foreground">{leg.lots}</td>
-                <td className={`p-2 text-right font-bold ${leg.action === 'BUY' ? 'text-destructive' : 'text-primary'}`}>
-                  {leg.action === 'BUY' ? '-' : '+'}₹{(leg.premium * leg.lots).toFixed(2)}
-                </td>
-              </tr>
-            ))}
+            {legs.map((leg) => {
+              const value = leg.premium * leg.lots * lotSize;
+              return (
+                <tr key={leg.id} className="border-t border-border/20">
+                  <td className={`p-2 font-bold ${leg.action === 'BUY' ? 'text-primary' : 'text-destructive'}`}>{leg.action}</td>
+                  <td className="p-2 text-foreground">{leg.type}</td>
+                  <td className="p-2 text-right text-foreground font-medium">{formatNumber(leg.strike)}</td>
+                  <td className="p-2 text-right text-foreground">₹{leg.premium.toFixed(2)}</td>
+                  <td className="p-2 text-right text-muted-foreground">{leg.lots}</td>
+                  <td className={`p-2 text-right font-bold ${leg.action === 'BUY' ? 'text-destructive' : 'text-primary'}`}>
+                    {leg.action === 'BUY' ? '-' : '+'}{fmt(value)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[
-          { label: 'Net Premium', value: `${netPremium >= 0 ? '+' : ''}₹${netPremium.toFixed(2)}`, cls: netPremium >= 0 ? 'text-primary' : 'text-destructive' },
-          { label: 'Max Profit', value: maxProfit > 99999 ? '∞' : `₹${maxProfit.toFixed(2)}`, cls: 'text-primary' },
-          { label: 'Max Loss', value: `₹${Math.abs(maxLoss).toFixed(2)}`, cls: 'text-destructive' },
+          { label: 'Net Premium', value: `${netPremium >= 0 ? '+' : ''}${fmt(netPremium)}`, cls: netPremium >= 0 ? 'text-primary' : 'text-destructive' },
+          { label: 'Max Profit', value: maxProfit > 9999999 ? '∞' : fmt(maxProfit), cls: 'text-primary' },
+          { label: 'Max Loss', value: fmt(Math.abs(maxLoss)), cls: 'text-destructive' },
           { label: 'Breakeven', value: breakevens.length > 0 ? breakevens.map(b => formatNumber(b)).join(', ') : '—', cls: 'text-[hsl(var(--terminal-amber))]' },
         ].map((card, i) => (
           <div key={i} className="t-card text-center py-3">
@@ -767,7 +790,7 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
                     </div>
                   </div>
                   <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-card border border-border rounded px-1.5 py-0.5 text-[8px] text-foreground whitespace-nowrap z-10 shadow-lg">
-                    {point.price}: {point.pnl >= 0 ? '+' : ''}₹{point.pnl.toFixed(0)}
+                    {point.price}: {point.pnl >= 0 ? '+' : ''}{fmt(point.pnl)}
                   </div>
                 </div>
               );
