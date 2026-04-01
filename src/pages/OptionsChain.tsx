@@ -790,7 +790,7 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
                     </div>
                   </div>
                   <div className="absolute -top-7 left-1/2 -translate-x-1/2 hidden group-hover:block bg-card border border-border rounded px-1.5 py-0.5 text-[8px] text-foreground whitespace-nowrap z-10 shadow-lg">
-                    {point.price}: {point.pnl >= 0 ? '+' : ''}₹{point.pnl.toFixed(0)}
+                    {point.price}: {point.pnl >= 0 ? '+' : ''}{fmt(point.pnl)}
                   </div>
                 </div>
               );
