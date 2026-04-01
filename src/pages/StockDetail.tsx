@@ -5,6 +5,7 @@ import { useFullStockData, useStockChart } from '@/hooks/useStockData';
 import { getStock, generateCandleData } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import { useWatchlist } from '@/hooks/useWatchlist';
+import AIFundamentalsPanel from '@/components/stock/AIFundamentalsPanel';
 
 // ─── Shared Components ───
 
