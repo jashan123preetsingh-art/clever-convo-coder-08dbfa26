@@ -56,7 +56,8 @@ async function getQuote(symbol: string) {
   const yfSymbol = toYahooSymbol(symbol);
   if (!yfSymbol) return null;
 
-  const resp = await fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=5d&includePrePost=false`);
+  // Use range=2d so chartPreviousClose = yesterday's close (not 5 days ago)
+  const resp = await fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=2d&includePrePost=false`);
   if (!resp) return null;
 
   const data = await resp.json();
@@ -65,14 +66,17 @@ async function getQuote(symbol: string) {
 
   const meta = result.meta;
   const quote = result.indicators?.quote?.[0];
+  const closes = quote?.close || [];
   const ts = result.timestamp || [];
   const last = ts.length - 1;
-  const prev = meta.chartPreviousClose || meta.previousClose || 0;
+  // chartPreviousClose with range=2d = yesterday's close (correct baseline)
+  // Fallback: use the first candle's close if available (yesterday's data)
+  const prev = meta.chartPreviousClose || meta.previousClose || (closes.length >= 2 ? closes[closes.length - 2] : 0) || 0;
 
   return {
     symbol, name: meta.longName || meta.shortName || symbol,
     ltp: meta.regularMarketPrice,
-    prev_close: prev,
+    prev_close: round(prev),
     open: quote?.open?.[last], high: quote?.high?.[last],
     low: quote?.low?.[last], close: quote?.close?.[last],
     volume: quote?.volume?.[last],
