@@ -613,9 +613,6 @@ export default function TradingAgent() {
   const [chartImage, setChartImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  // Options-specific config
-  const [riskReward, setRiskReward] = useState('1:2');
-  const [optionsTradeType, setOptionsTradeType] = useState('all');
 
   const handleImageFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) { toast.error('Please upload an image file'); return; }
