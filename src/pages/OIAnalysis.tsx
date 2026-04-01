@@ -317,7 +317,7 @@ export default function OIAnalysis() {
       </div>
 
       {/* OI Change Heatmap */}
-      <OIChangeHeatmap chain={chain} symbol={activeSymbol} />
+      <OIChangeHeatmap chain={chain} symbol={activeSymbol} spot={underlyingValue} />
 
       {/* Net OI Chart */}
       <div
