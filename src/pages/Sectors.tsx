@@ -33,119 +33,118 @@ const MiniHeatmap = ({ stocks }: { stocks: { symbol: string; change_pct: number 
   );
 };
 
+function SectorDetail({ sectorName }: { sectorName: string }) {
+  const sectors = getSectorPerformance();
+  const rawStocks = getStocksBySector(sectorName);
+  const sectorData = sectors.find(s => s.sector === sectorName);
+
+  const symbols = useMemo(() => rawStocks.map(s => s.symbol), [rawStocks]);
+  const { data: liveQuotes } = useBatchQuotes(symbols);
+
+  const stocks = useMemo(() => {
+    const quoteMap: Record<string, any> = {};
+    if (Array.isArray(liveQuotes)) {
+      liveQuotes.forEach((q: any) => {
+        if (q?.data && q.symbol) quoteMap[q.symbol] = q.data;
+      });
+    }
+    return rawStocks.map(s => {
+      const live = quoteMap[s.symbol];
+      if (!live) return s;
+      return {
+        ...s,
+        ltp: live.ltp ?? s.ltp,
+        change: live.change ?? s.change,
+        change_pct: live.change_pct ?? s.change_pct,
+        volume: live.volume ?? s.volume,
+      };
+    });
+  }, [rawStocks, liveQuotes]);
+
+  return (
+    <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        <Link to="/sectors" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-xs group mb-3">
+          <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+          Back to Sectors
+        </Link>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-secondary/80 border border-border/50 flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-foreground tracking-tight">{sectorName}</h1>
+              <p className="text-xs text-muted-foreground">{stocks.length} stocks in sector</p>
+            </div>
+          </div>
+          {sectorData && (
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold ${sectorData.avg_change >= 0 ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
+              <SectorIcon change={sectorData.avg_change} />
+              {formatPercent(sectorData.avg_change)}
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-xl border border-border/60 bg-card/50 backdrop-blur-sm overflow-hidden">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-border/60 bg-secondary/30">
+              <th className="text-left px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">Symbol</th>
+              <th className="text-right px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">LTP</th>
+              <th className="text-right px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">Change</th>
+              <th className="text-right px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase hidden md:table-cell">Volume</th>
+              <th className="text-right px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase hidden lg:table-cell">Market Cap</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stocks.map((stock, idx) => (
+              <motion.tr
+                key={stock.symbol}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: idx * 0.02 }}
+                className="border-b border-border/20 hover:bg-secondary/40 transition-colors group"
+              >
+                <td className="px-4 py-3">
+                  <Link to={`/stock/${stock.symbol}`} className="group-hover:text-primary transition-colors">
+                    <p className="font-semibold text-foreground text-[11px]">{stock.symbol}</p>
+                    <p className="text-[9px] text-muted-foreground mt-0.5">{stock.name}</p>
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-foreground text-[11px]">{formatCurrency(stock.ltp)}</td>
+                <td className="px-4 py-3 text-right">
+                  <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold ${stock.change_pct >= 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
+                    {stock.change_pct >= 0 ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
+                    {formatPercent(stock.change_pct)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right text-muted-foreground font-mono text-[10px] hidden md:table-cell">{formatVolume(stock.volume)}</td>
+                <td className="px-4 py-3 text-right text-muted-foreground font-mono text-[10px] hidden lg:table-cell">{formatMarketCap(stock.market_cap)}</td>
+              </motion.tr>
+            ))}
+          </tbody>
+        </table>
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Sectors() {
   const { sector: paramSector } = useParams();
   const sectors = getSectorPerformance();
 
-  // Sort sectors by performance
   const sortedSectors = [...sectors].sort((a, b) => b.avg_change - a.avg_change);
   const gainers = sortedSectors.filter(s => s.avg_change >= 0);
   const losers = sortedSectors.filter(s => s.avg_change < 0);
 
   if (paramSector) {
-    const decoded = decodeURIComponent(paramSector);
-    const rawStocks = getStocksBySector(decoded);
-    const sectorData = sectors.find(s => s.sector === decoded);
-
-    // Fetch live prices for all stocks in this sector
-    const symbols = rawStocks.map(s => s.symbol);
-    const { data: liveQuotes } = useBatchQuotes(symbols);
-
-    const stocks = useMemo(() => {
-      const quoteMap: Record<string, any> = {};
-      if (Array.isArray(liveQuotes)) {
-        liveQuotes.forEach((q: any) => {
-          if (q?.data && q.symbol) quoteMap[q.symbol] = q.data;
-        });
-      }
-      return rawStocks.map(s => {
-        const live = quoteMap[s.symbol];
-        if (!live) return s;
-        return {
-          ...s,
-          ltp: live.ltp ?? s.ltp,
-          change: live.change ?? s.change,
-          change_pct: live.change_pct ?? s.change_pct,
-          volume: live.volume ?? s.volume,
-        };
-      });
-    }, [rawStocks, liveQuotes]);
-
-    return (
-      <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
-        {/* Breadcrumb header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <Link to="/sectors" className="inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors text-xs group mb-3">
-            <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-            Back to Sectors
-          </Link>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-secondary/80 border border-border/50 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-foreground tracking-tight">{decoded}</h1>
-                <p className="text-xs text-muted-foreground">{stocks.length} stocks in sector</p>
-              </div>
-            </div>
-            {sectorData && (
-              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold ${sectorData.avg_change >= 0 ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
-                <SectorIcon change={sectorData.avg_change} />
-                {formatPercent(sectorData.avg_change)}
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Stock table */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-xl border border-border/60 bg-card/50 backdrop-blur-sm overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border/60 bg-secondary/30">
-                <th className="text-left px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">Symbol</th>
-                <th className="text-right px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">LTP</th>
-                <th className="text-right px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">Change</th>
-                <th className="text-right px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase hidden md:table-cell">Volume</th>
-                <th className="text-right px-4 py-3 text-muted-foreground text-[10px] font-semibold tracking-wider uppercase hidden lg:table-cell">Market Cap</th>
-              </tr>
-            </thead>
-            <tbody>
-              {stocks.map((stock, idx) => (
-                <motion.tr
-                  key={stock.symbol}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: idx * 0.02 }}
-                  className="border-b border-border/20 hover:bg-secondary/40 transition-colors group"
-                >
-                  <td className="px-4 py-3">
-                    <Link to={`/stock/${stock.symbol}`} className="group-hover:text-primary transition-colors">
-                      <p className="font-semibold text-foreground text-[11px]">{stock.symbol}</p>
-                      <p className="text-[9px] text-muted-foreground mt-0.5">{stock.name}</p>
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono text-foreground text-[11px]">{formatCurrency(stock.ltp)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[10px] font-semibold ${stock.change_pct >= 0 ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
-                      {stock.change_pct >= 0 ? <ArrowUpRight className="w-2.5 h-2.5" /> : <ArrowDownRight className="w-2.5 h-2.5" />}
-                      {formatPercent(stock.change_pct)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right text-muted-foreground font-mono text-[10px] hidden md:table-cell">{formatVolume(stock.volume)}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground font-mono text-[10px] hidden lg:table-cell">{formatMarketCap(stock.market_cap)}</td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </motion.div>
-      </div>
-    );
+    return <SectorDetail sectorName={decodeURIComponent(paramSector)} />;
   }
 
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
-      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <div className="flex items-center gap-3 mb-1">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center">
@@ -160,7 +159,6 @@ export default function Sectors() {
         </div>
       </motion.div>
 
-      {/* Summary bar */}
       <motion.div
         initial={{ opacity: 0, y: 5 }}
         animate={{ opacity: 1, y: 0 }}
@@ -186,7 +184,6 @@ export default function Sectors() {
         </div>
       </motion.div>
 
-      {/* Sector cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {sortedSectors.map((sec, i) => {
           const isPositive = sec.avg_change >= 0;
@@ -205,7 +202,6 @@ export default function Sectors() {
                     : 'border-destructive/10 bg-gradient-to-br from-card to-destructive/[0.02] hover:border-destructive/30 hover:shadow-destructive/5'
                 }`}
               >
-                {/* Card header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
                     <h3 className="text-[12px] font-bold text-foreground tracking-tight truncate group-hover:text-primary transition-colors">
@@ -223,12 +219,10 @@ export default function Sectors() {
                   </div>
                 </div>
 
-                {/* Mini heatmap */}
                 <div className="mb-3">
                   <MiniHeatmap stocks={sec.stocks} />
                 </div>
 
-                {/* Top movers */}
                 <div className="flex flex-wrap gap-1">
                   {sec.stocks.slice(0, 4).map(s => (
                     <span
