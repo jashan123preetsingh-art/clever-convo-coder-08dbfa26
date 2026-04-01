@@ -186,14 +186,28 @@ export default function Index() {
 
       {/* ── Footer ── */}
       <footer className="border-t border-border/30 py-10 px-6">
-        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-[hsl(var(--terminal-cyan))] flex items-center justify-center">
-              <span className="text-[7px] font-black text-primary-foreground">TA</span>
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-[hsl(var(--terminal-cyan))] flex items-center justify-center">
+                <span className="text-[7px] font-black text-primary-foreground">TA</span>
+              </div>
+              <span className="text-xs font-bold text-foreground">Trade Arsenal</span>
             </div>
-            <span className="text-xs font-bold text-foreground">Trade Arsenal</span>
+            <div className="flex items-center gap-4">
+              <Link to="/privacy" className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">Privacy Policy</Link>
+              <Link to="/terms" className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">Terms of Service</Link>
+              <Link to="/disclaimer" className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">Disclaimer</Link>
+            </div>
           </div>
-          <p className="text-[10px] text-muted-foreground">© {new Date().getFullYear()} Trade Arsenal. Built for Indian F&O traders.</p>
+          <div className="border-t border-border/20 pt-4">
+            <p className="text-[9px] text-muted-foreground/50 text-center leading-relaxed">
+              ⚠️ Investment in securities market are subject to market risks. Read all related documents carefully before investing.
+              Trade Arsenal is not a SEBI-registered Research Analyst, Investment Advisor, or Portfolio Manager.
+              All analysis is for informational purposes only — not financial advice.
+            </p>
+            <p className="text-[10px] text-muted-foreground/40 text-center mt-2">© {new Date().getFullYear()} Trade Arsenal. Built for Indian F&O traders.</p>
+          </div>
         </div>
       </footer>
     </div>
