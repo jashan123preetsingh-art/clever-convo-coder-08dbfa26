@@ -42,7 +42,7 @@ function isMarketHours(): boolean {
 }
 
 // ── Data Status Badge ──
-function DataBadge({ status, source }: { status: 'live' | 'delayed' | 'estimated' | 'loading' | 'unavailable' | 'market-closed'; source?: string }) {
+const DataBadge = React.forwardRef<HTMLSpanElement, { status: 'live' | 'delayed' | 'estimated' | 'loading' | 'unavailable' | 'market-closed'; source?: string }>(({ status, source, ...props }, ref) => {
   const config: Record<string, { text: string; bg: string; color: string; dot: boolean; ring?: string }> = {
     live: { text: 'LIVE', bg: 'bg-primary/12', color: 'text-primary', dot: true, ring: 'ring-1 ring-primary/20' },
     delayed: { text: 'MKT CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/70', dot: false },
@@ -53,12 +53,13 @@ function DataBadge({ status, source }: { status: 'live' | 'delayed' | 'estimated
   };
   const c = config[status] || config.unavailable;
   return (
-    <span className={`text-[7px] px-2 py-0.5 rounded-md ${c.bg} ${c.color} font-bold tracking-wider inline-flex items-center gap-1 ${c.ring || ''}`}>
+    <span ref={ref} {...props} className={`text-[8px] px-2 py-0.5 rounded-md ${c.bg} ${c.color} font-bold tracking-wider inline-flex items-center gap-1 ${c.ring || ''}`}>
       {c.dot && <span className="w-1 h-1 rounded-full bg-primary shadow-[0_0_4px_hsl(var(--primary)/0.6)] animate-pulse" />}
       {c.text}
     </span>
   );
-}
+});
+DataBadge.displayName = 'DataBadge';
 
 // ── Quick Action ──
 function QuickAction({ icon, title, desc, to }: { icon: string; title: string; desc: string; to: string }) {

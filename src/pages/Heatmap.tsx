@@ -4,23 +4,39 @@ import { getAllStocks, Stock } from '@/data/mockData';
 import { stockApi } from '@/lib/api';
 import { formatPercent } from '@/utils/format';
 import { useBatchQuotes } from '@/hooks/useStockData';
+import { useTheme } from '@/hooks/useTheme';
 
-function getHeatColor(pct: number): string {
-  if (pct >= 3) return 'hsl(145, 63%, 32%)';
-  if (pct >= 2) return 'hsl(145, 55%, 26%)';
-  if (pct >= 1) return 'hsl(145, 45%, 20%)';
-  if (pct >= 0.3) return 'hsl(145, 35%, 16%)';
-  if (pct > 0) return 'hsl(145, 25%, 13%)';
-  if (pct === 0) return 'hsl(225, 18%, 12%)';
-  if (pct > -0.3) return 'hsl(0, 25%, 15%)';
-  if (pct > -1) return 'hsl(0, 40%, 20%)';
-  if (pct > -2) return 'hsl(0, 50%, 26%)';
-  if (pct > -3) return 'hsl(0, 58%, 32%)';
-  return 'hsl(0, 65%, 38%)';
+function getHeatColor(pct: number, isDark = true): string {
+  if (isDark) {
+    if (pct >= 3) return 'hsl(145, 63%, 32%)';
+    if (pct >= 2) return 'hsl(145, 55%, 26%)';
+    if (pct >= 1) return 'hsl(145, 45%, 20%)';
+    if (pct >= 0.3) return 'hsl(145, 35%, 16%)';
+    if (pct > 0) return 'hsl(145, 25%, 13%)';
+    if (pct === 0) return 'hsl(225, 18%, 12%)';
+    if (pct > -0.3) return 'hsl(0, 25%, 15%)';
+    if (pct > -1) return 'hsl(0, 40%, 20%)';
+    if (pct > -2) return 'hsl(0, 50%, 26%)';
+    if (pct > -3) return 'hsl(0, 58%, 32%)';
+    return 'hsl(0, 65%, 38%)';
+  }
+  // Light mode — brighter, more saturated
+  if (pct >= 3) return 'hsl(145, 55%, 42%)';
+  if (pct >= 2) return 'hsl(145, 48%, 48%)';
+  if (pct >= 1) return 'hsl(145, 40%, 55%)';
+  if (pct >= 0.3) return 'hsl(145, 32%, 65%)';
+  if (pct > 0) return 'hsl(145, 22%, 75%)';
+  if (pct === 0) return 'hsl(225, 15%, 82%)';
+  if (pct > -0.3) return 'hsl(0, 22%, 75%)';
+  if (pct > -1) return 'hsl(0, 35%, 65%)';
+  if (pct > -2) return 'hsl(0, 45%, 55%)';
+  if (pct > -3) return 'hsl(0, 52%, 48%)';
+  return 'hsl(0, 58%, 42%)';
 }
 
-function getTextColor(pct: number): string {
-  return Math.abs(pct) >= 1 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)';
+function getTextColor(pct: number, isDark = true): string {
+  if (isDark) return Math.abs(pct) >= 1 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)';
+  return Math.abs(pct) >= 1 ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.7)';
 }
 
 interface TreeNode {
@@ -142,6 +158,8 @@ function HeatmapSkeleton() {
 }
 
 export default function Heatmap() {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const mockStocks = useMemo(() => getAllStocks(), []);
 
   // Only fetch top 120 stocks by market cap (covers 95%+ of heatmap visual area)
@@ -225,8 +243,8 @@ export default function Heatmap() {
           {isLoading && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
           <div className="flex items-center gap-0.5">
             {[{ l: '-3%', c: -3 }, { l: '-2%', c: -2 }, { l: '-1%', c: -1 }, { l: '0%', c: 0 }, { l: '+1%', c: 1 }, { l: '+2%', c: 2 }, { l: '+3%', c: 3 }].map((item, i) => (
-              <div key={i} className="w-9 h-4 rounded-sm text-[7px] flex items-center justify-center font-mono"
-                style={{ backgroundColor: getHeatColor(item.c), color: getTextColor(item.c) }}>
+              <div key={i} className="w-9 h-4 rounded-sm text-[8px] flex items-center justify-center font-mono"
+                style={{ backgroundColor: getHeatColor(item.c, isDark), color: getTextColor(item.c, isDark) }}>
                 {item.l}
               </div>
             ))}
@@ -247,7 +265,7 @@ export default function Heatmap() {
                 <g key={sec.sector}>
                   {sec.w > 80 && sec.h > 30 && (
                     <text x={sec.x + 5} y={sec.y + 12}
-                      fill="rgba(255,255,255,0.35)" fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif">
+                      fill={isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)'} fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif">
                       {sec.sector} ›
                     </text>
                   )}
@@ -263,19 +281,19 @@ export default function Heatmap() {
                           <rect
                             x={x + 0.5} y={y + 0.5}
                             width={Math.max(w - 1, 1)} height={Math.max(h - 1, 1)}
-                            fill={getHeatColor(node.change_pct)}
+                          fill={getHeatColor(node.change_pct, isDark)}
                             rx="2" ry="2"
                             className="cursor-pointer transition-opacity hover:opacity-80"
-                            stroke="hsl(225, 25%, 8%)" strokeWidth="0.5"
+                            stroke={isDark ? 'hsl(225, 25%, 8%)' : 'hsl(225, 15%, 92%)'} strokeWidth="0.5"
                           />
                           {isLarge && (
                             <>
                               <text x={x + w / 2} y={y + h / 2 - 6} textAnchor="middle"
-                                fill={getTextColor(node.change_pct)} fontSize="12" fontWeight="700" fontFamily="Inter, sans-serif">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="12" fontWeight="700" fontFamily="Inter, sans-serif">
                                 {node.symbol}
                               </text>
                               <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
-                                fill={getTextColor(node.change_pct)} fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">
                                 {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(2)}%
                               </text>
                             </>
@@ -283,18 +301,18 @@ export default function Heatmap() {
                           {!isLarge && isMedium && (
                             <>
                               <text x={x + w / 2} y={y + h / 2 - 3} textAnchor="middle"
-                                fill={getTextColor(node.change_pct)} fontSize="9" fontWeight="700" fontFamily="Inter, sans-serif">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="9" fontWeight="700" fontFamily="Inter, sans-serif">
                                 {node.symbol.slice(0, 7)}
                               </text>
                               <text x={x + w / 2} y={y + h / 2 + 9} textAnchor="middle"
-                                fill={getTextColor(node.change_pct)} fontSize="8" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="8" fontWeight="600" fontFamily="JetBrains Mono, monospace">
                                 {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(1)}%
                               </text>
                             </>
                           )}
                           {!isLarge && !isMedium && isSmall && (
                             <text x={x + w / 2} y={y + h / 2 + 3} textAnchor="middle"
-                              fill={getTextColor(node.change_pct)} fontSize="7" fontWeight="600" fontFamily="Inter, sans-serif">
+                              fill={getTextColor(node.change_pct, isDark)} fontSize="8" fontWeight="600" fontFamily="Inter, sans-serif">
                               {node.symbol.slice(0, 5)}
                             </text>
                           )}
@@ -305,7 +323,7 @@ export default function Heatmap() {
 
                   <rect
                     x={sec.x} y={sec.y} width={sec.w} height={sec.h}
-                    fill="none" stroke="hsl(225, 25%, 8%)" strokeWidth="2"
+                    fill="none" stroke={isDark ? 'hsl(225, 25%, 8%)' : 'hsl(225, 15%, 95%)'} strokeWidth="2"
                   />
                 </g>
               );

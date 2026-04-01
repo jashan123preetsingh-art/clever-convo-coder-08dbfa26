@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 export default function Auth() {
   const { user, loading } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
+  const [showForgot, setShowForgot] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -25,7 +26,14 @@ export default function Auth() {
     setSubmitting(true);
 
     try {
-      if (isLogin) {
+      if (showForgot) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw error;
+        toast.success('Password reset link sent! Check your email.');
+        setShowForgot(false);
+      } else if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success('Welcome back!');
@@ -63,23 +71,33 @@ export default function Auth() {
         {/* Card */}
         <div className="bg-card border border-border rounded-xl p-6 shadow-lg">
           {/* Tabs */}
-          <div className="flex mb-6 bg-secondary/50 rounded-lg p-1">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${isLogin ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${!isLogin ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Sign Up
-            </button>
-          </div>
+          {!showForgot && (
+            <div className="flex mb-6 bg-secondary/50 rounded-lg p-1">
+              <button
+                onClick={() => setIsLogin(true)}
+                className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${isLogin ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => setIsLogin(false)}
+                className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${!isLogin ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
+
+          {showForgot && (
+            <div className="mb-4">
+              <button onClick={() => setShowForgot(false)} className="text-xs text-primary hover:underline mb-2">← Back to Sign In</button>
+              <h2 className="text-base font-bold text-foreground">Reset Password</h2>
+              <p className="text-xs text-muted-foreground mt-1">Enter your email and we'll send you a reset link.</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {!isLogin && !showForgot && (
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Full Name</label>
                 <input
@@ -105,18 +123,26 @@ export default function Auth() {
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-secondary/60 border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
-                required
-                minLength={6}
-              />
-            </div>
+            {!showForgot && (
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground mb-1.5">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-secondary/60 border border-border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors"
+                  required
+                  minLength={6}
+                />
+              </div>
+            )}
+
+            {isLogin && !showForgot && (
+              <button type="button" onClick={() => setShowForgot(true)} className="text-xs text-primary hover:underline">
+                Forgot password?
+              </button>
+            )}
 
             <button
               type="submit"
@@ -126,10 +152,10 @@ export default function Auth() {
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  {isLogin ? 'Signing in...' : 'Creating account...'}
+                  {showForgot ? 'Sending...' : isLogin ? 'Signing in...' : 'Creating account...'}
                 </span>
               ) : (
-                isLogin ? 'Sign In' : 'Create Account'
+                showForgot ? 'Send Reset Link' : isLogin ? 'Sign In' : 'Create Account'
               )}
             </button>
           </form>
