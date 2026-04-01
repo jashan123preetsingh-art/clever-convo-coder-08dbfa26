@@ -81,6 +81,17 @@ export function useIndices() {
   });
 }
 
+export function useOptionsChain(symbol: string) {
+  return useQuery({
+    queryKey: ["options-chain", symbol],
+    queryFn: () => stockApi.getOptionsChain(symbol),
+    enabled: !!symbol,
+    staleTime: 60_000, // 1 min
+    refetchInterval: 60_000, // Auto-refresh every 60s
+    retry: 2,
+  });
+}
+
 export function useFiiDiiData() {
   return useQuery({
     queryKey: ["fii-dii"],
