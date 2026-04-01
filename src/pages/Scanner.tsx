@@ -373,10 +373,10 @@ export default function Scanner() {
                   <span className="text-base group-hover:scale-110 transition-transform duration-200">{scan.icon}</span>
                   <span className={`text-[10px] font-black font-data px-2 py-0.5 rounded-full transition-colors
                     ${count === -1
-                      ? 'bg-secondary/60 text-muted-foreground/50'
+                      ? 'bg-secondary/60 text-muted-foreground/70'
                       : count > 0
                         ? isActive ? 'bg-primary/15 text-primary' : 'bg-primary/8 text-primary'
-                        : 'bg-secondary/60 text-muted-foreground/50'}`}>
+                        : 'bg-secondary/60 text-muted-foreground/70'}`}>
                     {count === -1 ? '...' : count}
                   </span>
                 </div>

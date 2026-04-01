@@ -45,11 +45,11 @@ function isMarketHours(): boolean {
 function DataBadge({ status, source }: { status: 'live' | 'delayed' | 'estimated' | 'loading' | 'unavailable' | 'market-closed'; source?: string }) {
   const config: Record<string, { text: string; bg: string; color: string; dot: boolean; ring?: string }> = {
     live: { text: 'LIVE', bg: 'bg-primary/12', color: 'text-primary', dot: true, ring: 'ring-1 ring-primary/20' },
-    delayed: { text: 'MKT CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/50', dot: false },
+    delayed: { text: 'MKT CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/70', dot: false },
     estimated: { text: source === 'vix-estimate' ? 'VIX EST.' : 'EST.', bg: 'bg-accent/10', color: 'text-accent', dot: false },
     loading: { text: '···', bg: 'bg-muted/20', color: 'text-muted-foreground/60', dot: false },
     unavailable: { text: 'N/A', bg: 'bg-destructive/8', color: 'text-destructive/60', dot: false },
-    'market-closed': { text: 'CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/50', dot: false },
+    'market-closed': { text: 'CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/70', dot: false },
   };
   const c = config[status] || config.unavailable;
   return (
@@ -68,7 +68,7 @@ function QuickAction({ icon, title, desc, to }: { icon: string; title: string; d
         className="p-3 sm:p-4 rounded-xl bg-card/40 border border-border/10 hover:border-primary/20 hover:bg-card/70 transition-all duration-300 flex flex-col items-center text-center gap-1.5 sm:gap-2 group cursor-pointer h-full">
         <span className="text-lg sm:text-xl group-hover:scale-110 transition-transform duration-300">{icon}</span>
         <p className="text-[9px] sm:text-[10px] font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{title}</p>
-        <p className="text-[7px] text-muted-foreground/50 leading-relaxed hidden sm:block">{desc}</p>
+        <p className="text-[7px] text-muted-foreground/70 leading-relaxed hidden sm:block">{desc}</p>
       </motion.div>
     </Link>
   );
@@ -81,11 +81,11 @@ function MetricWidget({ label, value, sub, color, icon, status }: { label: strin
     <div className={`rounded-xl bg-card/40 p-3 sm:p-4 border border-border/10 hover:border-border/25 transition-all duration-300 group ${isLoading ? 'animate-pulse' : ''}`}>
       <div className="flex items-center gap-1.5 mb-2">
         {icon && <span className="text-[10px] opacity-60 group-hover:opacity-100 transition-opacity">{icon}</span>}
-        <p className="text-[7px] sm:text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] font-bold flex-1">{label}</p>
+        <p className="text-[7px] sm:text-[8px] text-muted-foreground/70 uppercase tracking-[0.15em] font-bold flex-1">{label}</p>
         {status && status !== 'loading' && <DataBadge status={status} />}
       </div>
       <p className={`text-base sm:text-lg font-black font-data tracking-tight ${color || 'text-foreground'}`}>{value}</p>
-      {sub && <p className="text-[7px] text-muted-foreground/40 mt-0.5">{sub}</p>}
+      {sub && <p className="text-[7px] text-muted-foreground/70 mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -97,10 +97,10 @@ function StockRow({ stock, rank, showVolume }: { stock: any; rank: number; showV
     <Link to={`/stock/${stock.symbol}`}
       className="flex items-center justify-between py-2 sm:py-2.5 px-3 sm:px-4 hover:bg-primary/[0.03] transition-all group">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-        <span className="text-[8px] text-muted-foreground/30 w-3 sm:w-4 font-data font-bold flex-shrink-0">{rank}</span>
+        <span className="text-[8px] text-muted-foreground/60 w-3 sm:w-4 font-data font-bold flex-shrink-0">{rank}</span>
         <div className="min-w-0">
           <p className="text-[10px] sm:text-[11px] font-bold text-foreground group-hover:text-primary transition-colors truncate">{stock.symbol}</p>
-          <p className="text-[7px] text-muted-foreground/40 truncate max-w-[80px] sm:max-w-[100px]">
+          <p className="text-[7px] text-muted-foreground/70 truncate max-w-[80px] sm:max-w-[100px]">
             {showVolume ? formatVolume(stock.volume) + ' vol' : stock.sector}
           </p>
         </div>
@@ -144,7 +144,7 @@ function IndexCard({ idx, isLive: dataLive }: { idx: any; isLive: boolean }) {
     <div className="rounded-xl bg-card/40 border border-border/10 p-4 sm:p-5 hover:border-border/25 transition-all duration-300 group">
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-[9px] sm:text-[10px] text-muted-foreground/50 font-bold tracking-wide">{idx.symbol}</span>
+          <span className="text-[9px] sm:text-[10px] text-muted-foreground/70 font-bold tracking-wide">{idx.symbol}</span>
           <DataBadge status={displayStatus} />
         </div>
         <span className={`text-[7px] px-2 py-0.5 rounded-md font-bold ${
@@ -310,7 +310,7 @@ export default function Dashboard() {
               <h1 className="text-sm sm:text-base font-black text-foreground tracking-tight">{greeting}, Trader</h1>
               <DataBadge status={marketOpen ? 'live' : 'market-closed'} />
             </div>
-            <p className="text-[9px] sm:text-[10px] text-muted-foreground/50 leading-relaxed">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 leading-relaxed">
               {marketOpen
                 ? `Market open · ${istTime} IST · Tracking NIFTY, BANKNIFTY & 2000+ stocks`
                 : `Market closed · Last close data · Opens Mon–Fri 9:15 AM IST`}
@@ -329,7 +329,7 @@ export default function Dashboard() {
           return (
             <div key={i}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/30 border border-border/10 whitespace-nowrap min-w-fit hover:border-border/20 transition-all">
-              <span className="text-[8px] sm:text-[9px] text-muted-foreground/40 font-bold">{idx.symbol}</span>
+              <span className="text-[8px] sm:text-[9px] text-muted-foreground/70 font-bold">{idx.symbol}</span>
               <span className="text-[10px] sm:text-[11px] text-foreground font-black font-data">
                 {Number(idx.ltp).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
               </span>
@@ -349,7 +349,7 @@ export default function Dashboard() {
 
       {/* ═══ Quick Actions ═══ */}
       <div>
-        <p className="text-[8px] sm:text-[9px] text-muted-foreground/40 font-bold mb-2 uppercase tracking-[0.15em]">Quick Actions</p>
+        <p className="text-[8px] sm:text-[9px] text-muted-foreground/70 font-bold mb-2 uppercase tracking-[0.15em]">Quick Actions</p>
         <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
           <QuickAction icon="📊" title="Option Chain" desc="NIFTY / BNF" to="/options" />
           <QuickAction icon="🔍" title="Scanner" desc="Find setups" to="/scanner" />
@@ -371,10 +371,10 @@ export default function Dashboard() {
       {/* ═══ Key Metrics ═══ */}
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <p className="text-[8px] sm:text-[9px] text-muted-foreground/40 font-bold uppercase tracking-[0.15em]">Key Metrics</p>
+          <p className="text-[8px] sm:text-[9px] text-muted-foreground/70 font-bold uppercase tracking-[0.15em]">Key Metrics</p>
           {dataSource && <DataBadge status={getMetricStatus(!!vix)} source={dataSource} />}
           {mm?.timestamp && (
-            <span className="text-[7px] text-muted-foreground/30 font-data ml-auto">
+            <span className="text-[7px] text-muted-foreground/60 font-data ml-auto">
               {new Date(mm.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })} IST
             </span>
           )}
@@ -433,24 +433,24 @@ export default function Dashboard() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
-                  <p className="text-[7px] text-muted-foreground/40 uppercase tracking-[0.15em] mb-1">±1σ Move</p>
+                  <p className="text-[7px] text-muted-foreground/70 uppercase tracking-[0.15em] mb-1">±1σ Move</p>
                   <p className="text-base sm:text-lg font-black text-primary font-data">{move != null ? `±${move}` : '—'}</p>
-                  <p className="text-[7px] text-muted-foreground/30">{move != null && item.ltp ? `${(move / item.ltp * 100).toFixed(1)}%` : ''}</p>
+                  <p className="text-[7px] text-muted-foreground/60">{move != null && item.ltp ? `${(move / item.ltp * 100).toFixed(1)}%` : ''}</p>
                 </div>
                 <div>
-                  <p className="text-[7px] text-muted-foreground/40 uppercase tracking-[0.15em] mb-1">ATM Straddle</p>
+                  <p className="text-[7px] text-muted-foreground/70 uppercase tracking-[0.15em] mb-1">ATM Straddle</p>
                   <p className="text-base sm:text-lg font-black text-foreground font-data">{straddle != null ? `₹${straddle}` : '—'}</p>
-                  <p className="text-[7px] text-muted-foreground/30">{source === 'yahoo' ? 'Yahoo' : source === 'vix-estimate' ? 'VIX Est.' : ''}</p>
+                  <p className="text-[7px] text-muted-foreground/60">{source === 'yahoo' ? 'Yahoo' : source === 'vix-estimate' ? 'VIX Est.' : ''}</p>
                 </div>
                 <div>
-                  <p className="text-[7px] text-muted-foreground/40 uppercase tracking-[0.15em] mb-1">ATM IV</p>
+                  <p className="text-[7px] text-muted-foreground/70 uppercase tracking-[0.15em] mb-1">ATM IV</p>
                   <p className="text-base sm:text-lg font-black text-accent font-data">{iv != null ? `${Number(iv).toFixed(1)}%` : '—'}</p>
-                  <p className="text-[7px] text-muted-foreground/30">{item.metrics ? 'Implied' : ''}</p>
+                  <p className="text-[7px] text-muted-foreground/60">{item.metrics ? 'Implied' : ''}</p>
                 </div>
                 <div>
-                  <p className="text-[7px] text-muted-foreground/40 uppercase tracking-[0.15em] mb-1">Max Pain</p>
+                  <p className="text-[7px] text-muted-foreground/70 uppercase tracking-[0.15em] mb-1">Max Pain</p>
                   <p className="text-base sm:text-lg font-black text-foreground font-data">{maxPain != null ? maxPain.toLocaleString('en-IN') : '—'}</p>
-                  <p className="text-[7px] text-muted-foreground/30">{maxPain ? 'Strike' : ''}</p>
+                  <p className="text-[7px] text-muted-foreground/60">{maxPain ? 'Strike' : ''}</p>
                 </div>
               </div>
             </motion.div>
@@ -486,9 +486,9 @@ export default function Dashboard() {
               <Link key={sec.sector} to={`/sectors/${encodeURIComponent(sec.sector)}`}
                 className="flex items-center justify-between py-2 sm:py-2.5 px-3 sm:px-4 hover:bg-primary/[0.03] transition-all">
                 <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                  <span className="text-[8px] text-muted-foreground/30 w-3 sm:w-4 font-data font-bold flex-shrink-0">{i + 1}</span>
+                  <span className="text-[8px] text-muted-foreground/60 w-3 sm:w-4 font-data font-bold flex-shrink-0">{i + 1}</span>
                   <span className="text-[9px] sm:text-[10px] text-foreground font-semibold truncate">{sec.sector}</span>
-                  <span className="text-[7px] text-muted-foreground/30 flex-shrink-0">({sec.count})</span>
+                  <span className="text-[7px] text-muted-foreground/60 flex-shrink-0">({sec.count})</span>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                   <div className="w-12 sm:w-16 h-1 bg-secondary/20 rounded-full overflow-hidden">

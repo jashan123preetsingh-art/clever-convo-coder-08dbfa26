@@ -67,39 +67,39 @@
 
   .light {
     --background: 230 18% 97%;
-    --foreground: 235 35% 8%;
+    --foreground: 235 40% 6%;
 
     --card: 0 0% 100%;
-    --card-foreground: 235 35% 8%;
+    --card-foreground: 235 40% 6%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 235 35% 8%;
+    --popover-foreground: 235 40% 6%;
 
-    --primary: 252 65% 50%;
+    --primary: 252 65% 46%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 230 16% 92%;
-    --secondary-foreground: 235 25% 18%;
+    --secondary-foreground: 235 30% 14%;
 
     --muted: 230 14% 94%;
-    --muted-foreground: 230 15% 30%;
+    --muted-foreground: 230 20% 22%;
 
-    --accent: 28 80% 46%;
+    --accent: 28 80% 42%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 4 68% 44%;
+    --destructive: 4 68% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 230 16% 85%;
-    --input: 230 16% 85%;
-    --ring: 252 65% 50%;
+    --border: 230 18% 82%;
+    --input: 230 18% 82%;
+    --ring: 252 65% 46%;
 
-    --terminal-green: 158 60% 30%;
-    --terminal-red: 4 65% 42%;
-    --terminal-amber: 28 75% 40%;
-    --terminal-blue: 215 75% 42%;
-    --terminal-cyan: 188 65% 30%;
-    --terminal-purple: 265 55% 44%;
+    --terminal-green: 158 65% 26%;
+    --terminal-red: 4 70% 38%;
+    --terminal-amber: 28 80% 36%;
+    --terminal-blue: 215 80% 38%;
+    --terminal-cyan: 188 70% 26%;
+    --terminal-purple: 265 60% 40%;
     --terminal-surface: 0 0% 100%;
     --terminal-surface-hover: 230 16% 96%;
     --terminal-header: 230 18% 96%;
@@ -112,7 +112,7 @@
     --shadow-glow: 0 0 40px -8px hsla(252, 65%, 50%, 0.08);
 
     --sidebar-background: 230 18% 96%;
-    --sidebar-foreground: 235 25% 22%;
+    --sidebar-foreground: 235 30% 14%;
     --sidebar-primary: 252 65% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 230 16% 92%;
