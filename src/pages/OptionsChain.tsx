@@ -246,12 +246,12 @@ export default function OptionsChain() {
   const presetLegs = useMemo(() => {
     if (chain.length === 0 || atmIndex < 0) return [];
     const strat = PRESET_STRATEGIES[selectedPreset];
-    const legDefs = strat.legs(atmStrike, strikeDiff);
-    return legDefs.map((leg, i) => {
+    const legDefs = strat.legs();
+    return legDefs.map((leg: any, i: number) => {
       const strike = atmStrike + leg.strikeOffset * strikeDiff;
       const row = chain.find((c: any) => c.strike === strike) || chain[atmIndex];
       const premium = leg.type === 'CE' ? row.ce.ltp : row.pe.ltp;
-      return { id: `preset-${i}`, type: leg.type, action: leg.action, strike, premium, lots: 1 } as StrategyLeg;
+      return { id: `preset-${i}`, type: leg.type, action: leg.action, strike, premium, lots: leg.lots || 1 } as StrategyLeg;
     });
   }, [selectedPreset, atmStrike, chain, atmIndex, strikeDiff]);
 
