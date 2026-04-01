@@ -1,0 +1,1 @@
+DELETE FROM ai_analysis_cache WHERE result::text LIKE '%undefined current price%' OR result::text LIKE '%undefined%' OR expires_at < now();
