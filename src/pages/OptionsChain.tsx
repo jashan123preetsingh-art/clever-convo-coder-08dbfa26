@@ -8,6 +8,11 @@ import { Loader2, Sparkles, Target, Search } from 'lucide-react';
 
 const FNO = ['NIFTY', 'BANKNIFTY', 'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BAJFINANCE', 'TATAMOTORS', 'ITC', 'LT'];
 
+const LOT_SIZES: Record<string, number> = {
+  NIFTY: 25, BANKNIFTY: 15, RELIANCE: 250, TCS: 150, HDFCBANK: 550,
+  INFY: 400, ICICIBANK: 700, SBIN: 1500, BAJFINANCE: 125, TATAMOTORS: 1400, ITC: 1600, LT: 150,
+};
+
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 interface StrategyLeg {
