@@ -323,17 +323,18 @@ export default function OptionsChain() {
       </div>
 
       {/* Loading state */}
-      {isLoading && chain.length === 0 && (
+      {isLoading && !effectiveData?.chain?.length && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
-          <span className="text-sm text-muted-foreground">Loading live options data...</span>
+          <span className="text-sm text-muted-foreground">Loading options data...</span>
         </div>
       )}
 
-      {isError && (
-        <div className="text-center py-10">
-          <p className="text-sm text-destructive mb-2">Failed to load options data</p>
-          <p className="text-[10px] text-muted-foreground">NSE data may be temporarily unavailable. Please try again.</p>
+      {!isLive && chain.length > 0 && (
+        <div className="text-center py-1 mb-1">
+          <span className="text-[9px] text-muted-foreground/60 bg-secondary/50 px-2 py-0.5 rounded">
+            Showing estimated data · Live NSE feed unavailable
+          </span>
         </div>
       )}
 
