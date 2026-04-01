@@ -84,6 +84,7 @@ export default function Dashboard() {
   const { data: liveIndices } = useIndices();
   const { data: liveFiiDii } = useFiiDiiData();
   const { data: liveBreadth } = useMarketBreadth();
+  const { data: marketMetrics } = useMarketMetrics();
   const indices = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : INDICES;
   const isLive = liveIndices?.length > 0 && !liveIndices[0]?.error;
 
