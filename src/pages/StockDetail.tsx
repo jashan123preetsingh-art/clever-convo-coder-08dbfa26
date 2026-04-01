@@ -147,90 +147,90 @@ export default function StockDetail() {
   const multiTFLevels = React.useMemo(() => {
     if (!realChartData || realChartData.length < 20) return null;
     
-    const calcPivots = (candles: any[]) => {
+    const calcPivotsFromRange = (candles: any[]) => {
       if (!candles.length) return null;
-      const last = candles[candles.length - 1];
-      const pivot = (last.high + last.low + last.close) / 3;
+      const h = Math.max(...candles.map((c: any) => c.high));
+      const l = Math.min(...candles.map((c: any) => c.low));
+      const c = candles[candles.length - 1].close;
+      const p = (h + l + c) / 3;
       return {
-        pivot: Math.round(pivot * 100) / 100,
-        s1: Math.round((2 * pivot - last.high) * 100) / 100,
-        s2: Math.round((pivot - (last.high - last.low)) * 100) / 100,
-        s3: Math.round((last.low - 2 * (last.high - pivot)) * 100) / 100,
-        r1: Math.round((2 * pivot - last.low) * 100) / 100,
-        r2: Math.round((pivot + (last.high - last.low)) * 100) / 100,
-        r3: Math.round((last.high + 2 * (pivot - last.low)) * 100) / 100,
+        pivot: Math.round(p * 100) / 100,
+        s1: Math.round((2 * p - h) * 100) / 100,
+        s2: Math.round((p - (h - l)) * 100) / 100,
+        r1: Math.round((2 * p - l) * 100) / 100,
+        r2: Math.round((p + (h - l)) * 100) / 100,
       };
     };
 
-    // Simulate different TF from daily data
-    // Daily (1D) = last candle
-    const daily = calcPivots(realChartData);
+    // 4H: last 2 days
+    const fourH = calcPivotsFromRange(realChartData.slice(-2));
+    // 1D: last candle
+    const daily = calcPivotsFromRange(realChartData.slice(-1));
+    // 1W: last 5 days
+    const weekly = calcPivotsFromRange(realChartData.slice(-5));
+    // 1M: last 22 trading days
+    const monthly = realChartData.length >= 22 ? calcPivotsFromRange(realChartData.slice(-22)) : null;
+    // 1Y: last 252 trading days
+    const yearly = realChartData.length >= 100 ? calcPivotsFromRange(realChartData.slice(-252)) : null;
 
-    // 4H approximation: use last 2 days range
-    const last2 = realChartData.slice(-2);
-    const fourH = last2.length >= 2 ? (() => {
-      const h = Math.max(...last2.map((c: any) => c.high));
-      const l = Math.min(...last2.map((c: any) => c.low));
-      const c = last2[last2.length - 1].close;
-      const p = (h + l + c) / 3;
-      return {
-        pivot: Math.round(p * 100) / 100,
-        s1: Math.round((2 * p - h) * 100) / 100,
-        s2: Math.round((p - (h - l)) * 100) / 100,
-        r1: Math.round((2 * p - l) * 100) / 100,
-        r2: Math.round((p + (h - l)) * 100) / 100,
-      };
-    })() : null;
-
-    // Weekly (1W) approximation: use last 5 days
-    const last5 = realChartData.slice(-5);
-    const weekly = last5.length >= 3 ? (() => {
-      const h = Math.max(...last5.map((c: any) => c.high));
-      const l = Math.min(...last5.map((c: any) => c.low));
-      const c = last5[last5.length - 1].close;
-      const p = (h + l + c) / 3;
-      return {
-        pivot: Math.round(p * 100) / 100,
-        s1: Math.round((2 * p - h) * 100) / 100,
-        s2: Math.round((p - (h - l)) * 100) / 100,
-        r1: Math.round((2 * p - l) * 100) / 100,
-        r2: Math.round((p + (h - l)) * 100) / 100,
-      };
-    })() : null;
-
-    return { daily, fourH, weekly };
+    return { fourH, daily, weekly, monthly, yearly };
   }, [realChartData]);
 
-  // ─── Supply/Demand Zones ───
+  // ─── Supply/Demand Zones (MTF aggregated — no TF labels) ───
   const supplyDemandZones = React.useMemo(() => {
     if (!realChartData || realChartData.length < 30) return null;
-    const candles = realChartData.slice(-60);
     const zones: { type: 'supply' | 'demand'; high: number; low: number; strength: number }[] = [];
 
-    for (let i = 2; i < candles.length - 1; i++) {
-      const prev = candles[i - 1];
-      const curr = candles[i];
-      const next = candles[i + 1];
-      
-      // Demand zone: big bullish candle after consolidation
-      if (curr.close > curr.open && (curr.close - curr.open) > (curr.high - curr.low) * 0.6) {
-        const volSpike = curr.volume > (prev.volume * 1.3);
-        if (next.close > curr.close || volSpike) {
-          zones.push({ type: 'demand', high: curr.open, low: curr.low, strength: volSpike ? 3 : 2 });
+    // Scan multiple lookback windows for MTF effect
+    const windows = [
+      { candles: realChartData.slice(-30), weight: 1 },   // Short-term
+      { candles: realChartData.slice(-60), weight: 1.5 },  // Mid-term
+      { candles: realChartData.slice(-120), weight: 2 },   // Long-term
+    ];
+
+    for (const { candles, weight } of windows) {
+      for (let i = 2; i < candles.length - 1; i++) {
+        const prev = candles[i - 1];
+        const curr = candles[i];
+        const next = candles[i + 1];
+        
+        // Demand zone: big bullish candle after consolidation
+        if (curr.close > curr.open && (curr.close - curr.open) > (curr.high - curr.low) * 0.6) {
+          const volSpike = curr.volume > (prev.volume * 1.3);
+          if (next.close > curr.close || volSpike) {
+            zones.push({ type: 'demand', high: curr.open, low: curr.low, strength: Math.round((volSpike ? 3 : 2) * weight) });
+          }
         }
-      }
-      // Supply zone: big bearish candle 
-      if (curr.open > curr.close && (curr.open - curr.close) > (curr.high - curr.low) * 0.6) {
-        const volSpike = curr.volume > (prev.volume * 1.3);
-        if (next.close < curr.close || volSpike) {
-          zones.push({ type: 'supply', high: curr.high, low: curr.open, strength: volSpike ? 3 : 2 });
+        // Supply zone: big bearish candle 
+        if (curr.open > curr.close && (curr.open - curr.close) > (curr.high - curr.low) * 0.6) {
+          const volSpike = curr.volume > (prev.volume * 1.3);
+          if (next.close < curr.close || volSpike) {
+            zones.push({ type: 'supply', high: curr.high, low: curr.open, strength: Math.round((volSpike ? 3 : 2) * weight) });
+          }
         }
       }
     }
 
-    // Keep top zones near current price
-    const ltp = candles[candles.length - 1].close;
-    const relevant = zones.filter(z => Math.abs((z.high + z.low) / 2 - ltp) / ltp < 0.08);
+    // Merge overlapping zones
+    const mergeZones = (zoneList: typeof zones) => {
+      const sorted = [...zoneList].sort((a, b) => b.high - a.high);
+      const merged: typeof zones = [];
+      for (const z of sorted) {
+        const existing = merged.find(m => m.type === z.type && Math.abs(m.high - z.high) / z.high < 0.01);
+        if (existing) {
+          existing.strength = Math.min(existing.strength + 1, 5);
+          existing.high = Math.max(existing.high, z.high);
+          existing.low = Math.min(existing.low, z.low);
+        } else {
+          merged.push({ ...z });
+        }
+      }
+      return merged;
+    };
+
+    const mergedZones = mergeZones(zones);
+    const ltp = realChartData[realChartData.length - 1].close;
+    const relevant = mergedZones.filter(z => Math.abs((z.high + z.low) / 2 - ltp) / ltp < 0.10);
     const supply = relevant.filter(z => z.type === 'supply').sort((a, b) => b.strength - a.strength).slice(0, 3);
     const demand = relevant.filter(z => z.type === 'demand').sort((a, b) => b.strength - a.strength).slice(0, 3);
     return { supply, demand };
