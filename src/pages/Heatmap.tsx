@@ -380,7 +380,7 @@ export default function Heatmap() {
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary/40 hover:bg-secondary/60 border border-border/30 transition-colors">
               <span className="text-[10px] text-foreground font-medium">{sg.sector}</span>
               <span className={`text-[10px] font-semibold font-data ${avg >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                {avg >= 0 ? '+' : ''}{avg.toFixed(2)}%
+                {avg >= 0 ? '+' : ''}{Number(avg).toFixed(2)}%
               </span>
             </Link>
           );
