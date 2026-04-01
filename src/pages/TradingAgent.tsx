@@ -925,9 +925,7 @@ export default function TradingAgent() {
       {/* Quick symbols */}
       {!loading && !result && (
         <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-4">
-          {(mode === 'options'
-            ? ['NIFTY 50', 'BANKNIFTY', 'RELIANCE', 'TCS', 'INFY', 'HDFCBANK']
-            : mode === 'invest'
+          {(mode === 'invest'
             ? ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ASIANPAINT', 'NESTLEIND']
             : ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'TATAMOTORS']
           ).map(s => (
