@@ -762,34 +762,28 @@ async function runOptionsPipeline(apiKey: string, symbol: string, dataCtx: strin
   const configCtx = `\nUser's Risk:Reward preference: minimum ${rrFilter}\nTrade type preference: ${tradeType === 'all' ? 'Show Intraday, Swing (2-5 days), and Till Expiry options' : tradeType}\nToday's date: ${new Date().toISOString().split('T')[0]}`;
 
   try {
-    // Step 1: OI Analysis + Greeks/IV in parallel
-    const [oiReport, greeksReport] = await Promise.all([
+    // Step 1: OI + Greeks + Technical ALL in parallel (flash models, fast)
+    const [oiReport, greeksReport, technicalReport] = await Promise.all([
       callAI(apiKey, OPTIONS_OI_SYSTEM, `Full OI analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.oiAnalyst),
       callAI(apiKey, OPTIONS_GREEKS_SYSTEM, `Greeks and IV analysis for ${symbol} options.${configCtx}\n${dataCtx}`, M.greeksAnalyst),
+      callAI(apiKey, OPTIONS_TECHNICAL_SYSTEM, `Technical analysis for options strike selection on ${symbol}.\n${dataCtx}`, M.technical),
     ]);
 
-    await sleep(500);
+    await sleep(300);
 
-    // Step 2: Technical for strike selection
-    const technicalReport = await callAI(apiKey, OPTIONS_TECHNICAL_SYSTEM, `Technical analysis for options strike selection on ${symbol}.\n${dataCtx}`, M.technical);
-
-    await sleep(500);
-
-    // Step 3: Strategy construction
+    // Step 2: Strategy construction (PRO model — needs all analysis context)
     const analystContext = `OI ANALYSIS:\n${oiReport}\n\nGREEKS & IV:\n${greeksReport}\n\nTECHNICAL (for strikes):\n${technicalReport}`;
     const strategyReport = await callAI(apiKey, OPTIONS_STRATEGY_SYSTEM, `Construct optimal options strategies for ${symbol}.\nRisk:Reward filter: minimum ${rrFilter}\nTrade types needed: ${tradeType}\n${analystContext}\n${dataCtx}${configCtx}`, M.strategist);
 
-    await sleep(500);
+    await sleep(300);
 
-    // Step 4: Risk assessment
-    const riskReport = await callAI(apiKey, OPTIONS_RISK_SYSTEM, `Evaluate options strategies for ${symbol}.\nSTRATEGIES:\n${strategyReport}\n${analystContext}\n${dataCtx}${configCtx}`, M.riskManager);
-
-    await sleep(500);
-
-    // Step 5: Final options trade decision
-    const traderDecision = await callAI(apiKey, OPTIONS_TRADER_SYSTEM,
-      `Final options trade decision for ${symbol}.\nRisk:Reward minimum: ${rrFilter}\nTrade type: ${tradeType}\n\nOI ANALYSIS:\n${oiReport}\nGREEKS:\n${greeksReport}\nTECHNICAL:\n${technicalReport}\nSTRATEGIES:\n${strategyReport}\nRISK ASSESSMENT:\n${riskReport}\n${dataCtx}`,
-      M.trader);
+    // Step 3: Risk + Final Trade in parallel (risk is flash, trader is PRO)
+    const [riskReport, traderDecision] = await Promise.all([
+      callAI(apiKey, OPTIONS_RISK_SYSTEM, `Evaluate options strategies for ${symbol}.\nSTRATEGIES:\n${strategyReport}\n${analystContext}\n${dataCtx}${configCtx}`, M.riskManager),
+      callAI(apiKey, OPTIONS_TRADER_SYSTEM,
+        `Final options trade decision for ${symbol}.\nRisk:Reward minimum: ${rrFilter}\nTrade type: ${tradeType}\n\nOI ANALYSIS:\n${oiReport}\nGREEKS:\n${greeksReport}\nTECHNICAL:\n${technicalReport}\nSTRATEGIES:\n${strategyReport}\n${dataCtx}`,
+        M.trader),
+    ]);
 
     return {
       agents: {
