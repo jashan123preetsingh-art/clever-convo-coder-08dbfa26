@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { INDICES, getTopGainers, getTopLosers, getMostActive, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
@@ -78,21 +78,26 @@ function SectionHeader({ title, badge, link, linkText }: { title: string; badge?
   );
 }
 
-const fadeUp = { hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } };
+const fadeUp = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const { data: liveIndices } = useIndices();
   const indices = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : INDICES;
   const isLive = liveIndices?.length > 0 && !liveIndices[0]?.error;
 
-  const gainers = getTopGainers();
-  const losers = getTopLosers();
-  const active = getMostActive();
-  const sectors = getSectorPerformance();
-  const allStocks = getAllStocks();
-  const advances = allStocks.filter(s => s.change_pct > 0).length;
-  const declines = allStocks.filter(s => s.change_pct < 0).length;
-  const unchanged = allStocks.filter(s => s.change_pct === 0).length;
+  const { gainers, losers, active, sectors, advances, declines, unchanged } = useMemo(() => {
+    const g = getTopGainers();
+    const l = getTopLosers();
+    const a = getMostActive();
+    const s = getSectorPerformance();
+    const all = getAllStocks();
+    return {
+      gainers: g, losers: l, active: a, sectors: s,
+      advances: all.filter(st => st.change_pct > 0).length,
+      declines: all.filter(st => st.change_pct < 0).length,
+      unchanged: all.filter(st => st.change_pct === 0).length,
+    };
+  }, []);
 
   const niftyLtp = indices.find((i: any) => i.symbol === 'NIFTY 50')?.ltp || 22800;
   const expectedMove = Math.round(niftyLtp * 0.014);
@@ -122,9 +127,9 @@ export default function Dashboard() {
       </motion.div>
 
       {/* ═══ Index Ticker ═══ */}
-      <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2.5 overflow-x-auto pb-1 will-change-scroll">
         {indices.map((idx: any, i: number) => (
-          <motion.div key={i} variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: i * 0.04 }}
+          <div key={i}
             className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-card/40 border border-border/15 whitespace-nowrap min-w-fit hover:border-border/30 transition-all">
             <span className="text-[10px] text-muted-foreground/50 font-bold">{idx.symbol}</span>
             <span className="text-[12px] text-foreground font-black font-data">
@@ -138,7 +143,7 @@ export default function Dashboard() {
                 <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" /> LIVE
               </span>
             )}
-          </motion.div>
+          </div>
         ))}
       </div>
 
@@ -162,7 +167,7 @@ export default function Dashboard() {
       {/* ═══ Index Cards ═══ */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {indices.map((idx: any, i: number) => (
-          <motion.div key={i} variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: i * 0.05 }}
+          <div key={i}
             className="rounded-2xl bg-card/50 border border-border/15 p-5 hover:border-border/30 transition-all duration-300">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] text-muted-foreground/50 font-bold tracking-[0.15em]">{idx.symbol}</span>
@@ -192,7 +197,7 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 

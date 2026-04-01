@@ -56,7 +56,8 @@ export function useBatchQuotes(symbols: string[]) {
     queryKey: ["batch-quotes", symbols.join(",")],
     queryFn: () => stockApi.getBatchQuotes(symbols),
     enabled: symbols.length > 0,
-    staleTime: 30_000,
+    staleTime: 15_000,
+    refetchInterval: 15_000,
     retry: 1,
   });
 }
@@ -65,7 +66,7 @@ export function useStockSearch(query: string) {
   return useQuery({
     queryKey: ["stock-search", query],
     queryFn: () => stockApi.search(query),
-    enabled: query.length >= 2,
+    enabled: query.length >= 1,
     staleTime: 120_000,
   });
 }
@@ -74,8 +75,8 @@ export function useIndices() {
   return useQuery({
     queryKey: ["indices"],
     queryFn: () => stockApi.getIndices(),
-    staleTime: 30_000,
-    refetchInterval: 30_000, // Auto-refresh every 30s
+    staleTime: 10_000, // 10s — keep data fresh
+    refetchInterval: 10_000, // Auto-refresh every 10s
     retry: 2,
   });
 }
