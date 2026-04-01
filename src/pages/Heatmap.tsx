@@ -34,9 +34,9 @@ function getHeatColor(pct: number, isDark = true): string {
   return 'hsl(0, 58%, 42%)';
 }
 
-function getTextColor(pct: number, isDark = true): string {
-  if (isDark) return Math.abs(pct) >= 1 ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.7)';
-  return Math.abs(pct) >= 1 ? 'rgba(255,255,255,0.95)' : 'rgba(0,0,0,0.7)';
+function getTextColor(_pct: number, isDark = true): string {
+  if (isDark) return 'rgba(255,255,255,0.95)';
+  return 'rgba(0,0,0,0.9)';
 }
 
 interface TreeNode {
