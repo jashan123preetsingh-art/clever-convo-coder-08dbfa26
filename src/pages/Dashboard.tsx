@@ -1,11 +1,26 @@
 import React, { useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { INDICES, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
 import { useIndices, useFiiDiiData, useMarketBreadth, useBatchQuotes, useMarketMetrics } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
 import MarketBrief from '@/components/MarketBrief';
 import WatchlistWidget from '@/components/WatchlistWidget';
+
+const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+
+async function fetchLiveNews() {
+  const resp = await fetch(`${FUNCTIONS_URL}/market-news`, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+  });
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  return data.news as { title: string; source: string; category: string; published_at: string; url: string }[];
+}
 
 // ── Quick Action ──
 function QuickAction({ icon, title, desc, to }: { icon: string; title: string; desc: string; to: string }) {
