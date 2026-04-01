@@ -21,8 +21,9 @@ export function formatPercent(value: number | null | undefined): string {
 }
 
 export function formatVolume(value: number | null | undefined): string {
-  if (!value) return '---';
+  if (value == null || isNaN(Number(value))) return '---';
   const num = Number(value);
+  if (num === 0) return '0';
   if (num >= 1e7) return `${(num / 1e7).toFixed(2)} Cr`;
   if (num >= 1e5) return `${(num / 1e5).toFixed(2)} L`;
   if (num >= 1e3) return `${(num / 1e3).toFixed(1)}K`;

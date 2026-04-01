@@ -1,0 +1,1 @@
+DELETE FROM ai_analysis_cache WHERE expires_at < now() OR result::text LIKE '%undefined%' OR result::text LIKE '%N/A (requires%' OR result::text LIKE '%-100%change%';

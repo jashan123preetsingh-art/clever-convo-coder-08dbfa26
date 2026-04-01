@@ -281,11 +281,11 @@ function VerdictCard({ agents, stockData, symbol, hasChartAnalysis, mode }: { ag
 
         {/* Price + metrics row */}
         <div className="flex items-center gap-3 sm:gap-6 mb-2 flex-wrap">
-          {stockData && (
+          {stockData && stockData.price != null && stockData.price > 0 && (
             <div className="flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-bold text-foreground font-data">₹{stockData.price?.toFixed(2)}</span>
-              <span className={`text-xs sm:text-sm font-semibold font-data ${stockData.changePct >= 0 ? 't-value-up' : 't-value-down'}`}>
-                {stockData.changePct >= 0 ? '+' : ''}{stockData.changePct?.toFixed(2)}%
+              <span className="text-xl sm:text-2xl font-bold text-foreground font-data">₹{Number(stockData.price).toFixed(2)}</span>
+              <span className={`text-xs sm:text-sm font-semibold font-data ${(stockData.changePct ?? 0) >= 0 ? 't-value-up' : 't-value-down'}`}>
+                {(stockData.changePct ?? 0) >= 0 ? '+' : ''}{Number(stockData.changePct ?? 0).toFixed(2)}%
               </span>
             </div>
           )}
