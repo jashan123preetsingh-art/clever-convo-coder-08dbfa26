@@ -243,8 +243,8 @@ export default function Heatmap() {
           {isLoading && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
           <div className="flex items-center gap-0.5">
             {[{ l: '-3%', c: -3 }, { l: '-2%', c: -2 }, { l: '-1%', c: -1 }, { l: '0%', c: 0 }, { l: '+1%', c: 1 }, { l: '+2%', c: 2 }, { l: '+3%', c: 3 }].map((item, i) => (
-              <div key={i} className="w-9 h-4 rounded-sm text-[7px] flex items-center justify-center font-mono"
-                style={{ backgroundColor: getHeatColor(item.c), color: getTextColor(item.c) }}>
+              <div key={i} className="w-9 h-4 rounded-sm text-[8px] flex items-center justify-center font-mono"
+                style={{ backgroundColor: getHeatColor(item.c, isDark), color: getTextColor(item.c, isDark) }}>
                 {item.l}
               </div>
             ))}
