@@ -81,6 +81,26 @@ export function useIndices() {
   });
 }
 
+export function useMarketMetrics() {
+  return useQuery({
+    queryKey: ["market-metrics"],
+    queryFn: () => stockApi.getMarketMetrics(),
+    staleTime: 60_000, // 1 min
+    refetchInterval: 60_000,
+    retry: 2,
+  });
+}
+
+export function useBatchEMA(symbols: string[]) {
+  return useQuery({
+    queryKey: ["batch-ema", symbols.join(",")],
+    queryFn: () => stockApi.getBatchEMA(symbols),
+    enabled: symbols.length > 0,
+    staleTime: 300_000, // 5 min
+    retry: 1,
+  });
+}
+
 export function useOptionsChain(symbol: string) {
   return useQuery({
     queryKey: ["options-chain", symbol],
