@@ -312,7 +312,7 @@ export default function Heatmap() {
                           )}
                           {!isLarge && !isMedium && isSmall && (
                             <text x={x + w / 2} y={y + h / 2 + 3} textAnchor="middle"
-                              fill={getTextColor(node.change_pct)} fontSize="7" fontWeight="600" fontFamily="Inter, sans-serif">
+                              fill={getTextColor(node.change_pct, isDark)} fontSize="8" fontWeight="600" fontFamily="Inter, sans-serif">
                               {node.symbol.slice(0, 5)}
                             </text>
                           )}
