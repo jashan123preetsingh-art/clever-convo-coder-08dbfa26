@@ -17,6 +17,37 @@ const corsHeaders = {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+// ── In-Memory Cache (10 min TTL) ────────────────────────────
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const cache = new Map<string, { data: any; timestamp: number }>();
+
+function getCacheKey(symbol: string, mode: string, optionsConfig?: any): string {
+  const base = `${symbol.toUpperCase()}:${mode}`;
+  if (mode === "options" && optionsConfig) {
+    return `${base}:${optionsConfig.tradeType || ""}:${optionsConfig.rrFilter || ""}`;
+  }
+  return base;
+}
+
+function getFromCache(key: string): any | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(key: string, data: any) {
+  // Limit cache size to prevent memory issues
+  if (cache.size > 100) {
+    const oldest = [...cache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
+    if (oldest) cache.delete(oldest[0]);
+  }
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
 // ── Mode-Optimized Model Selection ──────────────────────────
 // SCALP: Speed + technical precision. Flash models for low latency, GPT-5.2 for price action.
 // SWING: Balanced mix. Pro models for debate depth, GPT-5 for final decisions.
