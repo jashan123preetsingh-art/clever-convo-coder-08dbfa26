@@ -66,7 +66,7 @@ export function useStockSearch(query: string) {
   return useQuery({
     queryKey: ["stock-search", query],
     queryFn: () => stockApi.search(query),
-    enabled: query.length >= 2,
+    enabled: query.length >= 1,
     staleTime: 120_000,
   });
 }
