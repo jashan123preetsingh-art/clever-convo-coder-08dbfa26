@@ -72,21 +72,6 @@ const MODE_CONFIG: Record<TradeMode, {
       { key: 'architect', label: 'Portfolio Architect', icon: '👑', agents: ['portfolioArchitect'], statusText: 'Buffett making final call...' },
     ],
   },
-  options: {
-    label: 'Options & F&O',
-    subtitle: 'OI analysis, Greeks, IV, strategies with risk-reward',
-    icon: <Target className="w-5 h-5" />,
-    color: 'text-[hsl(var(--terminal-purple))]',
-    borderColor: 'border-[hsl(var(--terminal-purple))]/30',
-    bgColor: 'bg-[hsl(var(--terminal-purple))]/10',
-    steps: [
-      { key: 'oi-greeks', label: 'OI & Greeks Analysis', icon: '📊', agents: ['oiAnalysis', 'greeksIV'], statusText: 'Deep OI & IV scanning...' },
-      { key: 'technical', label: 'Strike Selection', icon: '🎯', agents: ['technical'], statusText: 'Identifying key levels...' },
-      { key: 'strategy', label: 'Strategy Builder', icon: '🏗️', agents: ['strategy'], statusText: 'Constructing strategies...' },
-      { key: 'risk', label: 'Risk Assessment', icon: '🛡️', agents: ['riskAssessment'], statusText: 'Evaluating risk-reward...' },
-      { key: 'trader', label: 'Options Trader', icon: '💎', agents: ['optionsTrader'], statusText: 'Final trade decision...' },
-    ],
-  },
 };
 
 const AGENT_META: Record<string, { label: string; icon: string }> = {
