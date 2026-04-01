@@ -4,6 +4,7 @@ import { getAllStocks, Stock } from '@/data/mockData';
 import { stockApi } from '@/lib/api';
 import { formatPercent } from '@/utils/format';
 import { useBatchQuotes } from '@/hooks/useStockData';
+import { useTheme } from '@/hooks/useTheme';
 
 function getHeatColor(pct: number, isDark = true): string {
   if (isDark) {
