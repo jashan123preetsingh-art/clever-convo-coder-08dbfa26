@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { INDICES, getTopGainers, getTopLosers, getMostActive, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
+import { INDICES, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
 import { useIndices, useFiiDiiData, useMarketBreadth } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
 import MarketBrief from '@/components/MarketBrief';
