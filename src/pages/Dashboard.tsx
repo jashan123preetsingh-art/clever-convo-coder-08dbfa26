@@ -316,8 +316,8 @@ export default function Dashboard() {
           { label: 'NIFTY', ltp: niftyLtp, metrics: niftyMM },
           { label: 'BANKNIFTY', ltp: bnfLtp, metrics: bnfMM },
         ].map((item, i) => {
-          const move = item.metrics?.expectedMove || Math.round(item.ltp * 0.014);
-          const straddle = item.metrics?.atmStraddle || Math.round(move * 0.85);
+          const move = item.metrics?.expectedMove;
+          const straddle = item.metrics?.atmStraddle;
           const iv = item.metrics?.atmIV;
           return (
             <motion.div key={item.label} variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.15 + i * 0.05 }}
