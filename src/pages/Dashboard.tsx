@@ -224,7 +224,10 @@ export default function Dashboard() {
     const sourceStocks = liveStocks.length > 0 ? liveStocks : fallbackStocks;
     const sortedByGains = [...sourceStocks].sort((a: any, b: any) => (b.change_pct ?? 0) - (a.change_pct ?? 0));
     const sortedByLosses = [...sourceStocks].sort((a: any, b: any) => (a.change_pct ?? 0) - (b.change_pct ?? 0));
-    const sortedByVolume = [...sourceStocks].sort((a: any, b: any) => (b.volume ?? 0) - (a.volume ?? 0));
+    // Filter out indices/ETFs from Most Active — only individual stocks
+    const INDEX_SYMBOLS = new Set(['NIFTY 500', 'NIFTY 50', 'NIFTY BANK', 'NIFTY IT', 'NIFTY NEXT 50', 'NIFTY MIDCAP', 'NIFTY FIN SERVICE', 'INDIA VIX', 'SENSEX', 'BANKNIFTY', 'FINNIFTY']);
+    const stocksOnly = sourceStocks.filter((s: any) => !INDEX_SYMBOLS.has(s.symbol) && !INDEX_SYMBOLS.has(s.name));
+    const sortedByVolume = [...stocksOnly].sort((a: any, b: any) => (b.volume ?? 0) - (a.volume ?? 0));
     return {
       baseGainers: sortedByGains.slice(0, 10),
       baseLosers: sortedByLosses.slice(0, 10),
