@@ -46,7 +46,7 @@ export default function AiAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [liveData, setLiveData] = useState<LiveContext>({ indices: [], fiiDii: [], stockData: null });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
