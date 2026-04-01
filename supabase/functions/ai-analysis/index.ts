@@ -15,9 +15,38 @@ serve(async (req) => {
 
     const { quote, fundamentals, technicals } = stockData;
 
-    const systemPrompt = `You are an expert Indian stock market analyst. Analyze the given stock data and provide a comprehensive analysis. Return ONLY valid JSON matching the exact schema specified.`;
+    const systemPrompt = `You are an expert Indian stock market analyst specializing in Price Action, Supply/Demand, and Institutional-grade technical analysis. Your framework (in order of priority):
 
-    const userPrompt = `Analyze this stock and return JSON:
+1. **PRICE ACTION & SUPPLY/DEMAND** (highest priority)
+   - Trend structure: HH/HL or LH/LL, BOS (Break of Structure), CHoCH (Change of Character)
+   - Supply zones (institutional selling) & Demand zones (institutional buying) with exact ₹ levels
+   - Order blocks, breaker blocks, Fair Value Gaps (FVGs)
+   - Liquidity sweeps, stop hunts, springs/upthrusts
+
+2. **MULTI-TIMEFRAME SUPPORT & RESISTANCE**
+   - Daily pivot levels (S1/S2/S3, R1/R2/R3)
+   - Key horizontal S/R from price history
+   - Round number psychology levels
+   - Previous day high/low/close (PDH/PDL/PDC)
+
+3. **MOVING AVERAGES (EMA)**
+   - EMA 9/20/50/200 stack alignment
+   - Price position relative to key EMAs
+   - Golden/Death cross signals
+   - Dynamic support/resistance from EMAs
+
+4. **VOLUME & VWAP**
+   - Volume-price relationship (confirmation/divergence)
+   - VWAP position and deviation bands
+   - Volume ratio vs 20-day average
+   - Climactic volume, no-demand/no-supply bars
+   - Bollinger Band position and squeeze
+
+5. **CANDLE PATTERNS** (only at key S/R or S/D zones)
+
+Return ONLY valid JSON. Do NOT include fundamentals in the scoring.`;
+
+    const userPrompt = `Analyze this stock using Price Action + S/D + S/R + EMA + Volume framework:
 
 STOCK: ${quote?.symbol} (${quote?.name})
 PRICE: ₹${quote?.ltp} | Change: ${quote?.change_pct?.toFixed(2)}%
@@ -25,66 +54,57 @@ PRICE: ₹${quote?.ltp} | Change: ${quote?.change_pct?.toFixed(2)}%
 
 TECHNICALS:
 - RSI(14): ${technicals?.rsi_14}
-- MACD: ${technicals?.macd}
-- SMA20: ${technicals?.sma_20} | SMA50: ${technicals?.sma_50} | SMA200: ${technicals?.sma_200}
-- EMA20: ${technicals?.ema_20} | EMA50: ${technicals?.ema_50}
+- EMA 9: ${technicals?.ema_9} | EMA 20: ${technicals?.ema_20} | EMA 50: ${technicals?.ema_50} | EMA 200: ${technicals?.ema_200}
+- SMA 20: ${technicals?.sma_20} | SMA 50: ${technicals?.sma_50} | SMA 200: ${technicals?.sma_200}
 - Trend: ${technicals?.trend} | Strength: ${technicals?.trend_strength}
 - Support: S1=${technicals?.s1} S2=${technicals?.s2} S3=${technicals?.s3}
 - Resistance: R1=${technicals?.r1} R2=${technicals?.r2} R3=${technicals?.r3}
+- Pivot: ${technicals?.pivot}
 - Bollinger: ${technicals?.bollinger_lower} / ${technicals?.bollinger_middle} / ${technicals?.bollinger_upper}
-- Volume Ratio: ${technicals?.volume_ratio}x avg
+- Volume Ratio: ${technicals?.volume_ratio}x avg | Avg Vol 20D: ${technicals?.avg_volume_20}
 - Candle Patterns: ${technicals?.candle_patterns?.join(", ") || "None"}
 - ATR(14): ${technicals?.atr_14}
-
-FUNDAMENTALS:
-- P/E: ${fundamentals?.pe_ratio} | Forward PE: ${fundamentals?.forward_pe}
-- P/B: ${fundamentals?.pb_ratio} | PEG: ${fundamentals?.peg_ratio}
-- ROE: ${fundamentals?.roe}% | ROA: ${fundamentals?.roa}%
-- Debt/Equity: ${fundamentals?.debt_to_equity}
-- Profit Margin: ${fundamentals?.profit_margins}% | Operating Margin: ${fundamentals?.operating_margins}%
-- Revenue Growth: ${fundamentals?.revenue_growth}% | Earnings Growth: ${fundamentals?.earnings_growth}%
-- Dividend Yield: ${fundamentals?.dividend_yield}%
-- Beta: ${fundamentals?.beta}
-- Analyst Target: ₹${fundamentals?.target_mean_price} (${fundamentals?.recommendation})
 
 Return this exact JSON structure:
 {
   "overall_score": <number 0-100>,
   "grade": "<A+/A/B+/B/C+/C/D/F>",
   "verdict": "<Strong Buy/Buy/Hold/Sell/Strong Sell>",
-  "summary": "<2-3 sentence analysis summary>",
+  "summary": "<2-3 sentence analysis focusing on price action, S/D zones, and key levels>",
   "key_levels": {
     "immediate_support": <number>,
     "immediate_resistance": <number>,
     "stop_loss": <number>,
     "target_1": <number>,
-    "target_2": <number>
+    "target_2": <number>,
+    "demand_zone_low": <number>,
+    "demand_zone_high": <number>,
+    "supply_zone_low": <number>,
+    "supply_zone_high": <number>
   },
   "scores": {
-    "price_action": { "score": <0-20>, "comment": "<brief>" },
-    "volume": { "score": <0-20>, "comment": "<brief>" },
-    "candle": { "score": <0-20>, "comment": "<brief>" },
-    "structure": { "score": <0-20>, "comment": "<brief>" },
-    "momentum": { "score": <0-20>, "comment": "<brief>" },
-    "fundamentals": { "score": <0-20>, "comment": "<brief>" },
-    "relative_strength": { "score": <0-20>, "comment": "<brief>" }
+    "price_action": { "score": <0-20>, "comment": "<trend structure, BOS/CHoCH, S/D zones>" },
+    "support_resistance": { "score": <0-20>, "comment": "<multi-TF S/R, pivot levels, key horizontals>" },
+    "ema_alignment": { "score": <0-20>, "comment": "<EMA stack, golden/death cross, dynamic S/R>" },
+    "volume_vwap": { "score": <0-20>, "comment": "<volume confirmation, VWAP, Bollinger>" },
+    "candle_pattern": { "score": <0-20>, "comment": "<patterns AT key levels only>" }
   },
   "risk_assessment": {
     "risk_level": "<Low/Medium/High/Very High>",
     "risk_factors": ["<factor1>", "<factor2>"],
-    "invalidation": "<price level and condition>"
+    "invalidation": "<price level that kills setup>"
   },
-  "candle_analysis": {
-    "pattern": "<detected pattern or None>",
-    "bias": "<Bullish/Bearish/Neutral>",
-    "description": "<brief description>"
+  "supply_demand": {
+    "nearest_demand": "<₹X - ₹Y zone description>",
+    "nearest_supply": "<₹X - ₹Y zone description>",
+    "bias": "<Bullish/Bearish/Neutral based on S/D>"
   },
-  "ma_analysis": {
-    "alignment": "<Bullish/Bearish/Mixed>",
-    "description": "<brief about MA stack>"
+  "ema_analysis": {
+    "alignment": "<Bullish Stack/Bearish Stack/Mixed>",
+    "description": "<EMA 9>20>50>200 etc>"
   },
-  "sector_context": "<brief sector outlook>",
-  "freshness": "<Fresh/Aging/Stale - based on pattern recency>"
+  "sector_context": "<brief>",
+  "freshness": "<Fresh/Aging/Stale>"
 }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -103,7 +123,7 @@ Return this exact JSON structure:
           type: "function",
           function: {
             name: "stock_analysis",
-            description: "Return structured stock analysis",
+            description: "Return structured stock analysis using PA/SD/SR/EMA/Volume framework",
             parameters: {
               type: "object",
               properties: {
@@ -119,6 +139,10 @@ Return this exact JSON structure:
                     stop_loss: { type: "number" },
                     target_1: { type: "number" },
                     target_2: { type: "number" },
+                    demand_zone_low: { type: "number" },
+                    demand_zone_high: { type: "number" },
+                    supply_zone_low: { type: "number" },
+                    supply_zone_high: { type: "number" },
                   },
                   required: ["immediate_support", "immediate_resistance", "stop_loss", "target_1", "target_2"],
                 },
@@ -126,14 +150,12 @@ Return this exact JSON structure:
                   type: "object",
                   properties: {
                     price_action: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
-                    volume: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
-                    candle: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
-                    structure: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
-                    momentum: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
-                    fundamentals: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
-                    relative_strength: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
+                    support_resistance: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
+                    ema_alignment: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
+                    volume_vwap: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
+                    candle_pattern: { type: "object", properties: { score: { type: "number" }, comment: { type: "string" } }, required: ["score", "comment"] },
                   },
-                  required: ["price_action", "volume", "candle", "structure", "momentum", "fundamentals", "relative_strength"],
+                  required: ["price_action", "support_resistance", "ema_alignment", "volume_vwap", "candle_pattern"],
                 },
                 risk_assessment: {
                   type: "object",
@@ -144,16 +166,16 @@ Return this exact JSON structure:
                   },
                   required: ["risk_level", "risk_factors", "invalidation"],
                 },
-                candle_analysis: {
+                supply_demand: {
                   type: "object",
                   properties: {
-                    pattern: { type: "string" },
+                    nearest_demand: { type: "string" },
+                    nearest_supply: { type: "string" },
                     bias: { type: "string" },
-                    description: { type: "string" },
                   },
-                  required: ["pattern", "bias", "description"],
+                  required: ["nearest_demand", "nearest_supply", "bias"],
                 },
-                ma_analysis: {
+                ema_analysis: {
                   type: "object",
                   properties: {
                     alignment: { type: "string" },
@@ -164,7 +186,7 @@ Return this exact JSON structure:
                 sector_context: { type: "string" },
                 freshness: { type: "string" },
               },
-              required: ["overall_score", "grade", "verdict", "summary", "key_levels", "scores", "risk_assessment", "candle_analysis", "ma_analysis", "sector_context", "freshness"],
+              required: ["overall_score", "grade", "verdict", "summary", "key_levels", "scores", "risk_assessment", "supply_demand", "ema_analysis", "sector_context", "freshness"],
             },
           },
         }],
