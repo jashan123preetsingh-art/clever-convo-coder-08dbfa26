@@ -511,6 +511,102 @@ function ModeSelector({ mode, setMode, disabled }: { mode: TradeMode; setMode: (
   );
 }
 
+/* ── Symbol Input with Autocomplete ─────────────────────────── */
+function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
+  symbol: string; setSymbol: (s: string) => void; onSubmit: () => void; disabled: boolean; placeholder: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const [query, setQuery] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Get local stock list for instant matching
+  const localStocks = useMemo(() => getAllStocks(), []);
+
+  // Local filter (instant, no API call)
+  const localResults = useMemo(() => {
+    if (!query || query.length < 1) return [];
+    const q = query.toUpperCase();
+    return localStocks
+      .filter(s => s.symbol.includes(q) || s.name.toUpperCase().includes(q))
+      .slice(0, 8)
+      .map(s => ({ symbol: s.symbol, name: s.name }));
+  }, [query, localStocks]);
+
+  const showDropdown = focused && query.length >= 1 && localResults.length > 0;
+
+  const selectSymbol = (sym: string) => {
+    setSymbol(sym);
+    setQuery('');
+    setFocused(false);
+    inputRef.current?.blur();
+  };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <label className="block text-[9px] sm:text-[10px] text-muted-foreground font-semibold mb-1 sm:mb-1.5 uppercase tracking-wider">Symbol</label>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
+        <input
+          ref={inputRef}
+          type="text"
+          value={symbol}
+          onChange={(e) => {
+            const v = e.target.value.toUpperCase();
+            setSymbol(v);
+            setQuery(v);
+          }}
+          onFocus={() => { setFocused(true); setQuery(symbol); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { setFocused(false); onSubmit(); }
+            if (e.key === 'Escape') setFocused(false);
+          }}
+          placeholder={placeholder}
+          className="w-full bg-secondary/40 border border-border/30 rounded-xl pl-9 pr-3 py-2 sm:py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 font-data transition-colors"
+          disabled={disabled}
+          autoComplete="off"
+        />
+      </div>
+      <AnimatePresence>
+        {showDropdown && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 top-full mt-1 w-full bg-card border border-border/40 rounded-xl shadow-xl overflow-hidden max-h-[280px] overflow-y-auto"
+          >
+            {localResults.map((item, i) => (
+              <button
+                key={item.symbol}
+                onClick={() => selectSymbol(item.symbol)}
+                className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-primary/5 transition-colors text-left border-b border-border/10 last:border-0"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[11px] font-bold text-foreground font-data">{item.symbol}</span>
+                  <span className="text-[9px] text-muted-foreground truncate max-w-[180px]">{item.name}</span>
+                </div>
+                <span className="text-[8px] text-muted-foreground/50">NSE</span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+
+
 function EmptyState({ onSelectSymbol }: { onSelectSymbol: (s: string) => void }) {
   return (
     <div className="rounded-2xl bg-card/40 border border-border/15 p-6 md:p-10 text-center">
