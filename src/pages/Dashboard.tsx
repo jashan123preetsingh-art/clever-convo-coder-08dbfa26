@@ -175,9 +175,15 @@ export default function Dashboard() {
   const active = useMemo(() => hydrate(baseActive), [baseActive, liveQuoteMap]);
 
   const niftyLtp = indices.find((i: any) => i.symbol === 'NIFTY 50')?.ltp || 22800;
-  const expectedMove = Math.round(niftyLtp * 0.014);
   const bnfLtp = indices.find((i: any) => i.symbol === 'BANKNIFTY')?.ltp || 52200;
-  const bnfExpectedMove = Math.round(bnfLtp * 0.019);
+
+  // Real metrics from market-metrics endpoint
+  const mm = marketMetrics;
+  const vix = mm?.vix;
+  const niftyMM = mm?.nifty;
+  const bnfMM = mm?.banknifty;
+  const daysToExpiry = mm?.daysToExpiry ?? '—';
+  const fnoTurnover = mm?.fnoTurnover;
 
   const greeting = new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening';
 
