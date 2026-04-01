@@ -1,7 +1,7 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, memo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Menu, X, Sun, Moon, Settings, LogOut } from 'lucide-react';
+import { useStockSearch } from '@/hooks/useStockData';
 import { useStockSearch } from '@/hooks/useStockData';
 import type { IndexData, SearchResult } from '@/types/stock';
 
