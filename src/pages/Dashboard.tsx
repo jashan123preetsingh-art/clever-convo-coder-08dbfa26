@@ -365,10 +365,6 @@ export default function Dashboard() {
             sub={fiiDiiParsed?.date || undefined}
             color={fiiDiiParsed ? (fiiDiiParsed.diiNet >= 0 ? 'text-primary' : 'text-destructive') : undefined}
             status={fiiDiiParsed ? 'live' : 'loading'} />
-          <MetricWidget icon="💹" label="F&O Turnover"
-            value={fnoTurnover != null && fnoTurnover > 0 ? `₹${fnoTurnover > 1000 ? (fnoTurnover / 1000).toFixed(1) + 'K' : fnoTurnover.toFixed(0)} Cr` : '—'}
-            sub={daysToExpiry !== '—' ? `${daysToExpiry}D to expiry` : undefined}
-            status={getMetricStatus(fnoTurnover != null && fnoTurnover > 0)} />
         </div>
       </div>
 
