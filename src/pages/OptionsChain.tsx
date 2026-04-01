@@ -580,7 +580,7 @@ export default function OptionsChain() {
                                 className="bg-transparent border border-border rounded px-2 py-1 text-[10px] text-foreground w-14 text-right focus:outline-none focus:border-primary/50" />
                             </td>
                             <td className={`p-1.5 text-right font-semibold ${leg.action === 'BUY' ? 'text-destructive' : 'text-primary'}`}>
-                              {leg.action === 'BUY' ? '-' : '+'}₹{(leg.premium * leg.lots).toFixed(2)}
+                              {leg.action === 'BUY' ? '-' : '+'}₹{(leg.premium * leg.lots * lotSize).toFixed(0)}
                             </td>
                             <td className="p-1.5">
                               <button onClick={() => removeCustomLeg(leg.id)} className="text-destructive/60 hover:text-destructive text-sm transition-colors">✕</button>
