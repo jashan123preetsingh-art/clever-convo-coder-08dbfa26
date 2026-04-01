@@ -127,9 +127,9 @@ export default function Dashboard() {
       </motion.div>
 
       {/* ═══ Index Ticker ═══ */}
-      <div className="flex items-center gap-2.5 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2.5 overflow-x-auto pb-1 will-change-scroll">
         {indices.map((idx: any, i: number) => (
-          <motion.div key={i} variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: i * 0.04 }}
+          <div key={i}
             className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-card/40 border border-border/15 whitespace-nowrap min-w-fit hover:border-border/30 transition-all">
             <span className="text-[10px] text-muted-foreground/50 font-bold">{idx.symbol}</span>
             <span className="text-[12px] text-foreground font-black font-data">
@@ -143,7 +143,7 @@ export default function Dashboard() {
                 <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" /> LIVE
               </span>
             )}
-          </motion.div>
+          </div>
         ))}
       </div>
 
