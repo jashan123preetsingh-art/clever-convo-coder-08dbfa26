@@ -288,9 +288,8 @@ export default function Heatmap() {
                   )}
 
                   {stockLayout.map(({ node, x, y, w, h }) => {
-                    const isLarge = w > 70 && h > 45;
-                    const isMedium = w > 45 && h > 30;
-                    const isSmall = w > 25 && h > 20;
+                    const isLarge = w > 60 && h > 40;
+                    const isMedium = w > 40 && h > 28;
 
                     return (
                       <g key={node.symbol}>
@@ -306,28 +305,28 @@ export default function Heatmap() {
                           {isLarge && (
                             <>
                               <text x={x + w / 2} y={y + h / 2 - 6} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="12" fontWeight="700" fontFamily="Inter, sans-serif">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="13" fontWeight="700" fontFamily="Inter, sans-serif">
                                 {node.symbol}
                               </text>
                               <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="12" fontWeight="600" fontFamily="JetBrains Mono, monospace">
                                 {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(2)}%
                               </text>
                             </>
                           )}
                           {!isLarge && isMedium && (
                             <>
-                              <text x={x + w / 2} y={y + h / 2 - 3} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="9" fontWeight="700" fontFamily="Inter, sans-serif">
-                                {node.symbol.slice(0, 7)}
+                              <text x={x + w / 2} y={y + h / 2 - 2} textAnchor="middle"
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="10" fontWeight="700" fontFamily="Inter, sans-serif">
+                                {node.symbol.slice(0, 8)}
                               </text>
-                              <text x={x + w / 2} y={y + h / 2 + 9} textAnchor="middle"
-                                fill={getTextColor(node.change_pct, isDark)} fontSize="8" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                              <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
+                                fill={getTextColor(node.change_pct, isDark)} fontSize="9" fontWeight="600" fontFamily="JetBrains Mono, monospace">
                                 {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(1)}%
                               </text>
                             </>
                           )}
-                          {!isLarge && !isMedium && isSmall && (
+                          {!isLarge && !isMedium && w > 20 && h > 16 && (
                             <text x={x + w / 2} y={y + h / 2 + 3} textAnchor="middle"
                               fill={getTextColor(node.change_pct, isDark)} fontSize="8" fontWeight="600" fontFamily="Inter, sans-serif">
                               {node.symbol.slice(0, 5)}
