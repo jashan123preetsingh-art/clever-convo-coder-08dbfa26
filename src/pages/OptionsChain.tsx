@@ -1,9 +1,14 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { generateOptionsChain, getStock } from '@/data/mockData';
+import { useOptionsChain } from '@/hooks/useStockData';
 import { formatCurrency, formatVolume, formatNumber } from '@/utils/format';
+import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
+import { Loader2, Sparkles, Target, Search } from 'lucide-react';
 
 const FNO = ['NIFTY', 'BANKNIFTY', 'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BAJFINANCE', 'TATAMOTORS', 'ITC', 'LT'];
+
+const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 interface StrategyLeg {
   id: string;
@@ -67,8 +72,7 @@ export default function OptionsChain() {
   const { symbol: paramSymbol } = useParams();
   const [symbol, setSymbol] = useState(paramSymbol || 'NIFTY');
   const [strikeRange, setStrikeRange] = useState(15);
-  const [selectedExpiry, setSelectedExpiry] = useState<string | null>(null);
-  const [activeView, setActiveView] = useState<'chain' | 'strategy' | 'custom'>('chain');
+  const [activeView, setActiveView] = useState<'chain' | 'strategy' | 'custom' | 'ai'>('chain');
 
   // Preset strategy
   const [selectedPreset, setSelectedPreset] = useState(0);
@@ -76,37 +80,48 @@ export default function OptionsChain() {
   // Custom strategy builder
   const [customLegs, setCustomLegs] = useState<StrategyLeg[]>([]);
 
-  const data = generateOptionsChain(symbol);
-  const { chain, underlyingValue, expiryDates, analytics } = data;
+  // AI Strategy state
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<string | null>(null);
+  const [riskReward, setRiskReward] = useState('1:2');
+  const [optionsTradeType, setOptionsTradeType] = useState('all');
 
-  if (!selectedExpiry && expiryDates.length) setSelectedExpiry(expiryDates[0]);
+  // ── Live API data ──
+  const { data: apiData, isLoading, isError, dataUpdatedAt } = useOptionsChain(symbol);
 
-  const atmStrike = chain.reduce((closest, item) =>
-    Math.abs(item.strike - underlyingValue) < Math.abs(closest.strike - underlyingValue) ? item : closest, chain[0])?.strike;
+  // Fallback: if API fails, show error
+  const chain = apiData?.chain || [];
+  const underlyingValue = apiData?.underlyingValue || 0;
+  const expiryDates = apiData?.expiryDates || [];
+  const analytics = apiData?.analytics || { totalCallOI: 0, totalPutOI: 0, pcr: 0, maxPain: 0, totalCallVol: 0, totalPutVol: 0 };
+  const isLive = apiData?.live === true;
+  const timestamp = apiData?.timestamp || '';
 
-  const atmIndex = chain.findIndex(c => c.strike === atmStrike);
+  const atmStrike = chain.length > 0 ? chain.reduce((closest: any, item: any) =>
+    Math.abs(item.strike - underlyingValue) < Math.abs(closest.strike - underlyingValue) ? item : closest, chain[0])?.strike : 0;
+
+  const atmIndex = chain.findIndex((c: any) => c.strike === atmStrike);
   const filtered = atmIndex >= 0 ? chain.slice(Math.max(0, atmIndex - strikeRange), Math.min(chain.length, atmIndex + strikeRange + 1)) : chain;
-  const maxOI = Math.max(...filtered.map(c => Math.max(c.ce.oi, c.pe.oi)), 1);
-  const maxCallOI = chain.reduce((max, c) => c.ce.oi > (max.ce?.oi || 0) ? c : max, chain[0]);
-  const maxPutOI = chain.reduce((max, c) => c.pe.oi > (max.pe?.oi || 0) ? c : max, chain[0]);
+  const maxOI = Math.max(...filtered.map((c: any) => Math.max(c.ce.oi, c.pe.oi)), 1);
+  const maxCallOI = chain.length > 0 ? chain.reduce((max: any, c: any) => c.ce.oi > (max.ce?.oi || 0) ? c : max, chain[0]) : null;
+  const maxPutOI = chain.length > 0 ? chain.reduce((max: any, c: any) => c.pe.oi > (max.pe?.oi || 0) ? c : max, chain[0]) : null;
   const strikeDiff = chain.length > 1 ? Math.abs(chain[1].strike - chain[0].strike) : 50;
 
-  // Available strikes for dropdowns
-  const strikes = chain.map(c => c.strike);
+  const strikes = chain.map((c: any) => c.strike);
 
   // ── Preset strategy legs ──
   const presetLegs = useMemo(() => {
+    if (chain.length === 0 || atmIndex < 0) return [];
     const strat = PRESET_STRATEGIES[selectedPreset];
     const legDefs = strat.legs(atmStrike, strikeDiff);
     return legDefs.map((leg, i) => {
       const strike = atmStrike + leg.strikeOffset * strikeDiff;
-      const row = chain.find(c => c.strike === strike) || chain[atmIndex];
+      const row = chain.find((c: any) => c.strike === strike) || chain[atmIndex];
       const premium = leg.type === 'CE' ? row.ce.ltp : row.pe.ltp;
       return { id: `preset-${i}`, type: leg.type, action: leg.action, strike, premium, lots: 1 } as StrategyLeg;
     });
   }, [selectedPreset, atmStrike, chain, atmIndex, strikeDiff]);
 
-  // ── Active legs (preset or custom) ──
   const activeLegs = activeView === 'custom' ? customLegs : presetLegs;
 
   // ── Payoff calculation ──
@@ -133,6 +148,7 @@ export default function OptionsChain() {
 
   // ── Custom leg management ──
   const addCustomLeg = useCallback(() => {
+    if (chain.length === 0) return;
     const row = chain[atmIndex];
     setCustomLegs(prev => [...prev, {
       id: Date.now().toString(),
@@ -148,9 +164,8 @@ export default function OptionsChain() {
     setCustomLegs(prev => prev.map(leg => {
       if (leg.id !== id) return leg;
       const updated = { ...leg, ...updates };
-      // Recalculate premium when strike or type changes
       if (updates.strike !== undefined || updates.type !== undefined) {
-        const row = chain.find(c => c.strike === updated.strike);
+        const row = chain.find((c: any) => c.strike === updated.strike);
         if (row) {
           updated.premium = updated.type === 'CE' ? row.ce.ltp : row.pe.ltp;
         }
@@ -164,16 +179,77 @@ export default function OptionsChain() {
   }, []);
 
   const loadPresetToCustom = useCallback((presetIdx: number) => {
+    if (chain.length === 0) return;
     const strat = PRESET_STRATEGIES[presetIdx];
     const legDefs = strat.legs(atmStrike, strikeDiff);
     const newLegs = legDefs.map((leg, i) => {
       const strike = atmStrike + leg.strikeOffset * strikeDiff;
-      const row = chain.find(c => c.strike === strike) || chain[atmIndex];
+      const row = chain.find((c: any) => c.strike === strike) || chain[atmIndex];
       const premium = leg.type === 'CE' ? row.ce.ltp : row.pe.ltp;
       return { id: `custom-${Date.now()}-${i}`, type: leg.type, action: leg.action, strike, premium, lots: 1 } as StrategyLeg;
     });
     setCustomLegs(newLegs);
   }, [atmStrike, strikeDiff, chain, atmIndex]);
+
+  // ── AI Strategy ──
+  const runAiStrategy = async () => {
+    if (!symbol.trim()) { toast.error('Select a symbol first'); return; }
+    setAiLoading(true);
+    setAiResult(null);
+    try {
+      const resp = await fetch(`${FUNCTIONS_URL}/trading-agent`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          symbol: symbol.toUpperCase().trim(),
+          mode: 'options',
+          optionsConfig: { riskReward, tradeType: optionsTradeType },
+        }),
+      });
+
+      if (!resp.ok) {
+        if (resp.status === 429) {
+          toast.error('AI is busy. Please wait 30 seconds and try again.', { duration: 6000 });
+        } else if (resp.status === 402) {
+          toast.error('AI credits temporarily unavailable.', { duration: 6000 });
+        } else {
+          toast.error('AI analysis failed. Please try again.');
+        }
+        return;
+      }
+
+      const data = await resp.json();
+      // Combine all agent outputs into a single report
+      const agents = data.agents || {};
+      let report = '';
+      const agentOrder = ['oiAnalysis', 'greeksIV', 'technical', 'strategy', 'riskAssessment', 'optionsTrader'];
+      const labels: Record<string, string> = {
+        oiAnalysis: '📊 OI Analysis',
+        greeksIV: '🔬 Greeks & IV',
+        technical: '🎯 Strike Selection',
+        strategy: '🏗️ Strategy Builder',
+        riskAssessment: '🛡️ Risk Assessment',
+        optionsTrader: '💎 Final Trade Decision',
+      };
+      for (const key of agentOrder) {
+        if (agents[key]) {
+          report += `## ${labels[key] || key}\n\n${agents[key]}\n\n---\n\n`;
+        }
+      }
+      setAiResult(report || 'No analysis generated.');
+      toast.success(`AI Options analysis complete for ${symbol}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Something went wrong.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  // Last updated time display
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
 
   return (
     <div className="p-3 max-w-[1800px] mx-auto">
@@ -182,17 +258,17 @@ export default function OptionsChain() {
         <div>
           <h1 className="text-sm font-bold text-foreground tracking-wide">OPTIONS DESK</h1>
           <p className="text-[9px] text-muted-foreground">
-            Chain, OI Analysis & Strategy Builder • Like{' '}
-            <a href="https://www.sensibull.com" target="_blank" rel="noopener noreferrer" className="text-terminal-blue hover:underline">Sensibull</a>{' • '}
-            <a href="https://opstra.definedge.com" target="_blank" rel="noopener noreferrer" className="text-terminal-blue hover:underline">Opstra</a>
+            Chain, OI Analysis & Strategy Builder
+            {isLive && <span className="ml-2 text-primary">● Live</span>}
+            {lastUpdated && <span className="ml-2 text-muted-foreground/60">Updated {lastUpdated}</span>}
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          {(['chain', 'strategy', 'custom'] as const).map(view => (
+          {(['chain', 'strategy', 'custom', 'ai'] as const).map(view => (
             <button key={view} onClick={() => setActiveView(view)}
               className={`px-3 py-1.5 rounded text-[10px] font-semibold border transition-all
                 ${activeView === view ? 'bg-primary/15 text-primary border-primary/30' : 'bg-secondary text-muted-foreground border-border hover:text-foreground'}`}>
-              {view === 'chain' ? '📊 CHAIN' : view === 'strategy' ? '📐 PRESETS' : '🔧 CUSTOM'}
+              {view === 'chain' ? '📊 CHAIN' : view === 'strategy' ? '📐 PRESETS' : view === 'custom' ? '🔧 CUSTOM' : '🤖 AI STRATEGY'}
             </button>
           ))}
           <Link to={`/stock/${symbol}`} className="t-btn text-[9px] ml-1">STOCK →</Link>
@@ -210,237 +286,304 @@ export default function OptionsChain() {
         ))}
       </div>
 
-      {/* ── Analytics strip ── */}
-      <div className="grid grid-cols-4 lg:grid-cols-8 gap-px bg-border rounded overflow-hidden mb-2">
-        {[
-          { label: 'SPOT', value: formatCurrency(underlyingValue), cls: 'text-foreground' },
-          { label: 'MAX PAIN', value: formatNumber(analytics.maxPain), cls: 'text-terminal-amber' },
-          { label: 'PCR', value: analytics.pcr.toFixed(2), cls: analytics.pcr > 1 ? 'text-primary' : 'text-destructive' },
-          { label: 'CALL OI', value: formatVolume(analytics.totalCallOI), cls: 'text-destructive' },
-          { label: 'PUT OI', value: formatVolume(analytics.totalPutOI), cls: 'text-primary' },
-          { label: 'MAX CALL OI', value: formatNumber(maxCallOI?.strike), cls: 'text-destructive' },
-          { label: 'MAX PUT OI', value: formatNumber(maxPutOI?.strike), cls: 'text-primary' },
-          { label: 'SIGNAL', value: analytics.pcr > 1.2 ? 'BULLISH' : analytics.pcr > 0.8 ? 'NEUTRAL' : 'BEARISH',
-            cls: analytics.pcr > 1.2 ? 'text-primary' : analytics.pcr > 0.8 ? 'text-terminal-amber' : 'text-destructive' },
-        ].map((item, i) => (
-          <div key={i} className="bg-card p-2 text-center">
-            <p className="text-[7px] text-muted-foreground uppercase tracking-wider">{item.label}</p>
-            <p className={`text-[11px] font-bold ${item.cls}`}>{item.value}</p>
-          </div>
-        ))}
-      </div>
+      {/* Loading state */}
+      {isLoading && chain.length === 0 && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
+          <span className="text-sm text-muted-foreground">Loading live options data...</span>
+        </div>
+      )}
 
-      {/* ══════════════════ CHAIN VIEW ══════════════════ */}
-      {activeView === 'chain' && (
+      {isError && (
+        <div className="text-center py-10">
+          <p className="text-sm text-destructive mb-2">Failed to load options data</p>
+          <p className="text-[10px] text-muted-foreground">NSE data may be temporarily unavailable. Please try again.</p>
+        </div>
+      )}
+
+      {chain.length > 0 && (
         <>
-          {/* OI bar + strikes control */}
-          <div className="flex items-center justify-between mb-2 px-1">
-            <div className="flex items-center gap-4 text-[9px]">
-              <span className="text-destructive font-medium">Resistance @ {formatNumber(maxCallOI?.strike)}</span>
-              <span className="text-primary font-medium">Support @ {formatNumber(maxPutOI?.strike)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[8px] text-muted-foreground">Strikes:</span>
-              {[10, 15, 25].map(n => (
-                <button key={n} onClick={() => setStrikeRange(n)}
-                  className={`text-[9px] px-2 py-0.5 rounded transition-all ${strikeRange === n ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'}`}>
-                  {n}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Expiry tabs */}
-          <div className="flex gap-1 mb-2 overflow-x-auto pb-1">
-            {expiryDates.map(exp => (
-              <button key={exp} onClick={() => setSelectedExpiry(exp)}
-                className={`px-2.5 py-1 rounded text-[9px] font-semibold whitespace-nowrap border transition-all
-                  ${selectedExpiry === exp ? 'bg-terminal-blue/15 text-terminal-blue border-terminal-blue/25' : 'bg-card text-muted-foreground border-border/50 hover:text-foreground'}`}>
-                {exp}
-              </button>
+          {/* ── Analytics strip ── */}
+          <div className="grid grid-cols-4 lg:grid-cols-8 gap-px bg-border rounded overflow-hidden mb-2">
+            {[
+              { label: 'SPOT', value: formatCurrency(underlyingValue), cls: 'text-foreground' },
+              { label: 'MAX PAIN', value: formatNumber(analytics.maxPain), cls: 'text-[hsl(var(--terminal-amber))]' },
+              { label: 'PCR', value: analytics.pcr.toFixed(2), cls: analytics.pcr > 1 ? 'text-primary' : 'text-destructive' },
+              { label: 'CALL OI', value: formatVolume(analytics.totalCallOI), cls: 'text-destructive' },
+              { label: 'PUT OI', value: formatVolume(analytics.totalPutOI), cls: 'text-primary' },
+              { label: 'MAX CALL OI', value: formatNumber(maxCallOI?.strike), cls: 'text-destructive' },
+              { label: 'MAX PUT OI', value: formatNumber(maxPutOI?.strike), cls: 'text-primary' },
+              { label: 'SIGNAL', value: analytics.pcr > 1.2 ? 'BULLISH' : analytics.pcr > 0.8 ? 'NEUTRAL' : 'BEARISH',
+                cls: analytics.pcr > 1.2 ? 'text-primary' : analytics.pcr > 0.8 ? 'text-[hsl(var(--terminal-amber))]' : 'text-destructive' },
+            ].map((item, i) => (
+              <div key={i} className="bg-card p-2 text-center">
+                <p className="text-[7px] text-muted-foreground uppercase tracking-wider">{item.label}</p>
+                <p className={`text-[11px] font-bold ${item.cls}`}>{item.value}</p>
+              </div>
             ))}
           </div>
 
-          {/* Chain table */}
-          <div className="t-card overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-[10px]">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th colSpan={5} className="text-center bg-destructive/5 text-destructive border-r border-border py-1.5 text-[9px]">CALLS (CE)</th>
-                    <th className="text-center bg-secondary/50 text-foreground border-r border-border py-1.5 text-[9px]">STRIKE</th>
-                    <th colSpan={5} className="text-center bg-primary/5 text-primary py-1.5 text-[9px]">PUTS (PE)</th>
-                  </tr>
-                  <tr className="border-b border-border text-muted-foreground text-[8px]">
-                    <th className="p-1.5 text-right">OI</th><th className="p-1.5 text-right">CHG</th><th className="p-1.5 text-right">IV</th><th className="p-1.5 text-right border-r border-border/50">LTP</th><th className="p-1.5 border-r border-border">BAR</th>
-                    <th className="p-1.5 text-center bg-secondary/30 border-r border-border font-bold">STRIKE</th>
-                    <th className="p-1.5">BAR</th><th className="p-1.5 text-right">LTP</th><th className="p-1.5 text-right">IV</th><th className="p-1.5 text-right">CHG</th><th className="p-1.5 text-right">OI</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((row, i) => {
-                    const isATM = row.strike === atmStrike;
-                    const isITMCall = row.strike < underlyingValue;
-                    const isITMPut = row.strike > underlyingValue;
-                    return (
-                      <tr key={i} className={`border-b border-border/20 transition-colors
-                        ${isATM ? 'bg-terminal-amber/8' : 'hover:bg-secondary/20'}
-                        ${isITMCall ? 'bg-destructive/3' : ''}`}>
-                        <td className="p-1.5 text-right text-muted-foreground">{formatVolume(row.ce.oi)}</td>
-                        <td className={`p-1.5 text-right ${row.ce.chg_oi >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatVolume(row.ce.chg_oi)}</td>
-                        <td className="p-1.5 text-right text-muted-foreground">{row.ce.iv}%</td>
-                        <td className="p-1.5 text-right text-foreground font-medium border-r border-border/50">{row.ce.ltp.toFixed(2)}</td>
-                        <td className="p-1.5 border-r border-border"><OIBar value={row.ce.oi} max={maxOI} color="bg-destructive/70" /></td>
-                        <td className={`p-1.5 text-center font-bold border-r border-border text-[11px]
-                          ${isATM ? 'text-terminal-amber bg-terminal-amber/10' : 'text-foreground bg-secondary/20'}`}>
-                          {formatNumber(row.strike)}
-                        </td>
-                        <td className="p-1.5"><OIBar value={row.pe.oi} max={maxOI} color="bg-primary/70" /></td>
-                        <td className="p-1.5 text-right text-foreground font-medium">{row.pe.ltp.toFixed(2)}</td>
-                        <td className="p-1.5 text-right text-muted-foreground">{row.pe.iv}%</td>
-                        <td className={`p-1.5 text-right ${row.pe.chg_oi >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatVolume(row.pe.chg_oi)}</td>
-                        <td className="p-1.5 text-right text-muted-foreground">{formatVolume(row.pe.oi)}</td>
+          {/* ══════════════════ CHAIN VIEW ══════════════════ */}
+          {activeView === 'chain' && (
+            <>
+              <div className="flex items-center justify-between mb-2 px-1">
+                <div className="flex items-center gap-4 text-[9px]">
+                  <span className="text-destructive font-medium">Resistance @ {formatNumber(maxCallOI?.strike)}</span>
+                  <span className="text-primary font-medium">Support @ {formatNumber(maxPutOI?.strike)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[8px] text-muted-foreground">Strikes:</span>
+                  {[10, 15, 25].map(n => (
+                    <button key={n} onClick={() => setStrikeRange(n)}
+                      className={`text-[9px] px-2 py-0.5 rounded transition-all ${strikeRange === n ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'}`}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="t-card overflow-hidden p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px]">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th colSpan={5} className="text-center bg-destructive/5 text-destructive border-r border-border py-1.5 text-[9px]">CALLS (CE)</th>
+                        <th className="text-center bg-secondary/50 text-foreground border-r border-border py-1.5 text-[9px]">STRIKE</th>
+                        <th colSpan={5} className="text-center bg-primary/5 text-primary py-1.5 text-[9px]">PUTS (PE)</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                      <tr className="border-b border-border text-muted-foreground text-[8px]">
+                        <th className="p-1.5 text-right">OI</th><th className="p-1.5 text-right">CHG</th><th className="p-1.5 text-right">IV</th><th className="p-1.5 text-right border-r border-border/50">LTP</th><th className="p-1.5 border-r border-border">BAR</th>
+                        <th className="p-1.5 text-center bg-secondary/30 border-r border-border font-bold">STRIKE</th>
+                        <th className="p-1.5">BAR</th><th className="p-1.5 text-right">LTP</th><th className="p-1.5 text-right">IV</th><th className="p-1.5 text-right">CHG</th><th className="p-1.5 text-right">OI</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((row: any, i: number) => {
+                        const isATM = row.strike === atmStrike;
+                        const isITMCall = row.strike < underlyingValue;
+                        return (
+                          <tr key={i} className={`border-b border-border/20 transition-colors
+                            ${isATM ? 'bg-[hsl(var(--terminal-amber))]/8' : 'hover:bg-secondary/20'}
+                            ${isITMCall ? 'bg-destructive/3' : ''}`}>
+                            <td className="p-1.5 text-right text-muted-foreground">{formatVolume(row.ce.oi)}</td>
+                            <td className={`p-1.5 text-right ${row.ce.chg_oi >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatVolume(row.ce.chg_oi)}</td>
+                            <td className="p-1.5 text-right text-muted-foreground">{row.ce.iv ? `${row.ce.iv}%` : '—'}</td>
+                            <td className="p-1.5 text-right text-foreground font-medium border-r border-border/50">{row.ce.ltp.toFixed(2)}</td>
+                            <td className="p-1.5 border-r border-border"><OIBar value={row.ce.oi} max={maxOI} color="bg-destructive/70" /></td>
+                            <td className={`p-1.5 text-center font-bold border-r border-border text-[11px]
+                              ${isATM ? 'text-[hsl(var(--terminal-amber))] bg-[hsl(var(--terminal-amber))]/10' : 'text-foreground bg-secondary/20'}`}>
+                              {formatNumber(row.strike)}
+                            </td>
+                            <td className="p-1.5"><OIBar value={row.pe.oi} max={maxOI} color="bg-primary/70" /></td>
+                            <td className="p-1.5 text-right text-foreground font-medium">{row.pe.ltp.toFixed(2)}</td>
+                            <td className="p-1.5 text-right text-muted-foreground">{row.pe.iv ? `${row.pe.iv}%` : '—'}</td>
+                            <td className={`p-1.5 text-right ${row.pe.chg_oi >= 0 ? 'text-primary' : 'text-destructive'}`}>{formatVolume(row.pe.chg_oi)}</td>
+                            <td className="p-1.5 text-right text-muted-foreground">{formatVolume(row.pe.oi)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ══════════════════ PRESET STRATEGY VIEW ══════════════════ */}
+          {activeView === 'strategy' && (
+            <div className="space-y-2">
+              <div className="t-card">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">Select Strategy</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                  {PRESET_STRATEGIES.map((strat, i) => (
+                    <button key={i} onClick={() => setSelectedPreset(i)}
+                      className={`text-left px-3 py-2 rounded border transition-all
+                        ${selectedPreset === i ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-secondary/50 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'}`}>
+                      <p className="text-[10px] font-semibold">{strat.name}</p>
+                      <p className="text-[8px] opacity-70 mt-0.5">{strat.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <StrategyDisplay legs={activeLegs} netPremium={netPremium} maxProfit={maxProfit} maxLoss={maxLoss}
+                breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} />
             </div>
-          </div>
+          )}
+
+          {/* ══════════════════ CUSTOM STRATEGY BUILDER ══════════════════ */}
+          {activeView === 'custom' && (
+            <div className="space-y-2">
+              <div className="t-card">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Custom Strategy Builder</p>
+                  <span className="text-[8px] text-muted-foreground">Build any multi-leg strategy</span>
+                </div>
+
+                <div className="flex gap-1 flex-wrap mb-3">
+                  <span className="text-[8px] text-muted-foreground self-center mr-1">Load preset:</span>
+                  {PRESET_STRATEGIES.map((s, i) => (
+                    <button key={i} onClick={() => loadPresetToCustom(i)}
+                      className="px-2 py-0.5 rounded text-[8px] bg-secondary text-muted-foreground border border-border/50 hover:text-foreground hover:border-border transition-all">
+                      {s.name}
+                    </button>
+                  ))}
+                </div>
+
+                {customLegs.length > 0 ? (
+                  <div className="overflow-x-auto mb-3">
+                    <table className="w-full text-[10px]">
+                      <thead>
+                        <tr className="border-b border-border text-muted-foreground text-[8px]">
+                          <th className="p-1.5 text-left">Action</th>
+                          <th className="p-1.5 text-left">Type</th>
+                          <th className="p-1.5 text-left">Strike</th>
+                          <th className="p-1.5 text-right">Premium</th>
+                          <th className="p-1.5 text-right">Lots</th>
+                          <th className="p-1.5 text-right">Cost/Credit</th>
+                          <th className="p-1.5 w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {customLegs.map(leg => (
+                          <tr key={leg.id} className="border-b border-border/20">
+                            <td className="p-1.5">
+                              <select value={leg.action} onChange={e => updateCustomLeg(leg.id, { action: e.target.value as 'BUY' | 'SELL' })}
+                                className={`bg-transparent border border-border rounded px-2 py-1 text-[10px] font-semibold focus:outline-none focus:border-primary/50 ${leg.action === 'BUY' ? 'text-primary' : 'text-destructive'}`}>
+                                <option value="BUY">BUY</option>
+                                <option value="SELL">SELL</option>
+                              </select>
+                            </td>
+                            <td className="p-1.5">
+                              <select value={leg.type} onChange={e => updateCustomLeg(leg.id, { type: e.target.value as 'CE' | 'PE' })}
+                                className="bg-transparent border border-border rounded px-2 py-1 text-[10px] text-foreground focus:outline-none focus:border-primary/50">
+                                <option value="CE">CE (Call)</option>
+                                <option value="PE">PE (Put)</option>
+                              </select>
+                            </td>
+                            <td className="p-1.5">
+                              <select value={leg.strike} onChange={e => updateCustomLeg(leg.id, { strike: Number(e.target.value) })}
+                                className="bg-transparent border border-border rounded px-2 py-1 text-[10px] text-foreground focus:outline-none focus:border-primary/50 max-h-48">
+                                {strikes.map((s: number) => (
+                                  <option key={s} value={s}>{formatNumber(s)} {s === atmStrike ? '(ATM)' : ''}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="p-1.5 text-right text-foreground">₹{leg.premium.toFixed(2)}</td>
+                            <td className="p-1.5 text-right">
+                              <input type="number" min={1} max={100} value={leg.lots}
+                                onChange={e => updateCustomLeg(leg.id, { lots: Math.max(1, parseInt(e.target.value) || 1) })}
+                                className="bg-transparent border border-border rounded px-2 py-1 text-[10px] text-foreground w-14 text-right focus:outline-none focus:border-primary/50" />
+                            </td>
+                            <td className={`p-1.5 text-right font-semibold ${leg.action === 'BUY' ? 'text-destructive' : 'text-primary'}`}>
+                              {leg.action === 'BUY' ? '-' : '+'}₹{(leg.premium * leg.lots).toFixed(2)}
+                            </td>
+                            <td className="p-1.5">
+                              <button onClick={() => removeCustomLeg(leg.id)} className="text-destructive/60 hover:text-destructive text-sm transition-colors">✕</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-[10px]">
+                    No legs added yet. Click "Add Leg" or load a preset above.
+                  </div>
+                )}
+
+                <button onClick={addCustomLeg}
+                  className="px-4 py-1.5 rounded text-[10px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all">
+                  + Add Leg
+                </button>
+              </div>
+
+              {customLegs.length > 0 && (
+                <StrategyDisplay legs={activeLegs} netPremium={netPremium} maxProfit={maxProfit} maxLoss={maxLoss}
+                  breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} />
+              )}
+            </div>
+          )}
+
+          {/* ══════════════════ AI STRATEGY VIEW ══════════════════ */}
+          {activeView === 'ai' && (
+            <div className="space-y-3">
+              <div className="rounded-xl bg-card/50 border border-[hsl(var(--terminal-purple))]/20 p-4">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="p-2 rounded-xl bg-[hsl(var(--terminal-purple))]/10">
+                    <Sparkles className="w-5 h-5 text-[hsl(var(--terminal-purple))]" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-bold text-foreground mb-1">AI Options Strategy</h3>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      AI analyzes OI patterns, Greeks, IV surface, and constructs optimal strategies with risk-reward filtering for <span className="text-foreground font-semibold">{symbol}</span>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                  <div>
+                    <label className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mb-1.5 block">Min Risk:Reward</label>
+                    <div className="flex gap-1.5">
+                      {['1:1.5', '1:2', '1:3', '1:4'].map(rr => (
+                        <button key={rr} onClick={() => setRiskReward(rr)}
+                          className={`px-2.5 py-1.5 text-[9px] font-bold rounded-lg border transition-all ${riskReward === rr ? 'bg-[hsl(var(--terminal-purple))]/15 border-[hsl(var(--terminal-purple))]/40 text-[hsl(var(--terminal-purple))]' : 'bg-secondary/30 border-border/20 text-muted-foreground hover:text-foreground'}`}>
+                          {rr}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider mb-1.5 block">Trade Type</label>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {[{ k: 'all', l: 'All' }, { k: 'intraday', l: 'Intraday' }, { k: 'swing', l: 'Swing' }, { k: 'expiry', l: 'Till Expiry' }].map(t => (
+                        <button key={t.k} onClick={() => setOptionsTradeType(t.k)}
+                          className={`px-2.5 py-1.5 text-[9px] font-bold rounded-lg border transition-all ${optionsTradeType === t.k ? 'bg-[hsl(var(--terminal-purple))]/15 border-[hsl(var(--terminal-purple))]/40 text-[hsl(var(--terminal-purple))]' : 'bg-secondary/30 border-border/20 text-muted-foreground hover:text-foreground'}`}>
+                          {t.l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={runAiStrategy}
+                  disabled={aiLoading}
+                  className="w-full px-4 py-2.5 bg-gradient-to-r from-[hsl(var(--terminal-purple))] to-primary text-primary-foreground rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {aiLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      AI Analyzing {symbol}...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Generate AI Strategy for {symbol}
+                    </>
+                  )}
+                </button>
+
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <span className="text-[8px] px-2 py-1 rounded-lg bg-[hsl(var(--terminal-purple))]/10 text-[hsl(var(--terminal-purple))] border border-[hsl(var(--terminal-purple))]/20 font-semibold">📊 OI Analysis</span>
+                  <span className="text-[8px] px-2 py-1 rounded-lg bg-[hsl(var(--terminal-purple))]/10 text-[hsl(var(--terminal-purple))] border border-[hsl(var(--terminal-purple))]/20 font-semibold">🔬 Greeks & IV</span>
+                  <span className="text-[8px] px-2 py-1 rounded-lg bg-[hsl(var(--terminal-purple))]/10 text-[hsl(var(--terminal-purple))] border border-[hsl(var(--terminal-purple))]/20 font-semibold">🏗️ Strategy Builder</span>
+                  <span className="text-[8px] px-2 py-1 rounded-lg bg-[hsl(var(--terminal-purple))]/10 text-[hsl(var(--terminal-purple))] border border-[hsl(var(--terminal-purple))]/20 font-semibold">🛡️ Risk-Reward</span>
+                </div>
+              </div>
+
+              {/* AI Result */}
+              {aiResult && (
+                <div className="rounded-xl bg-card/50 border border-border/20 p-4">
+                  <div className="prose prose-sm prose-invert max-w-none [&_p]:text-[11px] [&_p]:leading-relaxed [&_li]:text-[11px] [&_strong]:text-foreground [&_h2]:text-xs [&_h3]:text-[11px] [&_h2]:text-[hsl(var(--terminal-purple))] [&_hr]:border-border/20">
+                    <ReactMarkdown>{aiResult}</ReactMarkdown>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
-
-      {/* ══════════════════ PRESET STRATEGY VIEW ══════════════════ */}
-      {activeView === 'strategy' && (
-        <div className="space-y-2">
-          {/* Strategy selector */}
-          <div className="t-card">
-            <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold mb-2">Select Strategy</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-              {PRESET_STRATEGIES.map((strat, i) => (
-                <button key={i} onClick={() => setSelectedPreset(i)}
-                  className={`text-left px-3 py-2 rounded border transition-all
-                    ${selectedPreset === i ? 'bg-primary/10 border-primary/30 text-primary' : 'bg-secondary/50 border-border/50 text-muted-foreground hover:text-foreground hover:border-border'}`}>
-                  <p className="text-[10px] font-semibold">{strat.name}</p>
-                  <p className="text-[8px] opacity-70 mt-0.5">{strat.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Legs + Summary + Payoff */}
-          <StrategyDisplay legs={activeLegs} netPremium={netPremium} maxProfit={maxProfit} maxLoss={maxLoss}
-            breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} />
-        </div>
-      )}
-
-      {/* ══════════════════ CUSTOM STRATEGY BUILDER ══════════════════ */}
-      {activeView === 'custom' && (
-        <div className="space-y-2">
-          {/* Load from preset */}
-          <div className="t-card">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Custom Strategy Builder</p>
-              <span className="text-[8px] text-muted-foreground">Build any multi-leg strategy</span>
-            </div>
-
-            {/* Quick load presets */}
-            <div className="flex gap-1 flex-wrap mb-3">
-              <span className="text-[8px] text-muted-foreground self-center mr-1">Load preset:</span>
-              {PRESET_STRATEGIES.map((s, i) => (
-                <button key={i} onClick={() => loadPresetToCustom(i)}
-                  className="px-2 py-0.5 rounded text-[8px] bg-secondary text-muted-foreground border border-border/50 hover:text-foreground hover:border-border transition-all">
-                  {s.name}
-                </button>
-              ))}
-            </div>
-
-            {/* Legs table */}
-            {customLegs.length > 0 ? (
-              <div className="overflow-x-auto mb-3">
-                <table className="w-full text-[10px]">
-                  <thead>
-                    <tr className="border-b border-border text-muted-foreground text-[8px]">
-                      <th className="p-1.5 text-left">Action</th>
-                      <th className="p-1.5 text-left">Type</th>
-                      <th className="p-1.5 text-left">Strike</th>
-                      <th className="p-1.5 text-right">Premium</th>
-                      <th className="p-1.5 text-right">Lots</th>
-                      <th className="p-1.5 text-right">Cost/Credit</th>
-                      <th className="p-1.5 w-8"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customLegs.map(leg => (
-                      <tr key={leg.id} className="border-b border-border/20">
-                        <td className="p-1.5">
-                          <select value={leg.action} onChange={e => updateCustomLeg(leg.id, { action: e.target.value as 'BUY' | 'SELL' })}
-                            className={`bg-transparent border border-border rounded px-2 py-1 text-[10px] font-semibold focus:outline-none focus:border-primary/50 ${leg.action === 'BUY' ? 'text-primary' : 'text-destructive'}`}>
-                            <option value="BUY">BUY</option>
-                            <option value="SELL">SELL</option>
-                          </select>
-                        </td>
-                        <td className="p-1.5">
-                          <select value={leg.type} onChange={e => updateCustomLeg(leg.id, { type: e.target.value as 'CE' | 'PE' })}
-                            className="bg-transparent border border-border rounded px-2 py-1 text-[10px] text-foreground focus:outline-none focus:border-primary/50">
-                            <option value="CE">CE (Call)</option>
-                            <option value="PE">PE (Put)</option>
-                          </select>
-                        </td>
-                        <td className="p-1.5">
-                          <select value={leg.strike} onChange={e => updateCustomLeg(leg.id, { strike: Number(e.target.value) })}
-                            className="bg-transparent border border-border rounded px-2 py-1 text-[10px] text-foreground focus:outline-none focus:border-primary/50 max-h-48">
-                            {strikes.map(s => (
-                              <option key={s} value={s}>{formatNumber(s)} {s === atmStrike ? '(ATM)' : ''}</option>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="p-1.5 text-right text-foreground">₹{leg.premium.toFixed(2)}</td>
-                        <td className="p-1.5 text-right">
-                          <input type="number" min={1} max={100} value={leg.lots}
-                            onChange={e => updateCustomLeg(leg.id, { lots: Math.max(1, parseInt(e.target.value) || 1) })}
-                            className="bg-transparent border border-border rounded px-2 py-1 text-[10px] text-foreground w-14 text-right focus:outline-none focus:border-primary/50" />
-                        </td>
-                        <td className={`p-1.5 text-right font-semibold ${leg.action === 'BUY' ? 'text-destructive' : 'text-primary'}`}>
-                          {leg.action === 'BUY' ? '-' : '+'}₹{(leg.premium * leg.lots).toFixed(2)}
-                        </td>
-                        <td className="p-1.5">
-                          <button onClick={() => removeCustomLeg(leg.id)} className="text-destructive/60 hover:text-destructive text-sm transition-colors">✕</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground text-[10px]">
-                No legs added yet. Click "Add Leg" or load a preset above.
-              </div>
-            )}
-
-            <button onClick={addCustomLeg}
-              className="px-4 py-1.5 rounded text-[10px] font-medium border border-dashed border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all">
-              + Add Leg
-            </button>
-          </div>
-
-          {/* Show payoff if legs exist */}
-          {customLegs.length > 0 && (
-            <StrategyDisplay legs={activeLegs} netPremium={netPremium} maxProfit={maxProfit} maxLoss={maxLoss}
-              breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} />
-          )}
-        </div>
-      )}
-
-      {/* External links footer */}
-      <div className="mt-3 text-center">
-        <p className="text-[8px] text-muted-foreground">
-          For live options data:{' '}
-          <a href="https://www.sensibull.com" target="_blank" rel="noopener noreferrer" className="text-terminal-blue hover:underline">Sensibull</a>{' • '}
-          <a href="https://opstra.definedge.com" target="_blank" rel="noopener noreferrer" className="text-terminal-blue hover:underline">Opstra</a>{' • '}
-          <a href="https://www.nseindia.com/option-chain" target="_blank" rel="noopener noreferrer" className="text-terminal-blue hover:underline">NSE</a>
-        </p>
-      </div>
     </div>
   );
 }
@@ -460,7 +603,6 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
 
   return (
     <>
-      {/* Legs summary */}
       <div className="t-card p-0 overflow-hidden">
         <table className="w-full text-[10px]">
           <thead>
@@ -485,13 +627,12 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
         </table>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[
           { label: 'Net Premium', value: `${netPremium >= 0 ? '+' : ''}₹${netPremium.toFixed(2)}`, cls: netPremium >= 0 ? 'text-primary' : 'text-destructive' },
           { label: 'Max Profit', value: maxProfit > 99999 ? '∞' : `₹${maxProfit.toFixed(2)}`, cls: 'text-primary' },
           { label: 'Max Loss', value: `₹${Math.abs(maxLoss).toFixed(2)}`, cls: 'text-destructive' },
-          { label: 'Breakeven', value: breakevens.length > 0 ? breakevens.map(b => formatNumber(b)).join(', ') : '—', cls: 'text-terminal-amber' },
+          { label: 'Breakeven', value: breakevens.length > 0 ? breakevens.map(b => formatNumber(b)).join(', ') : '—', cls: 'text-[hsl(var(--terminal-amber))]' },
         ].map((card, i) => (
           <div key={i} className="t-card text-center py-3">
             <p className="text-[7px] text-muted-foreground uppercase tracking-wider">{card.label}</p>
@@ -500,7 +641,6 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
         ))}
       </div>
 
-      {/* Payoff chart */}
       {payoffData.length > 0 && (
         <div className="t-card">
           <p className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold mb-3">Payoff Diagram</p>
@@ -517,14 +657,14 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
                   <div className="w-full flex flex-col items-center justify-end" style={{ height: '90%' }}>
                     <div className="w-full flex flex-col justify-end items-center" style={{ height: '50%' }}>
                       {isPositive && (
-                        <div className={`w-full rounded-t-sm ${isSpot ? 'bg-terminal-amber' : 'bg-primary/60'}`}
+                        <div className={`w-full rounded-t-sm ${isSpot ? 'bg-[hsl(var(--terminal-amber))]' : 'bg-primary/60'}`}
                           style={{ height: `${height}%` }} />
                       )}
                     </div>
                     <div className="w-full h-px bg-border/50" />
                     <div className="w-full flex flex-col justify-start items-center" style={{ height: '50%' }}>
                       {!isPositive && (
-                        <div className={`w-full rounded-b-sm ${isSpot ? 'bg-terminal-amber' : 'bg-destructive/60'}`}
+                        <div className={`w-full rounded-b-sm ${isSpot ? 'bg-[hsl(var(--terminal-amber))]' : 'bg-destructive/60'}`}
                           style={{ height: `${height}%` }} />
                       )}
                     </div>
@@ -538,7 +678,7 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
           </div>
           <div className="flex justify-between text-[8px] text-muted-foreground mt-1.5">
             <span>{payoffData[0]?.price}</span>
-            <span className="text-terminal-amber font-medium">SPOT: {formatNumber(Math.round(underlyingValue))}</span>
+            <span className="text-[hsl(var(--terminal-amber))] font-medium">SPOT: {formatNumber(Math.round(underlyingValue))}</span>
             <span>{payoffData[payoffData.length - 1]?.price}</span>
           </div>
         </div>
