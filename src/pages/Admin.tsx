@@ -618,7 +618,7 @@ function PricingTab({ stats }: { stats: any }) {
                   <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Not included</p>
                   {plan.limits.map(l => (
                     <div key={l} className="flex items-center gap-1.5">
-                      <XCircle className="w-3 h-3 text-muted-foreground/40 flex-shrink-0" />
+                      <XCircle className="w-3 h-3 text-muted-foreground/70 flex-shrink-0" />
                       <span className="text-[10px] text-muted-foreground">{l}</span>
                     </div>
                   ))}
