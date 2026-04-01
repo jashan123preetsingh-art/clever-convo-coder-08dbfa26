@@ -1,10 +1,10 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense, memo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useStore from '@/store/useStore';
-import { INDICES as MOCK_INDICES, getAllStocks } from '@/data/mockData';
+import { INDICES as MOCK_INDICES } from '@/data/mockData';
 import { formatPercent } from '@/utils/format';
-import { useIndices } from '@/hooks/useStockData';
+import { useIndices, useStockSearch } from '@/hooks/useStockData';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertBell } from '@/components/PriceAlerts';
 import { useTheme } from '@/hooks/useTheme';
