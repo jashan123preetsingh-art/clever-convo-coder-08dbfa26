@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getSectorPerformance, getStocksBySector } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import { ArrowUpRight, ArrowDownRight, TrendingUp, ChevronLeft, BarChart3 } from 'lucide-react';
+import { useBatchQuotes } from '@/hooks/useStockData';
 
 const SectorIcon = ({ change }: { change: number }) => {
   if (change >= 0) return <ArrowUpRight className="w-3.5 h-3.5 text-primary" />;
