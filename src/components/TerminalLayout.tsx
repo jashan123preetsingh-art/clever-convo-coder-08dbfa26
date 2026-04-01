@@ -92,7 +92,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:text-sm focus:font-semibold">Skip to content</a>
       {/* ═══ Premium Top Bar ═══ */}
-      <header className="h-12 md:h-12 bg-card/70 glass border-b border-border/30 flex items-center justify-between px-3 md:px-5 flex-shrink-0 z-30">
+      <header className="h-12 md:h-12 bg-gradient-to-r from-card/90 via-card/70 to-card/90 glass border-b border-border/20 flex items-center justify-between px-3 md:px-5 flex-shrink-0 z-30">
         <div className="flex items-center gap-3 md:gap-5">
           {/* Mobile hamburger */}
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} className="md:hidden p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground transition-colors">
