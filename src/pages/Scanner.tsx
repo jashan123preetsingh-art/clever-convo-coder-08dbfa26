@@ -13,9 +13,7 @@ import {
   type Condition, type ScanPreset,
 } from '@/data/scanPresets';
 
-
-
-}
+const PAGE_SIZE = 50;
 
 function getStockValue(stock: Stock, key: string, emaData?: Record<string, any>): number | null {
   if (key === 'close') return stock.ltp;
