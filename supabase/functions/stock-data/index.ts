@@ -56,7 +56,8 @@ async function getQuote(symbol: string) {
   const yfSymbol = toYahooSymbol(symbol);
   if (!yfSymbol) return null;
 
-  const resp = await fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=5d&includePrePost=false`);
+  // Use range=2d so chartPreviousClose = yesterday's close (not 5 days ago)
+  const resp = await fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=2d&includePrePost=false`);
   if (!resp) return null;
 
   const data = await resp.json();
@@ -65,14 +66,17 @@ async function getQuote(symbol: string) {
 
   const meta = result.meta;
   const quote = result.indicators?.quote?.[0];
+  const closes = quote?.close || [];
   const ts = result.timestamp || [];
   const last = ts.length - 1;
-  const prev = meta.chartPreviousClose || meta.previousClose || 0;
+  // chartPreviousClose with range=2d = yesterday's close (correct baseline)
+  // Fallback: use the first candle's close if available (yesterday's data)
+  const prev = meta.chartPreviousClose || meta.previousClose || (closes.length >= 2 ? closes[closes.length - 2] : 0) || 0;
 
   return {
     symbol, name: meta.longName || meta.shortName || symbol,
     ltp: meta.regularMarketPrice,
-    prev_close: prev,
+    prev_close: round(prev),
     open: quote?.open?.[last], high: quote?.high?.[last],
     low: quote?.low?.[last], close: quote?.close?.[last],
     volume: quote?.volume?.[last],
@@ -543,14 +547,18 @@ async function fetchNSEOptionsChain(symbol: string) {
 async function getIndices() {
   const indices = ["^NSEI", "^BSESN", "^NSEBANK"];
   const names = ["NIFTY 50", "SENSEX", "BANKNIFTY"];
+  // Use range=2d so chartPreviousClose = yesterday's close (not 5 days ago)
   const results = await Promise.allSettled(
-    indices.map(idx => fetchSafe(`${YF_BASE}/v8/finance/chart/${idx}?interval=1d&range=5d`).then(r => r?.json()))
+    indices.map(idx => fetchSafe(`${YF_BASE}/v8/finance/chart/${idx}?interval=1d&range=2d`).then(r => r?.json()))
   );
   return results.map((r, i) => {
     if (r.status !== "fulfilled" || !r.value) return { symbol: names[i], error: true };
-    const meta = r.value?.chart?.result?.[0]?.meta;
-    if (!meta) return { symbol: names[i], error: true };
-    const prev = meta.chartPreviousClose || meta.previousClose || 0;
+    const res = r.value?.chart?.result?.[0];
+    if (!res?.meta) return { symbol: names[i], error: true };
+    const meta = res.meta;
+    const closes = res.indicators?.quote?.[0]?.close || [];
+    // chartPreviousClose with range=2d = yesterday's close
+    const prev = meta.chartPreviousClose || meta.previousClose || (closes.length >= 2 ? closes[closes.length - 2] : 0) || 0;
     return {
       symbol: names[i], ltp: round(meta.regularMarketPrice),
       open: round(meta.regularMarketOpen || meta.regularMarketPrice),
