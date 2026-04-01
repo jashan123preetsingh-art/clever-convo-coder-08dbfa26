@@ -257,6 +257,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_discount_code: { Args: { p_code: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
