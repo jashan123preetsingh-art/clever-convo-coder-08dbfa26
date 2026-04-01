@@ -16,13 +16,14 @@ const AiAssistant = lazy(() => import('@/components/AiAssistant'));
 
 const NAV_ITEMS = [
   { path: '/', label: 'Dashboard', shortcut: 'F1', icon: '⌂' },
-  { path: '/heatmap', label: 'Heatmap', shortcut: 'F2', icon: '▦' },
-  { path: '/scanner', label: 'Scanner', shortcut: 'F3', icon: '⊕' },
-  { path: '/options', label: 'Options', shortcut: 'F4', icon: '◎' },
-  { path: '/sectors', label: 'Sectors', shortcut: 'F5', icon: '◫' },
-  { path: '/fii-dii', label: 'FII/DII', shortcut: 'F6', icon: '⇄' },
-  { path: '/oi-analysis', label: 'OI Analysis', shortcut: 'F7', icon: '📈' },
-  { path: '/news', label: 'News', shortcut: 'F8', icon: '◉' },
+  { path: '/portfolio', label: 'Portfolio', shortcut: 'F2', icon: '💼' },
+  { path: '/heatmap', label: 'Heatmap', shortcut: 'F3', icon: '▦' },
+  { path: '/scanner', label: 'Scanner', shortcut: 'F4', icon: '⊕' },
+  { path: '/options', label: 'Options', shortcut: 'F5', icon: '◎' },
+  { path: '/sectors', label: 'Sectors', shortcut: 'F6', icon: '◫' },
+  { path: '/fii-dii', label: 'FII/DII', shortcut: 'F7', icon: '⇄' },
+  { path: '/oi-analysis', label: 'OI Analysis', shortcut: 'F8', icon: '📈' },
+  { path: '/news', label: 'News', shortcut: 'F9', icon: '◉' },
   { path: '/trading-agent', label: 'AI Agent', shortcut: 'F9', icon: '🤖' },
 ];
 
