@@ -50,7 +50,6 @@ export default function AiAssistant() {
   const [liveData, setLiveData] = useState<LiveContext>({ indices: [], fiiDii: [], stockData: null });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
 
   const fetchContextData = useCallback(async () => {
