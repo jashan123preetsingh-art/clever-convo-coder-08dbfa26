@@ -706,20 +706,13 @@ export default function TradingAgent() {
       <ModeSelector mode={mode} setMode={setMode} disabled={loading} />
 
       {/* Input */}
-      <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-border/15 p-3 sm:p-4 mb-4">
-        <div className="flex flex-col gap-2 sm:gap-3">
-          <div>
-            <label className="block text-[9px] sm:text-[10px] text-muted-foreground font-semibold mb-1 sm:mb-1.5 uppercase tracking-wider">Symbol</label>
-            <input
-              type="text"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === 'Enter' && runAgent()}
-              placeholder={mode === 'invest' ? 'e.g. RELIANCE, TCS' : 'e.g. NIFTY 50'}
-              className="w-full bg-secondary/40 border border-border/30 rounded-xl px-3 py-2 sm:py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 font-data transition-colors"
-              disabled={loading}
-            />
-          </div>
+      <SymbolInput
+        symbol={symbol}
+        setSymbol={setSymbol}
+        onSubmit={runAgent}
+        disabled={loading}
+        placeholder={mode === 'invest' ? 'e.g. RELIANCE, TCS' : 'e.g. NIFTY 50'}
+      />
           <div className="flex items-center gap-2">
             {mode !== 'invest' && mode !== 'options' && (
               <>
