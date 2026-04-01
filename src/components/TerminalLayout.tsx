@@ -338,7 +338,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
             <span className="text-[9px] text-muted-foreground/60 font-medium font-data">CONNECTED</span>
           </div>
           <span className="text-[9px] text-muted-foreground/40">NSE · BSE</span>
-          <span className="text-[9px] text-muted-foreground/40">{getAllStocks().length} stocks</span>
+          <span className="text-[9px] text-muted-foreground/40">500+ stocks</span>
         </div>
         <div className="flex items-center gap-5">
           <span className="text-[9px] text-muted-foreground/40">
