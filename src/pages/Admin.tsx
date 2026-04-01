@@ -359,12 +359,12 @@ function FeaturesTab({ features, toggleFeature, createFeature, updateFeature, de
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <input placeholder="Feature Key (e.g. ai_scanner)" value={form.feature_key} onChange={e => setForm(p => ({ ...p, feature_key: e.target.value }))}
-                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50" />
+                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/70" />
                 <input placeholder="Display Name" value={form.feature_name} onChange={e => setForm(p => ({ ...p, feature_name: e.target.value }))}
-                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50" />
+                  className="bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/70" />
               </div>
               <input placeholder="Description" value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50" />
+                className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/70" />
               <div className="flex items-center justify-between">
                 <select value={form.required_plan} onChange={e => setForm(p => ({ ...p, required_plan: e.target.value }))}
                   className="bg-secondary border border-border rounded-lg px-3 py-2 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30">

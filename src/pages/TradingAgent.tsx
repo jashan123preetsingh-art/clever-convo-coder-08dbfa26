@@ -533,7 +533,7 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
     <div className="relative" ref={dropdownRef}>
       <label className="block text-[9px] sm:text-[10px] text-muted-foreground font-semibold mb-1 sm:mb-1.5 uppercase tracking-wider">Symbol</label>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/70" />
         <input
           ref={inputRef}
           type="text"
@@ -549,7 +549,7 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
             if (e.key === 'Escape') setFocused(false);
           }}
           placeholder={placeholder}
-          className="w-full bg-secondary/40 border border-border/30 rounded-xl pl-9 pr-3 py-2 sm:py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 font-data transition-colors"
+          className="w-full bg-secondary/40 border border-border/30 rounded-xl pl-9 pr-3 py-2 sm:py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/30 font-data transition-colors"
           disabled={disabled}
           autoComplete="off"
         />
@@ -573,7 +573,7 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
                   <span className="text-[11px] font-bold text-foreground font-data">{item.symbol}</span>
                   <span className="text-[9px] text-muted-foreground truncate max-w-[180px]">{item.name}</span>
                 </div>
-                <span className="text-[8px] text-muted-foreground/50">NSE</span>
+                <span className="text-[8px] text-muted-foreground/70">NSE</span>
               </button>
             ))}
           </motion.div>
@@ -952,7 +952,7 @@ export default function TradingAgent() {
               <div key={step.key}>
                 <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                   <span>{step.icon}</span> {step.label}
-                  <span className="text-[8px] font-normal text-muted-foreground/50">— {step.agents.length} agent{step.agents.length > 1 ? 's' : ''}</span>
+                  <span className="text-[8px] font-normal text-muted-foreground/70">— {step.agents.length} agent{step.agents.length > 1 ? 's' : ''}</span>
                 </h3>
                 <div className={`grid gap-2 ${step.agents.length >= 3 ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : step.agents.length === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
                   {step.agents.map((agentKey, idx) => {

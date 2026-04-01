@@ -45,11 +45,11 @@ function isMarketHours(): boolean {
 function DataBadge({ status, source }: { status: 'live' | 'delayed' | 'estimated' | 'loading' | 'unavailable' | 'market-closed'; source?: string }) {
   const config: Record<string, { text: string; bg: string; color: string; dot: boolean; ring?: string }> = {
     live: { text: 'LIVE', bg: 'bg-primary/12', color: 'text-primary', dot: true, ring: 'ring-1 ring-primary/20' },
-    delayed: { text: 'MKT CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/50', dot: false },
+    delayed: { text: 'MKT CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/70', dot: false },
     estimated: { text: source === 'vix-estimate' ? 'VIX EST.' : 'EST.', bg: 'bg-accent/10', color: 'text-accent', dot: false },
     loading: { text: '···', bg: 'bg-muted/20', color: 'text-muted-foreground/60', dot: false },
     unavailable: { text: 'N/A', bg: 'bg-destructive/8', color: 'text-destructive/60', dot: false },
-    'market-closed': { text: 'CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/50', dot: false },
+    'market-closed': { text: 'CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/70', dot: false },
   };
   const c = config[status] || config.unavailable;
   return (
@@ -68,7 +68,7 @@ function QuickAction({ icon, title, desc, to }: { icon: string; title: string; d
         className="p-3 sm:p-4 rounded-xl bg-card/40 border border-border/10 hover:border-primary/20 hover:bg-card/70 transition-all duration-300 flex flex-col items-center text-center gap-1.5 sm:gap-2 group cursor-pointer h-full">
         <span className="text-lg sm:text-xl group-hover:scale-110 transition-transform duration-300">{icon}</span>
         <p className="text-[9px] sm:text-[10px] font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{title}</p>
-        <p className="text-[7px] text-muted-foreground/50 leading-relaxed hidden sm:block">{desc}</p>
+        <p className="text-[7px] text-muted-foreground/70 leading-relaxed hidden sm:block">{desc}</p>
       </motion.div>
     </Link>
   );
@@ -81,7 +81,7 @@ function MetricWidget({ label, value, sub, color, icon, status }: { label: strin
     <div className={`rounded-xl bg-card/40 p-3 sm:p-4 border border-border/10 hover:border-border/25 transition-all duration-300 group ${isLoading ? 'animate-pulse' : ''}`}>
       <div className="flex items-center gap-1.5 mb-2">
         {icon && <span className="text-[10px] opacity-60 group-hover:opacity-100 transition-opacity">{icon}</span>}
-        <p className="text-[7px] sm:text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] font-bold flex-1">{label}</p>
+        <p className="text-[7px] sm:text-[8px] text-muted-foreground/70 uppercase tracking-[0.15em] font-bold flex-1">{label}</p>
         {status && status !== 'loading' && <DataBadge status={status} />}
       </div>
       <p className={`text-base sm:text-lg font-black font-data tracking-tight ${color || 'text-foreground'}`}>{value}</p>
@@ -144,7 +144,7 @@ function IndexCard({ idx, isLive: dataLive }: { idx: any; isLive: boolean }) {
     <div className="rounded-xl bg-card/40 border border-border/10 p-4 sm:p-5 hover:border-border/25 transition-all duration-300 group">
       <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
-          <span className="text-[9px] sm:text-[10px] text-muted-foreground/50 font-bold tracking-wide">{idx.symbol}</span>
+          <span className="text-[9px] sm:text-[10px] text-muted-foreground/70 font-bold tracking-wide">{idx.symbol}</span>
           <DataBadge status={displayStatus} />
         </div>
         <span className={`text-[7px] px-2 py-0.5 rounded-md font-bold ${
@@ -310,7 +310,7 @@ export default function Dashboard() {
               <h1 className="text-sm sm:text-base font-black text-foreground tracking-tight">{greeting}, Trader</h1>
               <DataBadge status={marketOpen ? 'live' : 'market-closed'} />
             </div>
-            <p className="text-[9px] sm:text-[10px] text-muted-foreground/50 leading-relaxed">
+            <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 leading-relaxed">
               {marketOpen
                 ? `Market open · ${istTime} IST · Tracking NIFTY, BANKNIFTY & 2000+ stocks`
                 : `Market closed · Last close data · Opens Mon–Fri 9:15 AM IST`}
