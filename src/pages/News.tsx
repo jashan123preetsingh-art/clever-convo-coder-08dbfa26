@@ -7,13 +7,16 @@ import { NEWS } from '@/data/mockData';
 /** Strip any residual HTML tags and decode common HTML entities */
 function cleanDescription(text: string): string {
   return text
+    .replace(/&nbsp;/g, ' ')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
     .replace(/<[^>]*>/g, '')
+    .replace(/\s{2,}/g, ' ')
     .trim();
 }
 
