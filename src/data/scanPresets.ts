@@ -326,7 +326,7 @@ export const DEFAULT_SCANS: ScanPreset[] = [
       { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.005 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.5 },
     ] },
-  { id: 'vw4', name: 'VWAP Proxy Hold + Breakout', description: 'Held session avg support and breaking out (proxy – no real VWAP)', icon: '🚀', category: 'vwap',
+  { id: 'vw4', name: 'VWAP Hold + Breakout', description: 'Held session avg support and breaking out', icon: '🚀', category: 'vwap',
     conditions: [
       { measure: 'low', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 0.99 },
       { measure: 'close', operator: '>=', compareType: 'measure', value: '', compareMeasure: 'high', multiplier: 0.995 },
