@@ -235,11 +235,11 @@ export default function Dashboard() {
           <MetricWidget icon="📈" label="Adv / Dec" value={`${advances} / ${declines}`} sub={`${unchanged} unch`}
             color={advances > declines ? 'text-primary' : 'text-destructive'} />
           <MetricWidget icon="🏦" label="FII Net"
-            value={fiiDiiParsed ? `${fiiDiiParsed.fiiNet >= 0 ? '+' : '-'}₹${Math.abs(Math.round(fiiDiiParsed.fiiNet / 1e7)).toLocaleString('en-IN')} Cr` : '—'}
+            value={fiiDiiParsed ? `${fiiDiiParsed.fiiNet >= 0 ? '+' : ''}₹${Math.abs(Math.round(fiiDiiParsed.fiiNet)).toLocaleString('en-IN')} Cr` : '—'}
             sub={fiiDiiParsed?.date || 'Loading...'}
             color={fiiDiiParsed ? (fiiDiiParsed.fiiNet >= 0 ? 'text-primary' : 'text-destructive') : undefined} />
           <MetricWidget icon="📊" label="DII Net"
-            value={fiiDiiParsed ? `${fiiDiiParsed.diiNet >= 0 ? '+' : '-'}₹${Math.abs(Math.round(fiiDiiParsed.diiNet / 1e7)).toLocaleString('en-IN')} Cr` : '—'}
+            value={fiiDiiParsed ? `${fiiDiiParsed.diiNet >= 0 ? '+' : ''}₹${Math.abs(Math.round(fiiDiiParsed.diiNet)).toLocaleString('en-IN')} Cr` : '—'}
             sub={fiiDiiParsed?.date || 'Loading...'}
             color={fiiDiiParsed ? (fiiDiiParsed.diiNet >= 0 ? 'text-primary' : 'text-destructive') : undefined} />
           <MetricWidget icon="💹" label="F&O Turnover" value="₹98.5K Cr" sub="Premium" />
