@@ -605,7 +605,7 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
       </AnimatePresence>
     </div>
   );
-
+}
 
 function EmptyState({ onSelectSymbol }: { onSelectSymbol: (s: string) => void }) {
   return (
