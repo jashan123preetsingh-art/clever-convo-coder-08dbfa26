@@ -167,7 +167,7 @@ export default function Dashboard() {
       {/* ═══ Index Cards ═══ */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {indices.map((idx: any, i: number) => (
-          <motion.div key={i} variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: i * 0.05 }}
+          <div key={i}
             className="rounded-2xl bg-card/50 border border-border/15 p-5 hover:border-border/30 transition-all duration-300">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] text-muted-foreground/50 font-bold tracking-[0.15em]">{idx.symbol}</span>
@@ -197,7 +197,7 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 
