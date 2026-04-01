@@ -6,12 +6,13 @@ import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/
 import { ArrowUpRight, ArrowDownRight, TrendingUp, ChevronLeft, BarChart3 } from 'lucide-react';
 import { useBatchQuotes } from '@/hooks/useStockData';
 
-const SectorIcon = ({ change }: { change: number }) => {
-  if (change >= 0) return <ArrowUpRight className="w-3.5 h-3.5 text-primary" />;
-  return <ArrowDownRight className="w-3.5 h-3.5 text-destructive" />;
-};
+const SectorIcon = React.forwardRef<HTMLSpanElement, { change: number }>(({ change, ...props }, ref) => {
+  if (change >= 0) return <span ref={ref} {...props}><ArrowUpRight className="w-3.5 h-3.5 text-primary" /></span>;
+  return <span ref={ref} {...props}><ArrowDownRight className="w-3.5 h-3.5 text-destructive" /></span>;
+});
+SectorIcon.displayName = 'SectorIcon';
 
-const MiniHeatmap = ({ stocks }: { stocks: { symbol: string; change_pct: number }[] }) => {
+const MiniHeatmap = React.forwardRef<HTMLDivElement, { stocks: { symbol: string; change_pct: number }[] }>(({ stocks, ...props }, ref) => {
   const sorted = [...stocks].sort((a, b) => Math.abs(b.change_pct) - Math.abs(a.change_pct));
   const maxAbs = Math.max(...sorted.map(s => Math.abs(s.change_pct)), 1);
 
