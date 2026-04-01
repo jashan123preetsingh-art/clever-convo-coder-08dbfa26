@@ -155,7 +155,7 @@ export default function News() {
                   </div>
                   <h3 className="text-[11px] font-medium text-foreground group-hover:text-primary transition-colors mb-2 line-clamp-3">{article.title}</h3>
                   {'description' in article && article.description && (
-                    <p className="text-[9px] text-muted-foreground mb-2 line-clamp-2">{article.description}</p>
+                    <p className="text-[9px] text-muted-foreground mb-2 line-clamp-2">{cleanDescription(article.description)}</p>
                   )}
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <span className="text-[9px] text-muted-foreground">{article.source}</span>

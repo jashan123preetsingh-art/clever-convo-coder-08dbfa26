@@ -18,8 +18,19 @@ function extractCDATA(text: string): string {
   return match ? match[1].trim() : text.trim();
 }
 
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+}
+
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, "").trim();
+  return decodeEntities(html).replace(/<[^>]*>/g, "").trim();
 }
 
 function categorize(title: string): string {
