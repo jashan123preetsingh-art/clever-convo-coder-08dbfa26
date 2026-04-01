@@ -324,7 +324,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto bg-background" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <main id="main-content" className="flex-1 overflow-y-auto bg-background" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="min-h-full">
             {children}
           </div>

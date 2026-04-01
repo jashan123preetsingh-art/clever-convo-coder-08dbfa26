@@ -23,7 +23,15 @@ const Admin = lazy(() => import("./pages/Admin"));
 const TradingAgent = lazy(() => import("./pages/TradingAgent"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const Loading = () => (
   <div className="flex items-center justify-center h-screen bg-background">

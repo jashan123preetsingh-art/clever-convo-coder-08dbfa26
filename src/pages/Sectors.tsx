@@ -17,7 +17,7 @@ const MiniHeatmap = React.forwardRef<HTMLDivElement, { stocks: { symbol: string;
   const maxAbs = Math.max(...sorted.map(s => Math.abs(s.change_pct)), 1);
 
   return (
-    <div className="grid grid-cols-6 gap-[2px] w-full">
+    <div ref={ref} {...props} className="grid grid-cols-6 gap-[2px] w-full">
       {sorted.slice(0, 12).map((s, i) => {
         const intensity = Math.min(Math.abs(s.change_pct) / maxAbs, 1);
         const opacity = 0.15 + intensity * 0.65;
@@ -32,7 +32,8 @@ const MiniHeatmap = React.forwardRef<HTMLDivElement, { stocks: { symbol: string;
       })}
     </div>
   );
-};
+});
+MiniHeatmap.displayName = 'MiniHeatmap';
 
 function SectorDetail({ sectorName }: { sectorName: string }) {
   const sectors = getSectorPerformance();

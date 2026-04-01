@@ -323,7 +323,7 @@ export default function Heatmap() {
 
                   <rect
                     x={sec.x} y={sec.y} width={sec.w} height={sec.h}
-                    fill="none" stroke="hsl(225, 25%, 8%)" strokeWidth="2"
+                    fill="none" stroke={isDark ? 'hsl(225, 25%, 8%)' : 'hsl(225, 15%, 95%)'} strokeWidth="2"
                   />
                 </g>
               );
