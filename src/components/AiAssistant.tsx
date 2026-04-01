@@ -288,7 +288,7 @@ export default function AiAssistant() {
                   disabled={loading}
                   className="flex-1 bg-secondary/40 border border-border/30 rounded-lg px-3 py-2 text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-colors disabled:opacity-50"
                 />
-                <button type="submit" disabled={loading || (!input.trim() && !pendingImage)}
+                <button type="submit" disabled={loading || !input.trim()}
                   className="flex-shrink-0 px-3 py-2 bg-primary/15 hover:bg-primary/25 text-primary border border-primary/20 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
                   Send
                 </button>
