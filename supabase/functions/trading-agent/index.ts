@@ -193,10 +193,23 @@ async function fetchStockData(symbol: string, range = "3mo") {
     const lows = result.indicators?.quote?.[0]?.low || [];
     const opens = result.indicators?.quote?.[0]?.open || [];
     const volumes = result.indicators?.quote?.[0]?.volume || [];
-    const lastClose = closes[closes.length - 1];
-    const prevClose = closes[closes.length - 2];
+    
+    // Find last valid (non-null) close price — Yahoo sometimes returns nulls
+    let lastClose = null;
+    let prevClose = null;
+    for (let i = closes.length - 1; i >= 0; i--) {
+      if (closes[i] != null && closes[i] > 0) {
+        if (lastClose === null) { lastClose = closes[i]; }
+        else if (prevClose === null) { prevClose = closes[i]; break; }
+      }
+    }
+    
+    // If we still can't find valid prices, use meta regularMarketPrice
+    if (lastClose === null) lastClose = meta.regularMarketPrice || meta.previousClose || 0;
+    if (prevClose === null) prevClose = meta.previousClose || meta.chartPreviousClose || lastClose;
+    
     const change = lastClose - prevClose;
-    const changePct = (change / prevClose) * 100;
+    const changePct = prevClose > 0 ? (change / prevClose) * 100 : 0;
     const sma20 = closes.slice(-20).reduce((a: number, b: number) => a + (b || 0), 0) / 20;
     const sma50 = closes.slice(-50).reduce((a: number, b: number) => a + (b || 0), 0) / Math.min(50, closes.length);
     const avgVol = volumes.slice(-10).reduce((a: number, b: number) => a + (b || 0), 0) / 10;
