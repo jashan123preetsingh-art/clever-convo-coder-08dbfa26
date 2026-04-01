@@ -142,7 +142,7 @@ export default function OIAnalysis() {
   return (
     <div className="p-4 max-w-[1800px] mx-auto space-y-4">
       {/* Header */}
-      <div}>
+      <div>
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
