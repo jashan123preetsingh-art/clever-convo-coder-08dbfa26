@@ -284,7 +284,7 @@ export default function AiAssistant() {
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder={pendingImage ? "Ask about this chart..." : "Ask about stocks, options, charts..."}
+                  placeholder="Ask about stocks, options, markets..."
                   disabled={loading}
                   className="flex-1 bg-secondary/40 border border-border/30 rounded-lg px-3 py-2 text-[11px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/30 transition-colors disabled:opacity-50"
                 />
