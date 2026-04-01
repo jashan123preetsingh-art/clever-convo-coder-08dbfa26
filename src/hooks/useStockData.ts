@@ -74,8 +74,8 @@ export function useIndices() {
   return useQuery({
     queryKey: ["indices"],
     queryFn: () => stockApi.getIndices(),
-    staleTime: 30_000,
-    refetchInterval: 30_000, // Auto-refresh every 30s
+    staleTime: 10_000, // 10s — keep data fresh
+    refetchInterval: 10_000, // Auto-refresh every 10s
     retry: 2,
   });
 }
