@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useFullStockData, useStockChart, useAIAnalysis } from '@/hooks/useStockData';
+import { useFullStockData, useStockChart } from '@/hooks/useStockData';
 import { getStock, generateCandleData } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import { useWatchlist } from '@/hooks/useWatchlist';
-import AIFundamentalsPanel from '@/components/stock/AIFundamentalsPanel';
 
 // ─── Shared Components ───
 
@@ -29,35 +28,6 @@ function SectionTitle({ children, icon }: { children: React.ReactNode; icon?: st
   );
 }
 
-function GradeBadge({ grade }: { grade: string }) {
-  const colors: Record<string, string> = {
-    'A+': 'bg-primary/15 text-primary border-primary/25', 'A': 'bg-primary/12 text-primary border-primary/20',
-    'B+': 'bg-[hsl(var(--terminal-blue)/0.12)] text-[hsl(var(--terminal-blue))] border-[hsl(var(--terminal-blue)/0.2)]',
-    'B': 'bg-[hsl(var(--terminal-blue)/0.08)] text-[hsl(var(--terminal-blue))] border-[hsl(var(--terminal-blue)/0.15)]',
-    'C+': 'bg-accent/12 text-accent border-accent/20', 'C': 'bg-accent/8 text-accent border-accent/15',
-    'D': 'bg-destructive/12 text-destructive border-destructive/20', 'F': 'bg-destructive/15 text-destructive border-destructive/25',
-  };
-  return (
-    <span className={`inline-flex items-center justify-center w-11 h-11 rounded-lg text-sm font-black border ${colors[grade] || 'bg-secondary text-muted-foreground border-border'}`}>
-      {grade}
-    </span>
-  );
-}
-
-function ScoreBar({ label, score, maxScore = 20 }: { label: string; score: number; maxScore?: number }) {
-  const pct = Math.min((score / maxScore) * 100, 100);
-  const color = pct >= 70 ? 'bg-primary' : pct >= 40 ? 'bg-accent' : 'bg-destructive';
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-[9px] text-muted-foreground w-24 text-right shrink-0">{label}</span>
-      <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-        <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: 'easeOut' }} className={`h-full rounded-full ${color}`} />
-      </div>
-      <span className="text-[9px] text-foreground font-semibold w-10 font-data">{score}/{maxScore}</span>
-    </div>
-  );
-}
-
 function PivotLevel({ label, value, ltp, type }: { label: string; value: number | null; ltp: number; type: 'support' | 'resistance' }) {
   if (!value) return null;
   const pct = ((value - ltp) / ltp * 100);
@@ -71,6 +41,29 @@ function PivotLevel({ label, value, ltp, type }: { label: string; value: number 
         <span className="text-[11px] text-foreground font-medium font-data">{formatCurrency(value)}</span>
         <span className={`text-[9px] font-medium font-data ${type === 'support' ? 'text-destructive' : 'text-primary'}`}>
           {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function MultiTFLevel({ label, value, ltp, type, tf }: { label: string; value: number | null; ltp: number; type: 'support' | 'resistance'; tf: string }) {
+  if (!value) return null;
+  const pct = ((value - ltp) / ltp * 100);
+  const proximity = Math.abs(pct);
+  const isNear = proximity < 1;
+  return (
+    <div className={`flex items-center justify-between py-2 px-2 rounded-lg transition-all ${isNear ? 'bg-accent/8 border border-accent/15' : ''}`}>
+      <div className="flex items-center gap-2">
+        <span className={`w-1.5 h-1.5 rounded-full ${type === 'support' ? 'bg-destructive' : 'bg-primary'}`} />
+        <span className="text-[10px] font-semibold text-muted-foreground">{label}</span>
+        <span className="text-[7px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-bold">{tf}</span>
+        {isNear && <span className="text-[7px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-bold animate-pulse">NEAR</span>}
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-[11px] text-foreground font-medium font-data">{formatCurrency(value)}</span>
+        <span className={`text-[9px] font-medium font-data ${type === 'support' ? 'text-destructive' : 'text-primary'}`}>
+          {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
         </span>
       </div>
     </div>
@@ -94,14 +87,12 @@ export default function StockDetail() {
   const inWatchlist = isInWatchlist(symbol || '');
   const [period, setPeriod] = useState('1y');
   const [chartInterval] = useState('1d');
-  const [showAI, setShowAI] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'technicals' | 'fundamentals' | 'ai'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'technicals' | 'fundamentals'>('overview');
   const [crosshairData, setCrosshairData] = useState<any>(null);
   const [chartExpanded, setChartExpanded] = useState(false);
 
   const { data: fullData, isLoading, error } = useFullStockData(symbol || '');
   const { data: chartData, isLoading: chartLoading } = useStockChart(symbol || '', chartInterval, period);
-  const { data: aiAnalysis, isLoading: aiLoading, refetch: refetchAI } = useAIAnalysis(fullData, showAI);
 
   const mockStock = getStock(symbol || '');
   const quote = fullData?.quote || mockStock;
@@ -150,6 +141,99 @@ export default function StockDetail() {
     roce: (apiFundamentals as any)?.roce ?? (mockStock as any)?.roce ?? null,
   } : null;
   const realChartData = chartData?.length > 0 ? chartData : generateCandleData(symbol || '', 250);
+
+  // ─── Multi-TF S/R Levels ───
+  const multiTFLevels = React.useMemo(() => {
+    if (!realChartData || realChartData.length < 20) return null;
+    
+    const calcPivots = (candles: any[]) => {
+      if (!candles.length) return null;
+      const last = candles[candles.length - 1];
+      const pivot = (last.high + last.low + last.close) / 3;
+      return {
+        pivot: Math.round(pivot * 100) / 100,
+        s1: Math.round((2 * pivot - last.high) * 100) / 100,
+        s2: Math.round((pivot - (last.high - last.low)) * 100) / 100,
+        s3: Math.round((last.low - 2 * (last.high - pivot)) * 100) / 100,
+        r1: Math.round((2 * pivot - last.low) * 100) / 100,
+        r2: Math.round((pivot + (last.high - last.low)) * 100) / 100,
+        r3: Math.round((last.high + 2 * (pivot - last.low)) * 100) / 100,
+      };
+    };
+
+    // Simulate different TF from daily data
+    // Daily (1D) = last candle
+    const daily = calcPivots(realChartData);
+
+    // 4H approximation: use last 2 days range
+    const last2 = realChartData.slice(-2);
+    const fourH = last2.length >= 2 ? (() => {
+      const h = Math.max(...last2.map((c: any) => c.high));
+      const l = Math.min(...last2.map((c: any) => c.low));
+      const c = last2[last2.length - 1].close;
+      const p = (h + l + c) / 3;
+      return {
+        pivot: Math.round(p * 100) / 100,
+        s1: Math.round((2 * p - h) * 100) / 100,
+        s2: Math.round((p - (h - l)) * 100) / 100,
+        r1: Math.round((2 * p - l) * 100) / 100,
+        r2: Math.round((p + (h - l)) * 100) / 100,
+      };
+    })() : null;
+
+    // Weekly (1W) approximation: use last 5 days
+    const last5 = realChartData.slice(-5);
+    const weekly = last5.length >= 3 ? (() => {
+      const h = Math.max(...last5.map((c: any) => c.high));
+      const l = Math.min(...last5.map((c: any) => c.low));
+      const c = last5[last5.length - 1].close;
+      const p = (h + l + c) / 3;
+      return {
+        pivot: Math.round(p * 100) / 100,
+        s1: Math.round((2 * p - h) * 100) / 100,
+        s2: Math.round((p - (h - l)) * 100) / 100,
+        r1: Math.round((2 * p - l) * 100) / 100,
+        r2: Math.round((p + (h - l)) * 100) / 100,
+      };
+    })() : null;
+
+    return { daily, fourH, weekly };
+  }, [realChartData]);
+
+  // ─── Supply/Demand Zones ───
+  const supplyDemandZones = React.useMemo(() => {
+    if (!realChartData || realChartData.length < 30) return null;
+    const candles = realChartData.slice(-60);
+    const zones: { type: 'supply' | 'demand'; high: number; low: number; strength: number }[] = [];
+
+    for (let i = 2; i < candles.length - 1; i++) {
+      const prev = candles[i - 1];
+      const curr = candles[i];
+      const next = candles[i + 1];
+      
+      // Demand zone: big bullish candle after consolidation
+      if (curr.close > curr.open && (curr.close - curr.open) > (curr.high - curr.low) * 0.6) {
+        const volSpike = curr.volume > (prev.volume * 1.3);
+        if (next.close > curr.close || volSpike) {
+          zones.push({ type: 'demand', high: curr.open, low: curr.low, strength: volSpike ? 3 : 2 });
+        }
+      }
+      // Supply zone: big bearish candle 
+      if (curr.open > curr.close && (curr.open - curr.close) > (curr.high - curr.low) * 0.6) {
+        const volSpike = curr.volume > (prev.volume * 1.3);
+        if (next.close < curr.close || volSpike) {
+          zones.push({ type: 'supply', high: curr.high, low: curr.open, strength: volSpike ? 3 : 2 });
+        }
+      }
+    }
+
+    // Keep top zones near current price
+    const ltp = candles[candles.length - 1].close;
+    const relevant = zones.filter(z => Math.abs((z.high + z.low) / 2 - ltp) / ltp < 0.08);
+    const supply = relevant.filter(z => z.type === 'supply').sort((a, b) => b.strength - a.strength).slice(0, 3);
+    const demand = relevant.filter(z => z.type === 'demand').sort((a, b) => b.strength - a.strength).slice(0, 3);
+    return { supply, demand };
+  }, [realChartData]);
 
   // ─── Optimized Chart ───
   const renderChart = useCallback(async () => {
@@ -241,8 +325,6 @@ export default function StockDetail() {
     };
   }, [renderChart]);
 
-  const handleAnalyze = () => { setShowAI(true); setActiveTab('ai'); refetchAI(); };
-
   if (!quote && !isLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -259,10 +341,10 @@ export default function StockDetail() {
   const isPositive = changePct >= 0;
 
   return (
-    <div className="p-5 max-w-[1600px] mx-auto space-y-4">
+    <div className="p-3 sm:p-5 max-w-[1600px] mx-auto space-y-4">
       {/* ─── Header ─── */}
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between flex-wrap gap-2">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-xl font-black text-foreground tracking-tight">{symbol}</h1>
@@ -273,10 +355,6 @@ export default function StockDetail() {
             <p className="text-xs text-muted-foreground mt-0.5">{quote?.name || symbol}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handleAnalyze} disabled={aiLoading}
-              className="px-3.5 py-1.5 rounded-md text-[10px] font-semibold bg-[hsl(var(--terminal-cyan)/0.08)] text-[hsl(var(--terminal-cyan))] border border-[hsl(var(--terminal-cyan)/0.15)] hover:bg-[hsl(var(--terminal-cyan)/0.15)] transition-all disabled:opacity-50">
-              {aiLoading ? '⏳ Analyzing...' : '🤖 AI Analysis'}
-            </button>
             <button onClick={() => toggleWatchlist(symbol!, ltp)}
               className={`px-2.5 py-1.5 rounded-md text-sm transition-all border ${inWatchlist ? 'bg-accent/8 text-accent border-accent/20' : 'bg-secondary text-muted-foreground border-border/50 hover:text-foreground'}`}>
               {inWatchlist ? '★' : '☆'}
@@ -294,7 +372,7 @@ export default function StockDetail() {
             {isPositive ? '▲' : '▼'} {formatPercent(changePct)}
           </span>
         </div>
-        <div className="flex items-center gap-5 mt-1.5 text-[10px] text-muted-foreground font-data">
+        <div className="flex items-center gap-3 sm:gap-5 mt-1.5 text-[10px] text-muted-foreground font-data flex-wrap">
           {quote?.volume && <span>Vol: <span className="text-foreground font-medium">{formatVolume(quote.volume)}</span></span>}
           {(quote?.market_cap || fundamentals?.market_cap) && <span>MCap: <span className="text-foreground font-medium">{formatMarketCap(quote.market_cap || fundamentals?.market_cap)}</span></span>}
           {fundamentals?.pe_ratio && <span>P/E: <span className="text-foreground font-medium">{fundamentals.pe_ratio.toFixed(1)}</span></span>}
@@ -302,7 +380,7 @@ export default function StockDetail() {
       </motion.div>
 
       {/* ─── Chart ─── */}
-      <div className="t-card p-4 overflow-hidden">
+      <div className="t-card p-3 sm:p-4 overflow-hidden">
         <div className="flex items-center justify-between mb-3">
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Daily Chart</span>
           <div className="flex items-center gap-2">
@@ -317,7 +395,7 @@ export default function StockDetail() {
         <AnimatePresence>
           {crosshairData && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="flex items-center gap-4 text-[10px] mb-2 px-1 font-data">
+              className="flex items-center gap-3 sm:gap-4 text-[10px] mb-2 px-1 font-data flex-wrap">
               <span className="text-muted-foreground">O <span className="text-foreground font-medium">{crosshairData.open?.toFixed(2)}</span></span>
               <span className="text-muted-foreground">H <span className="text-foreground font-medium">{crosshairData.high?.toFixed(2)}</span></span>
               <span className="text-muted-foreground">L <span className="text-foreground font-medium">{crosshairData.low?.toFixed(2)}</span></span>
@@ -329,17 +407,15 @@ export default function StockDetail() {
         <div ref={chartRef} className="w-full rounded-md overflow-hidden" style={{ height: chartExpanded ? 560 : 380 }} />
 
         {technicals && (
-          <div className="flex items-center justify-between px-2 pt-3 mt-2 border-t border-border/20 font-data">
-            <div className="flex items-center gap-4 text-[9px]">
-              <span className="text-destructive/70">S3: {formatCurrency(technicals.s3)}</span>
-              <span className="text-destructive/50">S2: {formatCurrency(technicals.s2)}</span>
-              <span className="text-destructive/35">S1: {formatCurrency(technicals.s1)}</span>
+          <div className="flex items-center justify-between px-2 pt-3 mt-2 border-t border-border/20 font-data flex-wrap gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 text-[9px]">
+              <span className="text-destructive/70">S2: {formatCurrency(technicals.s2)}</span>
+              <span className="text-destructive/50">S1: {formatCurrency(technicals.s1)}</span>
             </div>
             <span className="text-[9px] text-accent font-semibold">Pivot: {formatCurrency(technicals.pivot)}</span>
-            <div className="flex items-center gap-4 text-[9px]">
-              <span className="text-primary/35">R1: {formatCurrency(technicals.r1)}</span>
-              <span className="text-primary/50">R2: {formatCurrency(technicals.r2)}</span>
-              <span className="text-primary/70">R3: {formatCurrency(technicals.r3)}</span>
+            <div className="flex items-center gap-2 sm:gap-4 text-[9px]">
+              <span className="text-primary/50">R1: {formatCurrency(technicals.r1)}</span>
+              <span className="text-primary/70">R2: {formatCurrency(technicals.r2)}</span>
             </div>
           </div>
         )}
@@ -347,11 +423,11 @@ export default function StockDetail() {
 
       {/* ─── Tab Navigation ─── */}
       <div className="flex gap-0.5 bg-secondary/30 p-0.5 rounded-lg w-fit border border-border/30">
-        {(['overview', 'technicals', 'fundamentals', 'ai'] as const).map(t => (
-          <button key={t} onClick={() => { setActiveTab(t); if (t === 'ai' && !showAI) handleAnalyze(); }}
-            className={`px-4 py-2 rounded-md text-[10px] font-semibold transition-all tracking-wide
+        {(['overview', 'technicals', 'fundamentals'] as const).map(t => (
+          <button key={t} onClick={() => setActiveTab(t)}
+            className={`px-3 sm:px-4 py-2 rounded-md text-[10px] font-semibold transition-all tracking-wide
               ${activeTab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-            {t === 'ai' ? '🤖 AI' : t.charAt(0).toUpperCase() + t.slice(1)}
+            {t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
         ))}
       </div>
@@ -372,7 +448,7 @@ export default function StockDetail() {
             </div>
 
             {technicals && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="t-card p-4">
                   <SectionTitle icon="▼">Support Levels</SectionTitle>
                   <PivotLevel label="S1" value={technicals.s1} ltp={ltp} type="support" />
@@ -408,12 +484,114 @@ export default function StockDetail() {
           <motion.div key="technicals" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-4">
             {technicals ? (
               <>
+                {/* 1. Price Action & Supply/Demand — TOP */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="t-card p-4">
+                    <SectionTitle icon="🕯️">Price Action</SectionTitle>
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className={`text-sm font-black px-3 py-1.5 rounded-md ${technicals.trend === 'Bullish' ? 'bg-primary/10 text-primary' : technicals.trend === 'Bearish' ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'}`}>
+                        {technicals.trend}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">· {technicals.trend_strength}</span>
+                    </div>
+                    {technicals.candle_patterns?.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {technicals.candle_patterns.map((p: string, i: number) => (
+                          <span key={i} className="text-[10px] px-2.5 py-1 rounded-md bg-accent/8 text-accent border border-accent/15 font-medium">{p}</span>
+                        ))}
+                      </div>
+                    ) : <p className="text-[10px] text-muted-foreground mb-3">No patterns detected</p>}
+                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                      <div className="bg-secondary/20 rounded-lg p-2">
+                        <span className="text-muted-foreground">RSI (14)</span>
+                        <p className={`text-base font-black font-data ${(technicals.rsi_14 || 50) > 70 ? 'text-destructive' : (technicals.rsi_14 || 50) < 30 ? 'text-primary' : 'text-foreground'}`}>
+                          {technicals.rsi_14?.toFixed(1) || '—'}
+                        </p>
+                        <span className={`text-[8px] font-bold ${(technicals.rsi_14 || 50) > 70 ? 'text-destructive' : (technicals.rsi_14 || 50) < 30 ? 'text-primary' : 'text-muted-foreground'}`}>
+                          {(technicals.rsi_14 || 50) > 70 ? 'OVERBOUGHT' : (technicals.rsi_14 || 50) < 30 ? 'OVERSOLD' : 'NEUTRAL'}
+                        </span>
+                      </div>
+                      <div className="bg-secondary/20 rounded-lg p-2">
+                        <span className="text-muted-foreground">ATR (14)</span>
+                        <p className="text-base font-black text-foreground font-data">{technicals.atr_14?.toFixed(2) || '—'}</p>
+                        <span className="text-[8px] text-muted-foreground font-bold">VOLATILITY</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="t-card p-4">
+                    <SectionTitle icon="⚡">Supply & Demand Zones</SectionTitle>
+                    {supplyDemandZones ? (
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[8px] text-destructive/70 font-bold uppercase tracking-wider mb-1.5">Supply (Resistance)</p>
+                          {supplyDemandZones.supply.length > 0 ? supplyDemandZones.supply.map((z, i) => (
+                            <div key={i} className="flex items-center justify-between py-1.5 text-[10px]">
+                              <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                                <span className="text-muted-foreground">Zone {i + 1}</span>
+                                <span className="text-[7px] px-1 py-0.5 bg-destructive/8 text-destructive rounded font-bold">{'★'.repeat(z.strength)}</span>
+                              </div>
+                              <span className="text-foreground font-data font-medium">{formatCurrency(z.low)} – {formatCurrency(z.high)}</span>
+                            </div>
+                          )) : <p className="text-[9px] text-muted-foreground">No strong supply zones nearby</p>}
+                        </div>
+                        <div>
+                          <p className="text-[8px] text-primary/70 font-bold uppercase tracking-wider mb-1.5">Demand (Support)</p>
+                          {supplyDemandZones.demand.length > 0 ? supplyDemandZones.demand.map((z, i) => (
+                            <div key={i} className="flex items-center justify-between py-1.5 text-[10px]">
+                              <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                <span className="text-muted-foreground">Zone {i + 1}</span>
+                                <span className="text-[7px] px-1 py-0.5 bg-primary/8 text-primary rounded font-bold">{'★'.repeat(z.strength)}</span>
+                              </div>
+                              <span className="text-foreground font-data font-medium">{formatCurrency(z.low)} – {formatCurrency(z.high)}</span>
+                            </div>
+                          )) : <p className="text-[9px] text-muted-foreground">No strong demand zones nearby</p>}
+                        </div>
+                      </div>
+                    ) : <p className="text-[10px] text-muted-foreground">Insufficient data</p>}
+                  </div>
+                </div>
+
+                {/* 2. Multi-TF Support & Resistance */}
                 <div className="t-card p-4">
-                  <SectionTitle icon="📈">Moving Averages</SectionTitle>
+                  <SectionTitle icon="🎯">Multi-Timeframe S/R Levels</SectionTitle>
+                  {multiTFLevels ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-[8px] text-primary/70 font-bold uppercase tracking-wider mb-2">Resistance</p>
+                        <div className="space-y-1">
+                          {multiTFLevels.weekly && <MultiTFLevel label="R2" value={multiTFLevels.weekly.r2} ltp={ltp} type="resistance" tf="1W" />}
+                          {multiTFLevels.weekly && <MultiTFLevel label="R1" value={multiTFLevels.weekly.r1} ltp={ltp} type="resistance" tf="1W" />}
+                          {multiTFLevels.fourH && <MultiTFLevel label="R2" value={multiTFLevels.fourH.r2} ltp={ltp} type="resistance" tf="4H" />}
+                          {multiTFLevels.fourH && <MultiTFLevel label="R1" value={multiTFLevels.fourH.r1} ltp={ltp} type="resistance" tf="4H" />}
+                          {multiTFLevels.daily && <MultiTFLevel label="R2" value={multiTFLevels.daily.r2} ltp={ltp} type="resistance" tf="1D" />}
+                          {multiTFLevels.daily && <MultiTFLevel label="R1" value={multiTFLevels.daily.r1} ltp={ltp} type="resistance" tf="1D" />}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[8px] text-destructive/70 font-bold uppercase tracking-wider mb-2">Support</p>
+                        <div className="space-y-1">
+                          {multiTFLevels.daily && <MultiTFLevel label="S1" value={multiTFLevels.daily.s1} ltp={ltp} type="support" tf="1D" />}
+                          {multiTFLevels.daily && <MultiTFLevel label="S2" value={multiTFLevels.daily.s2} ltp={ltp} type="support" tf="1D" />}
+                          {multiTFLevels.fourH && <MultiTFLevel label="S1" value={multiTFLevels.fourH.s1} ltp={ltp} type="support" tf="4H" />}
+                          {multiTFLevels.fourH && <MultiTFLevel label="S2" value={multiTFLevels.fourH.s2} ltp={ltp} type="support" tf="4H" />}
+                          {multiTFLevels.weekly && <MultiTFLevel label="S1" value={multiTFLevels.weekly.s1} ltp={ltp} type="support" tf="1W" />}
+                          {multiTFLevels.weekly && <MultiTFLevel label="S2" value={multiTFLevels.weekly.s2} ltp={ltp} type="support" tf="1W" />}
+                        </div>
+                      </div>
+                    </div>
+                  ) : <p className="text-[10px] text-muted-foreground">Loading S/R data...</p>}
+                </div>
+
+                {/* 3. EMAs */}
+                <div className="t-card p-4">
+                  <SectionTitle icon="📈">Moving Averages (EMA / SMA)</SectionTitle>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1">
                     {[
-                      { l: 'EMA 20', v: technicals.ema_20 }, { l: 'EMA 50', v: technicals.ema_50 },
-                      { l: 'EMA 200', v: technicals.ema_200 }, { l: 'SMA 20', v: technicals.sma_20 },
+                      { l: 'EMA 9', v: technicals.ema_9 }, { l: 'EMA 20', v: technicals.ema_20 },
+                      { l: 'EMA 50', v: technicals.ema_50 }, { l: 'EMA 200', v: technicals.ema_200 },
                       { l: 'SMA 50', v: technicals.sma_50 }, { l: 'SMA 200', v: technicals.sma_200 },
                     ].map((m, i) => (
                       <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/15">
@@ -431,76 +609,37 @@ export default function StockDetail() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="t-card p-4 text-center">
-                    <p className="text-[9px] text-muted-foreground mb-2 uppercase tracking-[0.12em]">RSI (14)</p>
-                    <p className={`text-2xl font-black font-data ${(technicals.rsi_14 || 50) > 70 ? 'text-destructive' : (technicals.rsi_14 || 50) < 30 ? 'text-primary' : 'text-foreground'}`}>
-                      {technicals.rsi_14?.toFixed(1) || '—'}
-                    </p>
-                    <p className={`text-[9px] mt-1 font-bold ${(technicals.rsi_14 || 50) > 70 ? 'text-destructive' : (technicals.rsi_14 || 50) < 30 ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {(technicals.rsi_14 || 50) > 70 ? 'OVERBOUGHT' : (technicals.rsi_14 || 50) < 30 ? 'OVERSOLD' : 'NEUTRAL'}
-                    </p>
-                  </div>
-                  <div className="t-card p-4 text-center">
-                    <p className="text-[9px] text-muted-foreground mb-2 uppercase tracking-[0.12em]">MACD</p>
-                    <p className={`text-2xl font-black font-data ${(technicals.macd || 0) >= 0 ? 'text-primary' : 'text-destructive'}`}>
-                      {technicals.macd?.toFixed(2) || '—'}
-                    </p>
-                    <p className="text-[9px] text-muted-foreground mt-1 font-bold">{(technicals.macd || 0) >= 0 ? 'BULLISH' : 'BEARISH'}</p>
-                  </div>
-                  <div className="t-card p-4 text-center">
-                    <p className="text-[9px] text-muted-foreground mb-2 uppercase tracking-[0.12em]">ATR (14)</p>
-                    <p className="text-2xl font-black text-foreground font-data">{technicals.atr_14?.toFixed(2) || '—'}</p>
-                    <p className="text-[9px] text-muted-foreground mt-1 font-bold">VOLATILITY</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+                {/* 4. Volume & VWAP */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="t-card p-4">
-                    <SectionTitle icon="🎯">Trend</SectionTitle>
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className={`text-sm font-black px-3 py-1.5 rounded-md ${technicals.trend === 'Bullish' ? 'bg-primary/10 text-primary' : technicals.trend === 'Bearish' ? 'bg-destructive/10 text-destructive' : 'bg-accent/10 text-accent'}`}>
-                        {technicals.trend}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">· {technicals.trend_strength}</span>
-                    </div>
-                    <div className="text-[10px] text-muted-foreground mt-2 font-data">
-                      Vol Ratio: <span className={`font-semibold ${(technicals.volume_ratio || 1) > 1.5 ? 'text-primary' : 'text-foreground'}`}>{technicals.volume_ratio?.toFixed(1)}×</span> avg
-                    </div>
-                  </div>
-                  <div className="t-card p-4">
-                    <SectionTitle icon="🕯️">Candle Patterns</SectionTitle>
-                    {technicals.candle_patterns?.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {technicals.candle_patterns.map((p: string, i: number) => (
-                          <span key={i} className="text-[10px] px-2.5 py-1 rounded-md bg-accent/8 text-accent border border-accent/15 font-medium">{p}</span>
-                        ))}
+                    <SectionTitle icon="📊">Volume Analysis</SectionTitle>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground">Volume Ratio</span>
+                        <span className={`text-sm font-black font-data ${(technicals.volume_ratio || 1) > 1.5 ? 'text-primary' : (technicals.volume_ratio || 1) < 0.5 ? 'text-destructive' : 'text-foreground'}`}>
+                          {technicals.volume_ratio?.toFixed(2)}× avg
+                        </span>
                       </div>
-                    ) : <p className="text-[10px] text-muted-foreground">No patterns detected</p>}
+                      <div className="h-2 bg-secondary/30 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${(technicals.volume_ratio || 1) > 1.5 ? 'bg-primary' : (technicals.volume_ratio || 1) < 0.5 ? 'bg-destructive' : 'bg-accent'}`}
+                          style={{ width: `${Math.min((technicals.volume_ratio || 1) * 33, 100)}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between text-[9px] text-muted-foreground">
+                        <span>Avg Vol (20D): {formatVolume(technicals.avg_volume_20)}</span>
+                        <span className={`font-bold ${(technicals.volume_ratio || 1) > 1.5 ? 'text-primary' : 'text-muted-foreground'}`}>
+                          {(technicals.volume_ratio || 1) > 2 ? 'HIGH VOL 🔥' : (technicals.volume_ratio || 1) > 1.3 ? 'ABOVE AVG' : (technicals.volume_ratio || 1) < 0.5 ? 'DRY' : 'NORMAL'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="t-card p-4">
-                  <SectionTitle icon="📉">Bollinger Bands (20,2)</SectionTitle>
-                  <div className="grid grid-cols-3 gap-3">
-                    <MetricCard label="Upper" value={formatCurrency(technicals.bollinger_upper)} />
-                    <MetricCard label="Middle" value={formatCurrency(technicals.bollinger_middle)} />
-                    <MetricCard label="Lower" value={formatCurrency(technicals.bollinger_lower)} />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
                   <div className="t-card p-4">
-                    <SectionTitle icon="▼">Support Levels</SectionTitle>
-                    <PivotLevel label="S1" value={technicals.s1} ltp={ltp} type="support" />
-                    <PivotLevel label="S2" value={technicals.s2} ltp={ltp} type="support" />
-                    <PivotLevel label="S3" value={technicals.s3} ltp={ltp} type="support" />
-                  </div>
-                  <div className="t-card p-4">
-                    <SectionTitle icon="▲">Resistance Levels</SectionTitle>
-                    <PivotLevel label="R1" value={technicals.r1} ltp={ltp} type="resistance" />
-                    <PivotLevel label="R2" value={technicals.r2} ltp={ltp} type="resistance" />
-                    <PivotLevel label="R3" value={technicals.r3} ltp={ltp} type="resistance" />
+                    <SectionTitle icon="📉">Bollinger Bands (20,2)</SectionTitle>
+                    <div className="space-y-2">
+                      <MetricCard label="Upper" value={formatCurrency(technicals.bollinger_upper)} color="text-primary" />
+                      <MetricCard label="Middle (SMA20)" value={formatCurrency(technicals.bollinger_middle)} />
+                      <MetricCard label="Lower" value={formatCurrency(technicals.bollinger_lower)} color="text-destructive" />
+                    </div>
                   </div>
                 </div>
               </>
@@ -514,92 +653,56 @@ export default function StockDetail() {
 
         {activeTab === 'fundamentals' && (
           <motion.div key="fundamentals" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-4">
-            <AIFundamentalsPanel symbol={symbol!} quote={quote} technicals={technicals} partialFundamentals={fundamentals} />
-          </motion.div>
-        )}
-
-        {activeTab === 'ai' && (
-          <motion.div key="ai" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="space-y-4">
-            {aiLoading ? (
-              <div className="t-card p-16 text-center">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-10 h-10 border-2 border-[hsl(var(--terminal-cyan)/0.3)] border-t-[hsl(var(--terminal-cyan))] rounded-full animate-spin" />
-                  <p className="text-[hsl(var(--terminal-cyan))] text-sm font-medium">🤖 AI is analyzing {symbol}...</p>
-                  <p className="text-[10px] text-muted-foreground">Evaluating technicals, fundamentals, patterns & risk</p>
-                </div>
-              </div>
-            ) : aiAnalysis && !aiAnalysis.error ? (
+            {fundamentals ? (
               <>
-                <div className="t-card p-5 border-l-2 border-[hsl(var(--terminal-cyan))]">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-4">
-                      <GradeBadge grade={aiAnalysis.grade} />
-                      <div>
-                        <span className="text-2xl font-black text-foreground font-data">{aiAnalysis.overall_score}/100</span>
-                        <p className={`text-[11px] font-bold ${aiAnalysis.verdict?.includes('Buy') ? 'text-primary' : aiAnalysis.verdict?.includes('Sell') ? 'text-destructive' : 'text-accent'}`}>
-                          {aiAnalysis.verdict}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[9px] text-[hsl(var(--terminal-cyan))] font-medium">● {aiAnalysis.freshness || 'Fresh'}</span>
+                <div className="t-card p-4">
+                  <SectionTitle icon="💰">Valuation</SectionTitle>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    <MetricCard label="P/E" value={fundamentals.pe_ratio?.toFixed(1) || '—'} />
+                    <MetricCard label="Forward P/E" value={fundamentals.forward_pe?.toFixed(1) || '—'} />
+                    <MetricCard label="P/B" value={fundamentals.pb_ratio?.toFixed(2) || '—'} />
+                    <MetricCard label="PEG" value={fundamentals.peg_ratio?.toFixed(2) || '—'} />
+                    <MetricCard label="EV" value={fundamentals.enterprise_value ? formatMarketCap(fundamentals.enterprise_value) : '—'} />
+                    <MetricCard label="MCap" value={fundamentals.market_cap ? formatMarketCap(fundamentals.market_cap) : '—'} />
                   </div>
-                  {aiAnalysis.summary && <p className="text-[11px] text-muted-foreground leading-relaxed">{aiAnalysis.summary}</p>}
                 </div>
-
-                {aiAnalysis.scores && (
-                  <div className="t-card p-4">
-                    <SectionTitle icon="📊">Score Breakdown</SectionTitle>
-                    <div className="space-y-2">
-                      {Object.entries(aiAnalysis.scores).map(([key, val]) => (
-                        <ScoreBar key={key} label={key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} score={val as number} />
-                      ))}
-                    </div>
+                <div className="t-card p-4">
+                  <SectionTitle icon="📈">Profitability & Growth</SectionTitle>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    <MetricCard label="ROE" value={fundamentals.roe ? `${fundamentals.roe.toFixed(1)}%` : '—'} color={(fundamentals.roe || 0) >= 15 ? 'text-primary' : undefined} />
+                    <MetricCard label="ROA" value={fundamentals.roa ? `${fundamentals.roa.toFixed(1)}%` : '—'} />
+                    <MetricCard label="Profit Margin" value={fundamentals.profit_margins ? `${fundamentals.profit_margins.toFixed(1)}%` : '—'} />
+                    <MetricCard label="Op. Margin" value={fundamentals.operating_margins ? `${fundamentals.operating_margins.toFixed(1)}%` : '—'} />
+                    <MetricCard label="Rev Growth" value={fundamentals.revenue_growth ? `${fundamentals.revenue_growth.toFixed(1)}%` : '—'} color={(fundamentals.revenue_growth || 0) > 10 ? 'text-primary' : undefined} />
+                    <MetricCard label="EPS (TTM)" value={fundamentals.eps_trailing?.toFixed(2) || '—'} />
                   </div>
-                )}
-
-                {aiAnalysis.key_levels && (
-                  <div className="t-card p-4">
-                    <SectionTitle icon="🎯">AI Key Levels</SectionTitle>
-                    <div className="grid grid-cols-3 gap-3">
-                      <MetricCard label="Entry" value={formatCurrency(aiAnalysis.key_levels.entry)} color="text-[hsl(var(--terminal-cyan))]" />
-                      <MetricCard label="Target" value={formatCurrency(aiAnalysis.key_levels.target)} color="text-primary" />
-                      <MetricCard label="Stop Loss" value={formatCurrency(aiAnalysis.key_levels.stop_loss)} color="text-destructive" />
-                    </div>
+                </div>
+                <div className="t-card p-4">
+                  <SectionTitle icon="🏛️">Health & Dividend</SectionTitle>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    <MetricCard label="D/E" value={fundamentals.debt_to_equity?.toFixed(2) || '—'} color={(fundamentals.debt_to_equity || 0) > 1.5 ? 'text-destructive' : (fundamentals.debt_to_equity || 0) <= 0.5 ? 'text-primary' : undefined} />
+                    <MetricCard label="Current Ratio" value={fundamentals.current_ratio?.toFixed(2) || '—'} />
+                    <MetricCard label="Div Yield" value={fundamentals.dividend_yield ? `${fundamentals.dividend_yield.toFixed(1)}%` : '—'} />
+                    <MetricCard label="Beta" value={fundamentals.beta?.toFixed(2) || '—'} />
+                    <MetricCard label="Book Value" value={fundamentals.book_value?.toFixed(2) || '—'} />
+                    <MetricCard label="52W Range" value={fundamentals.week_52_low && fundamentals.week_52_high ? `${formatCurrency(fundamentals.week_52_low)} - ${formatCurrency(fundamentals.week_52_high)}` : '—'} />
                   </div>
-                )}
-
-                {aiAnalysis.catalysts?.length > 0 && (
+                </div>
+                {fundamentals.recommendation && (
                   <div className="t-card p-4">
-                    <SectionTitle icon="⚡">Catalysts</SectionTitle>
-                    <div className="space-y-2">
-                      {aiAnalysis.catalysts.map((c: string, i: number) => (
-                        <div key={i} className="flex items-start gap-2 text-[11px] text-muted-foreground">
-                          <span className="text-[hsl(var(--terminal-cyan))] mt-0.5">•</span><span>{c}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {aiAnalysis.risks?.length > 0 && (
-                  <div className="t-card p-4">
-                    <SectionTitle icon="⚠️">Risks</SectionTitle>
-                    <div className="space-y-2">
-                      {aiAnalysis.risks.map((r: string, i: number) => (
-                        <div key={i} className="flex items-start gap-2 text-[11px] text-muted-foreground">
-                          <span className="text-destructive mt-0.5">•</span><span>{r}</span>
-                        </div>
-                      ))}
+                    <SectionTitle icon="🎯">Analyst Consensus</SectionTitle>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <MetricCard label="Consensus" value={fundamentals.recommendation?.toUpperCase() || '—'} color={fundamentals.recommendation === 'buy' || fundamentals.recommendation === 'strong_buy' ? 'text-primary' : fundamentals.recommendation === 'sell' ? 'text-destructive' : undefined} />
+                      <MetricCard label="Target" value={formatCurrency(fundamentals.target_mean_price)} />
+                      <MetricCard label="Target High" value={formatCurrency(fundamentals.target_high_price)} color="text-primary" />
+                      <MetricCard label="Target Low" value={formatCurrency(fundamentals.target_low_price)} color="text-destructive" />
                     </div>
                   </div>
                 )}
               </>
             ) : (
               <div className="t-card p-12 text-center">
-                <p className="text-muted-foreground text-sm mb-3">{aiAnalysis?.error || 'Click AI Analysis to generate insights'}</p>
-                <button onClick={handleAnalyze} className="text-[10px] px-4 py-2 rounded-md bg-[hsl(var(--terminal-cyan)/0.08)] text-[hsl(var(--terminal-cyan))] border border-[hsl(var(--terminal-cyan)/0.15)] hover:bg-[hsl(var(--terminal-cyan)/0.15)] transition-all font-semibold">
-                  🤖 Generate AI Analysis
-                </button>
+                <p className="text-muted-foreground text-sm">{isLoading ? '⏳ Loading fundamentals...' : 'Fundamental data unavailable'}</p>
               </div>
             )}
           </motion.div>
