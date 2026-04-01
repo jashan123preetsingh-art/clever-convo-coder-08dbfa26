@@ -245,11 +245,19 @@ export default function Heatmap() {
         <div>
           <h1 className="text-sm font-bold text-foreground tracking-wide">MARKET HEATMAP</h1>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            {stocks.length} stocks · {liveMap.size > 0 ? `${liveMap.size} live` : 'Loading...'} · Sector weighted
+            {displayedCount} stocks · {liveMap.size > 0 ? `${liveMap.size} live` : 'Loading...'} · Top {maxPerSector}/sector
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isLoading && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+          <div className="flex items-center gap-1 bg-secondary/30 rounded-lg p-0.5 border border-border/20">
+            {[8, 12, 20].map(n => (
+              <button key={n} onClick={() => setMaxPerSector(n)}
+                className={`px-2.5 py-1 rounded-md text-[9px] font-bold transition-all ${maxPerSector === n ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                Top {n}
+              </button>
+            ))}
+          </div>
           <div className="flex items-center gap-0.5">
             {[{ l: '-3%', c: -3 }, { l: '-2%', c: -2 }, { l: '-1%', c: -1 }, { l: '0%', c: 0 }, { l: '+1%', c: 1 }, { l: '+2%', c: 2 }, { l: '+3%', c: 3 }].map((item, i) => (
               <div key={i} className="w-9 h-4 rounded-sm text-[8px] flex items-center justify-center font-mono"
