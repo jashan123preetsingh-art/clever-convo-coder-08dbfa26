@@ -110,19 +110,28 @@ export default function Dashboard() {
     };
   }, [liveBreadth]);
 
+  const liveStocks = useMemo(() => {
+    if (!Array.isArray(liveBreadth?.stocks) || liveBreadth.stocks.length === 0) return [];
+    return liveBreadth.stocks.filter((stock: any) => stock && typeof stock.ltp === 'number' && stock.ltp > 0);
+  }, [liveBreadth]);
+
   const { gainers, losers, active, sectors, advances, declines, unchanged } = useMemo(() => {
-    const g = getTopGainers();
-    const l = getTopLosers();
-    const a = getMostActive();
+    const fallbackStocks = getAllStocks();
+    const sourceStocks = liveStocks.length > 0 ? liveStocks : fallbackStocks;
+    const sortedByGains = [...sourceStocks].sort((a: any, b: any) => (b.change_pct ?? 0) - (a.change_pct ?? 0));
+    const sortedByLosses = [...sourceStocks].sort((a: any, b: any) => (a.change_pct ?? 0) - (b.change_pct ?? 0));
+    const sortedByVolume = [...sourceStocks].sort((a: any, b: any) => (b.volume ?? 0) - (a.volume ?? 0));
     const s = getSectorPerformance();
-    const all = getAllStocks();
     return {
-      gainers: g, losers: l, active: a, sectors: s,
-      advances: breadthParsed?.advances ?? all.filter(st => st.change_pct > 0).length,
-      declines: breadthParsed?.declines ?? all.filter(st => st.change_pct < 0).length,
-      unchanged: breadthParsed?.unchanged ?? all.filter(st => st.change_pct === 0).length,
+      gainers: sortedByGains,
+      losers: sortedByLosses,
+      active: sortedByVolume,
+      sectors: s,
+      advances: breadthParsed?.advances ?? sourceStocks.filter((st: any) => st.change_pct > 0).length,
+      declines: breadthParsed?.declines ?? sourceStocks.filter((st: any) => st.change_pct < 0).length,
+      unchanged: breadthParsed?.unchanged ?? sourceStocks.filter((st: any) => st.change_pct === 0).length,
     };
-  }, [breadthParsed]);
+  }, [breadthParsed, liveStocks]);
 
   const niftyLtp = indices.find((i: any) => i.symbol === 'NIFTY 50')?.ltp || 22800;
   const expectedMove = Math.round(niftyLtp * 0.014);

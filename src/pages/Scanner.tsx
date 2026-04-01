@@ -169,38 +169,43 @@ const DEFAULT_SCANS: ScanPreset[] = [
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.5 },
     ] },
 
-  // ─── ORB ───
-  { id: 'orb1', name: '15 Min ORB – Bullish', description: 'Price above 15min opening range high with volume', icon: '⏱️', category: 'orb',
+  // ─── ORB PROXY ───
+  { id: 'orb1', name: '15 Min ORB Proxy – Bullish', description: 'Opening range breakout proxy: strong expansion from open, close near high, with volume', icon: '⏱️', category: 'orb',
     conditions: [
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.005 },
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.005 },
-      { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.3 },
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0.5', compareMeasure: '', multiplier: 1 },
-    ] },
-  { id: 'orb2', name: '15 Min ORB – Bearish', description: 'Price below 15min opening range low', icon: '⏱️', category: 'orb',
-    conditions: [
-      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 0.995 },
-      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 0.995 },
-      { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.3 },
-      { measure: 'change_pct', operator: '<', compareType: 'number', value: '-0.5', compareMeasure: '', multiplier: 1 },
-    ] },
-  { id: 'orb3', name: '30 Min ORB – Bullish', description: 'Breaking above 30min high with momentum', icon: '🕐', category: 'orb',
-    conditions: [
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.008 },
+      { measure: 'high', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.01 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.006 },
+      { measure: 'close', operator: '>=', compareType: 'measure', value: '', compareMeasure: 'high', multiplier: 0.995 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.5 },
+    ] },
+  { id: 'orb2', name: '15 Min ORB Proxy – Bearish', description: 'Opening range breakdown proxy: strong expansion below open, close near low, with volume', icon: '⏱️', category: 'orb',
+    conditions: [
+      { measure: 'low', operator: '<', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 0.99 },
+      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 0.994 },
+      { measure: 'close', operator: '<=', compareType: 'measure', value: '', compareMeasure: 'low', multiplier: 1.005 },
+      { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.5 },
+    ] },
+  { id: 'orb3', name: '30 Min ORB Proxy – Bullish', description: 'Stronger opening range breakout proxy with broader session expansion', icon: '🕐', category: 'orb',
+    conditions: [
+      { measure: 'high', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.015 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.008 },
+      { measure: 'close', operator: '>=', compareType: 'measure', value: '', compareMeasure: 'high', multiplier: 0.996 },
+      { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.8 },
       { measure: 'change_pct', operator: '>', compareType: 'number', value: '0.8', compareMeasure: '', multiplier: 1 },
     ] },
-  { id: 'orb4', name: '30 Min ORB – Bearish', description: 'Breaking below 30min low with selling', icon: '🕐', category: 'orb',
+  { id: 'orb4', name: '30 Min ORB Proxy – Bearish', description: 'Stronger opening range breakdown proxy with broad selling pressure', icon: '🕐', category: 'orb',
     conditions: [
+      { measure: 'low', operator: '<', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 0.985 },
       { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 0.992 },
-      { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.5 },
+      { measure: 'close', operator: '<=', compareType: 'measure', value: '', compareMeasure: 'low', multiplier: 1.004 },
+      { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.8 },
       { measure: 'change_pct', operator: '<', compareType: 'number', value: '-0.8', compareMeasure: '', multiplier: 1 },
     ] },
-  { id: 'orb5', name: 'ORB + Volume Breakout', description: 'ORB with 2x+ volume confirmation', icon: '💹', category: 'orb',
+  { id: 'orb5', name: 'ORB Proxy + Volume Breakout', description: 'Session expansion with close near high and 2x volume confirmation', icon: '💹', category: 'orb',
     conditions: [
+      { measure: 'high', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.015 },
       { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'open', multiplier: 1.01 },
+      { measure: 'close', operator: '>=', compareType: 'measure', value: '', compareMeasure: 'high', multiplier: 0.995 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 2 },
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '1', compareMeasure: '', multiplier: 1 },
     ] },
 
   // ─── EMA ───
