@@ -175,6 +175,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
 
           {/* Theme toggle */}
           <button onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             className="w-8 h-8 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-all duration-200 flex items-center justify-center text-sm"
             title={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}>
             {theme === 'dark' ? '☀️' : '🌙'}
