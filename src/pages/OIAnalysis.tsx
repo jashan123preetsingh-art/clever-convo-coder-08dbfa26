@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
+
 import { generateOptionsChain } from '@/data/mockData';
 import { useOptionsChain } from '@/hooks/useStockData';
 import { formatNumber, formatVolume } from '@/utils/format';
@@ -26,9 +26,9 @@ function MetricCard({ label, value, sub, color, icon }: { label: string; value: 
   );
 }
 
-function OIChangeHeatmap({ chain, symbol }: { chain: any[]; symbol: string }) {
-  // Take strikes around ATM
-  const underlyingValue = symbol === 'NIFTY' ? 22800 : 52200;
+function OIChangeHeatmap({ chain, symbol, spot }: { chain: any[]; symbol: string; spot: number }) {
+  // Take strikes around ATM — use live spot price
+  const underlyingValue = spot || (symbol === 'NIFTY' ? 22800 : 52200);
   const atmIdx = chain.findIndex(c => Math.abs(c.strike - underlyingValue) === Math.min(...chain.map(r => Math.abs(r.strike - underlyingValue))));
   const visible = chain.slice(Math.max(0, atmIdx - 10), atmIdx + 11);
   const maxChg = Math.max(...visible.map(c => Math.max(Math.abs(c.ce.chg_oi), Math.abs(c.pe.chg_oi))), 1);
@@ -142,7 +142,7 @@ export default function OIAnalysis() {
   return (
     <div className="p-4 max-w-[1800px] mx-auto space-y-4">
       {/* Header */}
-      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
+      <div>
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -170,7 +170,7 @@ export default function OIAnalysis() {
             ))}
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Key Metrics Strip */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
@@ -185,7 +185,7 @@ export default function OIAnalysis() {
       </div>
 
       {/* Market Interpretation */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
+      <div
         className="t-card p-4">
         <div className="flex items-center gap-3 mb-2">
           <span className="text-sm">🧠</span>
@@ -219,12 +219,12 @@ export default function OIAnalysis() {
             </p>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* Call vs Put OI Distribution */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put OI Distribution</p>
           <p className="text-[8px] text-muted-foreground mb-3">Strikewise open interest comparison</p>
@@ -241,10 +241,10 @@ export default function OIAnalysis() {
               <Bar dataKey="putOI" name="Put OI" fill="hsl(var(--primary)/0.6)" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </motion.div>
+        </div>
 
         {/* OI Change Chart */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">OI Change by Strike</p>
           <p className="text-[8px] text-muted-foreground mb-3">Today's OI additions/reductions per strike</p>
@@ -269,13 +269,13 @@ export default function OIAnalysis() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </motion.div>
+        </div>
       </div>
 
       {/* PCR Trend + Net OI */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         {/* PCR Trend */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">PCR Trend (10 Sessions)</p>
           <p className="text-[8px] text-muted-foreground mb-3">Put-Call Ratio over recent sessions</p>
@@ -295,10 +295,10 @@ export default function OIAnalysis() {
               <Area type="monotone" dataKey="pcr" name="PCR" stroke="hsl(var(--primary))" fill="url(#pcrGrad)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
-        </motion.div>
+        </div>
 
         {/* Call vs Put OI Trend */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put OI Trend</p>
           <p className="text-[8px] text-muted-foreground mb-3">Total Call & Put OI over sessions</p>
@@ -313,14 +313,14 @@ export default function OIAnalysis() {
               <Line type="monotone" dataKey="putOI" name="Put OI" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
-        </motion.div>
+        </div>
       </div>
 
       {/* OI Change Heatmap */}
-      <OIChangeHeatmap chain={chain} symbol={activeSymbol} />
+      <OIChangeHeatmap chain={chain} symbol={activeSymbol} spot={underlyingValue} />
 
       {/* Net OI Chart */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+      <div
         className="t-card p-4">
         <p className="text-[11px] font-bold text-foreground mb-1">Net OI (Put - Call) by Strike</p>
         <p className="text-[8px] text-muted-foreground mb-3">Positive = Bullish bias, Negative = Bearish bias</p>
@@ -339,11 +339,11 @@ export default function OIAnalysis() {
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </motion.div>
+      </div>
 
       {/* ═══ IV Surface ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">IV Smile — {activeSymbol}</p>
           <p className="text-[8px] text-muted-foreground mb-3">Implied Volatility across strikes (Call IV vs Put IV)</p>
@@ -364,10 +364,10 @@ export default function OIAnalysis() {
               <Line type="monotone" dataKey="putIV" name="Put IV" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 2 }} />
             </LineChart>
           </ResponsiveContainer>
-        </motion.div>
+        </div>
 
         {/* IV Skew */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">IV Skew (Put IV - Call IV)</p>
           <p className="text-[8px] text-muted-foreground mb-3">Positive = Put premium {'>'} Call premium (fear) • Negative = Calls richer</p>
@@ -388,12 +388,12 @@ export default function OIAnalysis() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </motion.div>
+        </div>
       </div>
 
       {/* ═══ Straddle & Strangle Premium ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">Straddle Premium by Strike</p>
           <p className="text-[8px] text-muted-foreground mb-3">CE + PE premium at each strike — ATM straddle shows expected move</p>
@@ -429,10 +429,10 @@ export default function OIAnalysis() {
               <span className="font-bold text-primary font-data">±{((chain[atmIdx].ce.ltp + chain[atmIdx].pe.ltp) / underlyingValue * 100).toFixed(2)}%</span>
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* Strangle Premium */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
+        <div
           className="t-card p-4">
           <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put Premium</p>
           <p className="text-[8px] text-muted-foreground mb-3">Individual CE and PE premium across strikes</p>
@@ -452,11 +452,11 @@ export default function OIAnalysis() {
               <Line type="monotone" dataKey="putPrem" name="Put Premium" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 2 }} />
             </LineChart>
           </ResponsiveContainer>
-        </motion.div>
+        </div>
       </div>
 
       {/* IV Surface 3D-like Heatmap */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+      <div
         className="t-card p-4">
         <p className="text-[11px] font-bold text-foreground mb-1">IV Surface — {activeSymbol}</p>
         <p className="text-[8px] text-muted-foreground mb-3">Implied Volatility heatmap across strikes — darker = higher IV</p>
@@ -496,7 +496,7 @@ export default function OIAnalysis() {
             <span className="text-[7px] text-accent ml-2">■ = ATM Strike</span>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }
