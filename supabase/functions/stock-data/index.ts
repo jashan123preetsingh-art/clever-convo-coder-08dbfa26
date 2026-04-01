@@ -741,8 +741,10 @@ serve(async (req) => {
         break;
       }
       case "batch": result = await getBatchQuotes(symbols); break;
+      case "batch-ema": result = await getBatchEMA(symbols); break;
       case "search": result = await searchStocks(query); break;
       case "indices": result = await getIndices(); break;
+      case "market-metrics": result = await getMarketMetrics(); break;
       case "options-chain": result = await fetchNSEOptionsChain(symbol || "NIFTY"); break;
       default: result = { error: "Unknown action" };
     }
