@@ -1,10 +1,10 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllStocks, getSectorPerformance, Stock } from '@/data/mockData';
+import { getAllStocks, Stock } from '@/data/mockData';
 import { stockApi } from '@/lib/api';
 import { formatPercent } from '@/utils/format';
+import { useBatchQuotes } from '@/hooks/useStockData';
 
-// TradingView-style color scale
 function getHeatColor(pct: number): string {
   if (pct >= 3) return 'hsl(145, 63%, 32%)';
   if (pct >= 2) return 'hsl(145, 55%, 26%)';
@@ -35,7 +35,6 @@ interface TreeNode {
 type Rect = { x: number; y: number; w: number; h: number };
 type LayoutItem = { node: TreeNode; x: number; y: number; w: number; h: number };
 
-// Proper squarified treemap (Bruls, Huizing, van Wijk)
 function squarify(nodes: TreeNode[], x: number, y: number, w: number, h: number): LayoutItem[] {
   if (nodes.length === 0) return [];
   if (nodes.length === 1) return [{ node: nodes[0], x, y, w, h }];
@@ -113,7 +112,6 @@ function worstAspect(row: { area: number }[], rect: Rect): number {
   return worst;
 }
 
-// Sector-level treemap using same squarify
 function sectorTreemap(
   sectors: { sector: string; stocks: TreeNode[]; totalMcap: number }[],
   width: number, height: number
@@ -129,51 +127,48 @@ function sectorTreemap(
   }));
 }
 
+// Skeleton placeholder for loading state
+function HeatmapSkeleton() {
+  return (
+    <div className="relative rounded-lg overflow-hidden border border-border/40 animate-pulse" style={{ width: '100%', paddingBottom: '46.875%' }}>
+      <div className="absolute inset-0 bg-secondary/20 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-[10px] text-muted-foreground">Loading live market data...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Heatmap() {
-  const [liveStocks, setLiveStocks] = useState<Map<string, any>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const mockStocks = useMemo(() => getAllStocks(), []);
 
-  const mockStocks = getAllStocks();
+  // Only fetch top 120 stocks by market cap (covers 95%+ of heatmap visual area)
+  const topSymbols = useMemo(() => {
+    return [...mockStocks]
+      .sort((a, b) => (b.market_cap || 0) - (a.market_cap || 0))
+      .slice(0, 120)
+      .map(s => s.symbol);
+  }, [mockStocks]);
 
-  // Fetch live quotes in batches
-  useEffect(() => {
-    const fetchLive = async () => {
-      setLoading(true);
-      try {
-        const symbols = mockStocks.map(s => s.symbol);
-        // Batch in groups of 15
-        const batches: string[][] = [];
-        for (let i = 0; i < symbols.length; i += 15) {
-          batches.push(symbols.slice(i, i + 15));
-        }
+  // Use React Query with caching — fetches in batches of 20 internally
+  const { data: liveQuotes, isLoading } = useBatchQuotes(topSymbols);
 
-        const results = await Promise.all(
-          batches.map(batch => stockApi.getBatchQuotes(batch).catch(() => []))
-        );
-
-        const map = new Map<string, any>();
-        for (const batch of results) {
-          if (!Array.isArray(batch)) continue;
-          for (const item of batch) {
-            if (item.data) map.set(item.symbol, item.data);
-          }
-        }
-        setLiveStocks(map);
-        setLastUpdate(new Date());
-      } catch { /* silent */ }
-      setLoading(false);
-    };
-
-    fetchLive();
-    const interval = setInterval(fetchLive, 60000); // refresh every 60s
-    return () => clearInterval(interval);
-  }, []);
+  const liveMap = useMemo(() => {
+    const m = new Map<string, any>();
+    if (Array.isArray(liveQuotes)) {
+      for (const item of liveQuotes) {
+        if (item?.data) m.set(item.symbol, item.data);
+      }
+    }
+    return m;
+  }, [liveQuotes]);
 
   // Merge live + mock data
   const stocks: TreeNode[] = useMemo(() => {
     return mockStocks.map(s => {
-      const live = liveStocks.get(s.symbol);
+      const live = liveMap.get(s.symbol);
       return {
         symbol: s.symbol,
         name: live?.name || s.name,
@@ -183,7 +178,7 @@ export default function Heatmap() {
         sector: s.sector,
       };
     }).sort((a, b) => b.market_cap - a.market_cap);
-  }, [mockStocks, liveStocks]);
+  }, [mockStocks, liveMap]);
 
   // Group by sector
   const sectorGroups = useMemo(() => {
@@ -223,12 +218,11 @@ export default function Heatmap() {
         <div>
           <h1 className="text-sm font-bold text-foreground tracking-wide">MARKET HEATMAP</h1>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            {stocks.length} stocks · {liveStocks.size > 0 ? `${liveStocks.size} live` : 'Loading...'} · Sector weighted
-            {lastUpdate && <span className="ml-2">Updated {lastUpdate.toLocaleTimeString('en-IN', { hour12: false })}</span>}
+            {stocks.length} stocks · {liveMap.size > 0 ? `${liveMap.size} live` : 'Loading...'} · Sector weighted
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {loading && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
+          {isLoading && <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
           <div className="flex items-center gap-0.5">
             {[{ l: '-3%', c: -3 }, { l: '-2%', c: -2 }, { l: '-1%', c: -1 }, { l: '0%', c: 0 }, { l: '+1%', c: 1 }, { l: '+2%', c: 2 }, { l: '+3%', c: 3 }].map((item, i) => (
               <div key={i} className="w-9 h-4 rounded-sm text-[7px] flex items-center justify-center font-mono"
@@ -240,87 +234,85 @@ export default function Heatmap() {
         </div>
       </div>
 
-      {/* Treemap */}
-      <div className="relative rounded-lg overflow-hidden border border-border/40" style={{ width: '100%', paddingBottom: `${(HEIGHT / WIDTH) * 100}%` }}>
-        <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-          {sectorLayout.map((sec) => {
-            const stockLayout = squarify(sec.stocks, sec.x, sec.y, sec.w, sec.h);
-            const avgChange = sectorAvgChange[sec.sector] ?? 0;
+      {/* Treemap or Skeleton */}
+      {isLoading && liveMap.size === 0 ? (
+        <HeatmapSkeleton />
+      ) : (
+        <div className="relative rounded-lg overflow-hidden border border-border/40" style={{ width: '100%', paddingBottom: `${(HEIGHT / WIDTH) * 100}%` }}>
+          <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+            {sectorLayout.map((sec) => {
+              const stockLayout = squarify(sec.stocks, sec.x, sec.y, sec.w, sec.h);
 
-            return (
-              <g key={sec.sector}>
-                {/* Sector label */}
-                {sec.w > 80 && sec.h > 30 && (
-                  <text
-                    x={sec.x + 5} y={sec.y + 12}
-                    fill="rgba(255,255,255,0.35)" fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif"
-                  >
-                    {sec.sector} ›
-                  </text>
-                )}
+              return (
+                <g key={sec.sector}>
+                  {sec.w > 80 && sec.h > 30 && (
+                    <text x={sec.x + 5} y={sec.y + 12}
+                      fill="rgba(255,255,255,0.35)" fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif">
+                      {sec.sector} ›
+                    </text>
+                  )}
 
-                {/* Stock tiles */}
-                {stockLayout.map(({ node, x, y, w, h }) => {
-                  const isLarge = w > 70 && h > 45;
-                  const isMedium = w > 45 && h > 30;
-                  const isSmall = w > 25 && h > 20;
+                  {stockLayout.map(({ node, x, y, w, h }) => {
+                    const isLarge = w > 70 && h > 45;
+                    const isMedium = w > 45 && h > 30;
+                    const isSmall = w > 25 && h > 20;
 
-                  return (
-                    <g key={node.symbol}>
-                      <Link to={`/stock/${node.symbol}`}>
-                        <rect
-                          x={x + 0.5} y={y + 0.5}
-                          width={Math.max(w - 1, 1)} height={Math.max(h - 1, 1)}
-                          fill={getHeatColor(node.change_pct)}
-                          rx="2" ry="2"
-                          className="cursor-pointer transition-opacity hover:opacity-80"
-                          stroke="hsl(225, 25%, 8%)" strokeWidth="0.5"
-                        />
-                        {isLarge && (
-                          <>
-                            <text x={x + w / 2} y={y + h / 2 - 6} textAnchor="middle"
-                              fill={getTextColor(node.change_pct)} fontSize="12" fontWeight="700" fontFamily="Inter, sans-serif">
-                              {node.symbol}
+                    return (
+                      <g key={node.symbol}>
+                        <Link to={`/stock/${node.symbol}`}>
+                          <rect
+                            x={x + 0.5} y={y + 0.5}
+                            width={Math.max(w - 1, 1)} height={Math.max(h - 1, 1)}
+                            fill={getHeatColor(node.change_pct)}
+                            rx="2" ry="2"
+                            className="cursor-pointer transition-opacity hover:opacity-80"
+                            stroke="hsl(225, 25%, 8%)" strokeWidth="0.5"
+                          />
+                          {isLarge && (
+                            <>
+                              <text x={x + w / 2} y={y + h / 2 - 6} textAnchor="middle"
+                                fill={getTextColor(node.change_pct)} fontSize="12" fontWeight="700" fontFamily="Inter, sans-serif">
+                                {node.symbol}
+                              </text>
+                              <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
+                                fill={getTextColor(node.change_pct)} fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                                {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(2)}%
+                              </text>
+                            </>
+                          )}
+                          {!isLarge && isMedium && (
+                            <>
+                              <text x={x + w / 2} y={y + h / 2 - 3} textAnchor="middle"
+                                fill={getTextColor(node.change_pct)} fontSize="9" fontWeight="700" fontFamily="Inter, sans-serif">
+                                {node.symbol.slice(0, 7)}
+                              </text>
+                              <text x={x + w / 2} y={y + h / 2 + 9} textAnchor="middle"
+                                fill={getTextColor(node.change_pct)} fontSize="8" fontWeight="600" fontFamily="JetBrains Mono, monospace">
+                                {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(1)}%
+                              </text>
+                            </>
+                          )}
+                          {!isLarge && !isMedium && isSmall && (
+                            <text x={x + w / 2} y={y + h / 2 + 3} textAnchor="middle"
+                              fill={getTextColor(node.change_pct)} fontSize="7" fontWeight="600" fontFamily="Inter, sans-serif">
+                              {node.symbol.slice(0, 5)}
                             </text>
-                            <text x={x + w / 2} y={y + h / 2 + 10} textAnchor="middle"
-                              fill={getTextColor(node.change_pct)} fontSize="11" fontWeight="600" fontFamily="JetBrains Mono, monospace">
-                              {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(2)}%
-                            </text>
-                          </>
-                        )}
-                        {!isLarge && isMedium && (
-                          <>
-                            <text x={x + w / 2} y={y + h / 2 - 3} textAnchor="middle"
-                              fill={getTextColor(node.change_pct)} fontSize="9" fontWeight="700" fontFamily="Inter, sans-serif">
-                              {node.symbol.slice(0, 7)}
-                            </text>
-                            <text x={x + w / 2} y={y + h / 2 + 9} textAnchor="middle"
-                              fill={getTextColor(node.change_pct)} fontSize="8" fontWeight="600" fontFamily="JetBrains Mono, monospace">
-                              {node.change_pct >= 0 ? '+' : ''}{node.change_pct.toFixed(1)}%
-                            </text>
-                          </>
-                        )}
-                        {!isLarge && !isMedium && isSmall && (
-                          <text x={x + w / 2} y={y + h / 2 + 3} textAnchor="middle"
-                            fill={getTextColor(node.change_pct)} fontSize="7" fontWeight="600" fontFamily="Inter, sans-serif">
-                            {node.symbol.slice(0, 5)}
-                          </text>
-                        )}
-                      </Link>
-                    </g>
-                  );
-                })}
+                          )}
+                        </Link>
+                      </g>
+                    );
+                  })}
 
-                {/* Sector border */}
-                <rect
-                  x={sec.x} y={sec.y} width={sec.w} height={sec.h}
-                  fill="none" stroke="hsl(225, 25%, 8%)" strokeWidth="2"
-                />
-              </g>
-            );
-          })}
-        </svg>
-      </div>
+                  <rect
+                    x={sec.x} y={sec.y} width={sec.w} height={sec.h}
+                    fill="none" stroke="hsl(225, 25%, 8%)" strokeWidth="2"
+                  />
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      )}
 
       {/* Sector summary bar */}
       <div className="flex flex-wrap gap-2 mt-3">
