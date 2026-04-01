@@ -1,9 +1,69 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { usePortfolio, PortfolioPosition } from '@/hooks/usePortfolio';
-import { useBatchQuotes } from '@/hooks/useStockData';
+import { useBatchQuotes, useStockSearch } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent } from '@/utils/format';
+import { Search } from 'lucide-react';
 import type { Stock } from '@/types/stock';
+
+function SymbolSearchInput({ value, onChange }: { value: string; onChange: (symbol: string) => void }) {
+  const [input, setInput] = useState(value);
+  const [open, setOpen] = useState(false);
+  const { data: results } = useStockSearch(input);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setInput(value); }, [value]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!input || input.length < 1 || !Array.isArray(results)) return [];
+    return results.slice(0, 8);
+  }, [input, results]);
+
+  return (
+    <div ref={ref} className="relative">
+      <label className="text-[8px] text-muted-foreground/70 uppercase tracking-wider font-bold block mb-1">Symbol</label>
+      <div className="flex items-center bg-secondary/40 border border-border/30 rounded-lg px-2.5 py-2 gap-1.5 focus-within:border-primary/30 transition-all">
+        <Search className="w-3 h-3 text-muted-foreground/50 flex-shrink-0" />
+        <input
+          value={input}
+          onChange={e => { setInput(e.target.value); onChange(''); setOpen(true); }}
+          onFocus={() => input.length >= 1 && setOpen(true)}
+          placeholder="Search stock..."
+          className="bg-transparent text-[11px] text-foreground placeholder:text-muted-foreground/50 w-28 focus:outline-none"
+          required
+        />
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute top-full left-0 mt-1 w-72 bg-card/95 backdrop-blur-xl border border-border/40 rounded-xl shadow-2xl z-50 overflow-hidden max-h-52 overflow-y-auto">
+          {filtered.map((stock: { symbol: string; name: string; exchange?: string }, i: number) => (
+            <button key={`${stock.symbol}-${i}`} type="button"
+              onMouseDown={e => {
+                e.preventDefault();
+                setInput(stock.symbol);
+                onChange(stock.symbol);
+                setOpen(false);
+              }}
+              className="w-full text-left flex items-center justify-between px-3 py-2.5 hover:bg-primary/5 transition-colors border-b border-border/10 last:border-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[11px] font-bold text-foreground">{stock.symbol}</span>
+                <span className="text-[9px] text-muted-foreground truncate">{stock.name}</span>
+              </div>
+              <span className="text-[8px] text-muted-foreground/50 bg-secondary/50 px-1.5 py-0.5 rounded flex-shrink-0">{stock.exchange || 'NSE'}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function AddPositionForm({ onSubmit }: { onSubmit: (data: { symbol: string; entry_price: number; quantity: number; trade_type: string; notes?: string }) => void }) {
   const [symbol, setSymbol] = useState('');
@@ -20,11 +80,7 @@ function AddPositionForm({ onSubmit }: { onSubmit: (data: { symbol: string; entr
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-wrap gap-2 items-end">
-      <div>
-        <label className="text-[8px] text-muted-foreground/70 uppercase tracking-wider font-bold block mb-1">Symbol</label>
-        <input value={symbol} onChange={e => setSymbol(e.target.value)} placeholder="RELIANCE"
-          className="bg-secondary/40 border border-border/30 rounded-lg px-3 py-2 text-[11px] text-foreground w-28 focus:outline-none focus:border-primary/30" required />
-      </div>
+      <SymbolSearchInput value={symbol} onChange={setSymbol} />
       <div>
         <label className="text-[8px] text-muted-foreground/70 uppercase tracking-wider font-bold block mb-1">Entry Price</label>
         <input value={price} onChange={e => setPrice(e.target.value)} type="number" step="0.01" placeholder="1400"
