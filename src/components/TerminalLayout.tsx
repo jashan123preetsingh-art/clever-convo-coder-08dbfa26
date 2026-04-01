@@ -1,10 +1,10 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense, memo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import useStore from '@/store/useStore';
-import { INDICES as MOCK_INDICES, getAllStocks } from '@/data/mockData';
+import { INDICES as MOCK_INDICES } from '@/data/mockData';
 import { formatPercent } from '@/utils/format';
-import { useIndices } from '@/hooks/useStockData';
+import { useIndices, useStockSearch } from '@/hooks/useStockData';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertBell } from '@/components/PriceAlerts';
 import { useTheme } from '@/hooks/useTheme';
@@ -30,7 +30,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   const { sidebarOpen, toggleSidebar } = useStore();
   const { user, isAdmin, profile, signOut } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -39,8 +39,14 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   const { data: liveIndices } = useIndices();
   const INDICES = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : MOCK_INDICES;
 
+  // Use live search instead of filtering entire getAllStocks() on every keystroke
+  const { data: searchResults } = useStockSearch(searchInput);
+
+  // Update clock every 30s instead of every 1s — no one needs second precision
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
+    const update = () => setTime(new Date().toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit' }));
+    update();
+    const timer = setInterval(update, 30_000);
     return () => clearInterval(timer);
   }, []);
 
@@ -61,24 +67,26 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
-  const isMarketOpen = () => {
+  const marketOpen = useMemo(() => {
     const now = new Date();
     const day = now.getDay();
     if (day === 0 || day === 6) return false;
     const timeVal = now.getHours() * 60 + now.getMinutes();
     return timeVal >= 555 && timeVal <= 930;
-  };
+  }, [time]); // recalc when clock updates
 
-  const handleSearchSelect = (symbol: string) => {
+  const handleSearchSelect = useCallback((symbol: string) => {
     navigate(`/stock/${symbol}`);
     setSearchInput('');
     setShowSearch(false);
-  };
+  }, [navigate]);
 
-  const combinedResults = searchInput.length >= 1
-    ? getAllStocks().filter(s => s.symbol.toLowerCase().includes(searchInput.toLowerCase()) || s.name.toLowerCase().includes(searchInput.toLowerCase())).slice(0, 10)
-    : [];
-  const marketOpen = isMarketOpen();
+  const combinedResults = useMemo(() => {
+    if (!searchInput || searchInput.length < 1) return [];
+    if (Array.isArray(searchResults) && searchResults.length > 0) return searchResults.slice(0, 10);
+    return [];
+  }, [searchInput, searchResults]);
+  
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
@@ -178,7 +186,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
             <span className={`text-[9px] font-bold tracking-wider ${marketOpen ? 'text-primary' : 'text-muted-foreground'}`}>
               {marketOpen ? 'LIVE' : 'CLOSED'}
             </span>
-            <span className="text-[9px] text-muted-foreground/50 font-data">{time.toLocaleTimeString('en-IN', { hour12: false })}</span>
+            <span className="text-[9px] text-muted-foreground/50 font-data">{time}</span>
           </div>
 
           {/* User avatar */}
@@ -314,11 +322,10 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto bg-background">
-          <motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}
-            className="min-h-full">
+        <main className="flex-1 overflow-y-auto bg-background" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="min-h-full">
             {children}
-          </motion.div>
+          </div>
         </main>
       </div>
 
@@ -330,7 +337,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
             <span className="text-[9px] text-muted-foreground/60 font-medium font-data">CONNECTED</span>
           </div>
           <span className="text-[9px] text-muted-foreground/40">NSE · BSE</span>
-          <span className="text-[9px] text-muted-foreground/40">{getAllStocks().length} stocks</span>
+          <span className="text-[9px] text-muted-foreground/40">500+ stocks</span>
         </div>
         <div className="flex items-center gap-5">
           <span className="text-[9px] text-muted-foreground/40">
