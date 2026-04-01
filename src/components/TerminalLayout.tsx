@@ -67,23 +67,25 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
     return () => window.removeEventListener('keydown', handleKey);
   }, []);
 
-  const isMarketOpen = () => {
+  const marketOpen = useMemo(() => {
     const now = new Date();
     const day = now.getDay();
     if (day === 0 || day === 6) return false;
     const timeVal = now.getHours() * 60 + now.getMinutes();
     return timeVal >= 555 && timeVal <= 930;
-  };
+  }, [time]); // recalc when clock updates
 
-  const handleSearchSelect = (symbol: string) => {
+  const handleSearchSelect = useCallback((symbol: string) => {
     navigate(`/stock/${symbol}`);
     setSearchInput('');
     setShowSearch(false);
-  };
+  }, [navigate]);
 
-  const combinedResults = searchInput.length >= 1
-    ? getAllStocks().filter(s => s.symbol.toLowerCase().includes(searchInput.toLowerCase()) || s.name.toLowerCase().includes(searchInput.toLowerCase())).slice(0, 10)
-    : [];
+  const combinedResults = useMemo(() => {
+    if (!searchInput || searchInput.length < 1) return [];
+    if (Array.isArray(searchResults) && searchResults.length > 0) return searchResults.slice(0, 10);
+    return [];
+  }, [searchInput, searchResults]);
   const marketOpen = isMarketOpen();
 
   return (
