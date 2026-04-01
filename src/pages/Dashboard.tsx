@@ -101,6 +101,8 @@ export default function Dashboard() {
   const { data: liveBreadth } = useMarketBreadth();
   const { data: marketMetrics } = useMarketMetrics();
   const indices = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : INDICES;
+  const isLive = liveIndices?.length > 0 && !liveIndices[0]?.error;
+
   const { data: liveNews } = useQuery({
     queryKey: ['dashboard-news'],
     queryFn: fetchLiveNews,
