@@ -239,13 +239,7 @@ export default function AiAssistant() {
                   </div>
                   <div className="grid grid-cols-2 gap-1.5 mt-3">
                     {SUGGESTIONS.map((s, i) => (
-                      <button key={i} onClick={() => {
-                        if (s.includes('📸')) {
-                          fileInputRef.current?.click();
-                        } else {
-                          sendMessage(s);
-                        }
-                      }}
+                      <button key={i} onClick={() => sendMessage(s)}
                         className="text-left text-[9px] text-muted-foreground hover:text-foreground bg-secondary/40 hover:bg-secondary/70 rounded-lg px-2.5 py-2 transition-colors border border-border/30">
                         {s}
                       </button>
