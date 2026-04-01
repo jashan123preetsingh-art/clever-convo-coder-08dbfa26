@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { INDICES, getTopGainers, getTopLosers, getMostActive, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
-import { useIndices } from '@/hooks/useStockData';
+import { useIndices, useFiiDiiData, useMarketBreadth } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
 import MarketBrief from '@/components/MarketBrief';
 import WatchlistWidget from '@/components/WatchlistWidget';
@@ -82,8 +82,33 @@ const fadeUp = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const { data: liveIndices } = useIndices();
+  const { data: liveFiiDii } = useFiiDiiData();
+  const { data: liveBreadth } = useMarketBreadth();
   const indices = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : INDICES;
   const isLive = liveIndices?.length > 0 && !liveIndices[0]?.error;
+
+  // Parse live FII/DII data
+  const fiiDiiParsed = useMemo(() => {
+    if (!liveFiiDii || !Array.isArray(liveFiiDii)) return null;
+    const fii = liveFiiDii.find((d: any) => d.category?.includes('FII'));
+    const dii = liveFiiDii.find((d: any) => d.category === 'DII');
+    if (!fii && !dii) return null;
+    return {
+      fiiNet: parseFloat(fii?.netValue || '0'),
+      diiNet: parseFloat(dii?.netValue || '0'),
+      date: fii?.date || dii?.date || '',
+    };
+  }, [liveFiiDii]);
+
+  // Parse live breadth
+  const breadthParsed = useMemo(() => {
+    if (!liveBreadth) return null;
+    return {
+      advances: liveBreadth.advances ?? 0,
+      declines: liveBreadth.declines ?? 0,
+      unchanged: liveBreadth.unchanged ?? 0,
+    };
+  }, [liveBreadth]);
 
   const { gainers, losers, active, sectors, advances, declines, unchanged } = useMemo(() => {
     const g = getTopGainers();
@@ -93,11 +118,11 @@ export default function Dashboard() {
     const all = getAllStocks();
     return {
       gainers: g, losers: l, active: a, sectors: s,
-      advances: all.filter(st => st.change_pct > 0).length,
-      declines: all.filter(st => st.change_pct < 0).length,
-      unchanged: all.filter(st => st.change_pct === 0).length,
+      advances: breadthParsed?.advances ?? all.filter(st => st.change_pct > 0).length,
+      declines: breadthParsed?.declines ?? all.filter(st => st.change_pct < 0).length,
+      unchanged: breadthParsed?.unchanged ?? all.filter(st => st.change_pct === 0).length,
     };
-  }, []);
+  }, [breadthParsed]);
 
   const niftyLtp = indices.find((i: any) => i.symbol === 'NIFTY 50')?.ltp || 22800;
   const expectedMove = Math.round(niftyLtp * 0.014);
@@ -209,8 +234,14 @@ export default function Dashboard() {
           <MetricWidget icon="⚡" label="India VIX" value="25.27" sub="-5.4%" color="text-accent" />
           <MetricWidget icon="📈" label="Adv / Dec" value={`${advances} / ${declines}`} sub={`${unchanged} unch`}
             color={advances > declines ? 'text-primary' : 'text-destructive'} />
-          <MetricWidget icon="🏦" label="FII Net" value="-₹4,367 Cr" sub="27-Mar" color="text-destructive" />
-          <MetricWidget icon="📊" label="DII Net" value="+₹3,566 Cr" sub="27-Mar" color="text-primary" />
+          <MetricWidget icon="🏦" label="FII Net"
+            value={fiiDiiParsed ? `${fiiDiiParsed.fiiNet >= 0 ? '+' : ''}₹${Math.abs(Math.round(fiiDiiParsed.fiiNet)).toLocaleString('en-IN')} Cr` : '—'}
+            sub={fiiDiiParsed?.date || 'Loading...'}
+            color={fiiDiiParsed ? (fiiDiiParsed.fiiNet >= 0 ? 'text-primary' : 'text-destructive') : undefined} />
+          <MetricWidget icon="📊" label="DII Net"
+            value={fiiDiiParsed ? `${fiiDiiParsed.diiNet >= 0 ? '+' : ''}₹${Math.abs(Math.round(fiiDiiParsed.diiNet)).toLocaleString('en-IN')} Cr` : '—'}
+            sub={fiiDiiParsed?.date || 'Loading...'}
+            color={fiiDiiParsed ? (fiiDiiParsed.diiNet >= 0 ? 'text-primary' : 'text-destructive') : undefined} />
           <MetricWidget icon="💹" label="F&O Turnover" value="₹98.5K Cr" sub="Premium" />
         </div>
       </div>
