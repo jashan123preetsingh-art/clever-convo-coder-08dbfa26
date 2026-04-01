@@ -465,6 +465,7 @@ export const CATEGORIES = [
   { key: 'quality', label: 'Quality', icon: '💎', color: 'text-[hsl(var(--terminal-purple))]' },
   { key: 'value', label: 'Value', icon: '🏷️', color: 'text-primary' },
   { key: 'price', label: 'Price', icon: '🪙', color: 'text-accent' },
+  { key: 'investment', label: '📈 Investment', icon: '📈', color: 'text-primary' },
 ];
 
 export const CATEGORY_ACCENT: Record<string, string> = {
