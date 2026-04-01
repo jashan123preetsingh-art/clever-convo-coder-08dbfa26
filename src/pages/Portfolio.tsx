@@ -500,6 +500,9 @@ export default function Portfolio() {
         </div>
       </div>
 
+      {/* AI Portfolio Analysis */}
+      <PortfolioAI positions={openPositions} quoteMap={quoteMap} liveSymbolMap={liveSymbolByPositionId} />
+
       <div className="rounded-xl bg-card/30 border border-border/10 p-4">
         <p className="text-[9px] text-muted-foreground/70 font-bold uppercase tracking-wider mb-3">Add Position</p>
         <AddPositionForm onSubmit={addPosition} />
