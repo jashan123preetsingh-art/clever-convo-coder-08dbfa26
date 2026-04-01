@@ -23,11 +23,11 @@ ${JSON.stringify(marketData.indices, null, 1)}
 MARKET BREADTH:
 - Advances: ${marketData.advances}, Declines: ${marketData.declines}, Unchanged: ${marketData.unchanged}
 
-TOP GAINERS: ${marketData.gainers?.map((g: any) => `${g.symbol} (+${g.change_pct?.toFixed(1)}%)`).join(', ')}
-TOP LOSERS: ${marketData.losers?.map((l: any) => `${l.symbol} (${l.change_pct?.toFixed(1)}%)`).join(', ')}
+TOP GAINERS: ${marketData.gainers?.map((g: any) => `${g.symbol} (+${(g.change_pct ?? 0).toFixed(1)}%)`).join(', ') || 'N/A'}
+TOP LOSERS: ${marketData.losers?.map((l: any) => `${l.symbol} (${(l.change_pct ?? 0).toFixed(1)}%)`).join(', ') || 'N/A'}
 
 SECTOR PERFORMANCE:
-${marketData.sectors?.map((s: any) => `${s.sector}: ${s.avg_change >= 0 ? '+' : ''}${s.avg_change?.toFixed(2)}%`).join('\n')}
+${marketData.sectors?.map((s: any) => `${s.sector}: ${(s.avg_change ?? 0) >= 0 ? '+' : ''}${(s.avg_change ?? 0).toFixed(2)}%`).join('\n') || 'N/A'}
 
 Return this JSON structure:
 {
