@@ -707,37 +707,51 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
 }) {
   if (legs.length === 0) return null;
 
+  const fmt = (v: number) => {
+    const abs = Math.abs(v);
+    if (abs >= 100000) return `₹${(v / 100000).toFixed(2)}L`;
+    if (abs >= 1000) return `₹${(v / 1000).toFixed(1)}K`;
+    return `₹${v.toFixed(0)}`;
+  };
+
   return (
     <>
       <div className="t-card p-0 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-1.5 bg-secondary/20 border-b border-border/20">
+          <span className="text-[8px] text-muted-foreground font-bold uppercase tracking-wider">Strategy Legs</span>
+          <span className="text-[8px] text-muted-foreground">Lot Size: <span className="text-foreground font-bold">{lotSize}</span> × {symbol}</span>
+        </div>
         <table className="w-full text-[10px]">
           <thead>
             <tr className="bg-secondary/30 text-muted-foreground text-[8px]">
-              <th className="p-2 text-left">Action</th><th className="p-2 text-left">Type</th><th className="p-2 text-right">Strike</th><th className="p-2 text-right">Premium</th><th className="p-2 text-right">Lots</th><th className="p-2 text-right">Cost/Credit</th>
+              <th className="p-2 text-left">Action</th><th className="p-2 text-left">Type</th><th className="p-2 text-right">Strike</th><th className="p-2 text-right">Premium</th><th className="p-2 text-right">Lots</th><th className="p-2 text-right">Value (₹)</th>
             </tr>
           </thead>
           <tbody>
-            {legs.map((leg) => (
-              <tr key={leg.id} className="border-t border-border/20">
-                <td className={`p-2 font-bold ${leg.action === 'BUY' ? 'text-primary' : 'text-destructive'}`}>{leg.action}</td>
-                <td className="p-2 text-foreground">{leg.type}</td>
-                <td className="p-2 text-right text-foreground font-medium">{formatNumber(leg.strike)}</td>
-                <td className="p-2 text-right text-foreground">₹{leg.premium.toFixed(2)}</td>
-                <td className="p-2 text-right text-muted-foreground">{leg.lots}</td>
-                <td className={`p-2 text-right font-bold ${leg.action === 'BUY' ? 'text-destructive' : 'text-primary'}`}>
-                  {leg.action === 'BUY' ? '-' : '+'}₹{(leg.premium * leg.lots).toFixed(2)}
-                </td>
-              </tr>
-            ))}
+            {legs.map((leg) => {
+              const value = leg.premium * leg.lots * lotSize;
+              return (
+                <tr key={leg.id} className="border-t border-border/20">
+                  <td className={`p-2 font-bold ${leg.action === 'BUY' ? 'text-primary' : 'text-destructive'}`}>{leg.action}</td>
+                  <td className="p-2 text-foreground">{leg.type}</td>
+                  <td className="p-2 text-right text-foreground font-medium">{formatNumber(leg.strike)}</td>
+                  <td className="p-2 text-right text-foreground">₹{leg.premium.toFixed(2)}</td>
+                  <td className="p-2 text-right text-muted-foreground">{leg.lots}</td>
+                  <td className={`p-2 text-right font-bold ${leg.action === 'BUY' ? 'text-destructive' : 'text-primary'}`}>
+                    {leg.action === 'BUY' ? '-' : '+'}{fmt(value)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[
-          { label: 'Net Premium', value: `${netPremium >= 0 ? '+' : ''}₹${netPremium.toFixed(2)}`, cls: netPremium >= 0 ? 'text-primary' : 'text-destructive' },
-          { label: 'Max Profit', value: maxProfit > 99999 ? '∞' : `₹${maxProfit.toFixed(2)}`, cls: 'text-primary' },
-          { label: 'Max Loss', value: `₹${Math.abs(maxLoss).toFixed(2)}`, cls: 'text-destructive' },
+          { label: 'Net Premium', value: `${netPremium >= 0 ? '+' : ''}${fmt(netPremium)}`, cls: netPremium >= 0 ? 'text-primary' : 'text-destructive' },
+          { label: 'Max Profit', value: maxProfit > 9999999 ? '∞' : fmt(maxProfit), cls: 'text-primary' },
+          { label: 'Max Loss', value: fmt(Math.abs(maxLoss)), cls: 'text-destructive' },
           { label: 'Breakeven', value: breakevens.length > 0 ? breakevens.map(b => formatNumber(b)).join(', ') : '—', cls: 'text-[hsl(var(--terminal-amber))]' },
         ].map((card, i) => (
           <div key={i} className="t-card text-center py-3">
