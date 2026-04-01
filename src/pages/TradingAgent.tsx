@@ -667,7 +667,7 @@ export default function TradingAgent() {
           if (stepTimer) clearInterval(stepTimer);
           return prev;
         });
-      }, mode === 'scalp' ? 4000 : mode === 'options' ? 6000 : 5000);
+      }, mode === 'scalp' ? 4000 : 5000);
 
       const bodyPayload: any = {
         symbol: symbol.toUpperCase().trim(),
