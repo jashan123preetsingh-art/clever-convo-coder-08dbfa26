@@ -56,7 +56,6 @@ async function getQuote(symbol: string) {
   const yfSymbol = toYahooSymbol(symbol);
   if (!yfSymbol) return null;
 
-  // Use range=2d so chartPreviousClose = yesterday's close (not 5 days ago)
   const resp = await fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=2d&includePrePost=false`);
   if (!resp) return null;
 
@@ -69,8 +68,6 @@ async function getQuote(symbol: string) {
   const closes = quote?.close || [];
   const ts = result.timestamp || [];
   const last = ts.length - 1;
-  // chartPreviousClose with range=2d = yesterday's close (correct baseline)
-  // Fallback: use the first candle's close if available (yesterday's data)
   const prev = meta.chartPreviousClose || meta.previousClose || (closes.length >= 2 ? closes[closes.length - 2] : 0) || 0;
 
   return {
@@ -115,17 +112,15 @@ async function getChart(symbol: string, interval = "1d", range = "1y") {
   return candles;
 }
 
-// Fundamentals - merge quote + quoteSummary so we don't return sparse data
+// Fundamentals
 async function getFundamentals(symbol: string) {
   const yfSymbol = toYahooSymbol(symbol);
   if (!yfSymbol) return null;
 
   let quoteFundamentals: Record<string, any> = {};
 
-  // Try v6 quote API first
   const resp = await fetchSafe(
-    `${YF_BASE}/v6/finance/quote?symbols=${encodeURIComponent(yfSymbol)}`,
-    1
+    `${YF_BASE}/v6/finance/quote?symbols=${encodeURIComponent(yfSymbol)}`, 1
   );
 
   if (resp) {
@@ -134,53 +129,38 @@ async function getFundamentals(symbol: string) {
       const q = data?.quoteResponse?.result?.[0];
       if (q) {
         quoteFundamentals = {
-          pe_ratio: q.trailingPE || null,
-          forward_pe: q.forwardPE || null,
+          pe_ratio: q.trailingPE || null, forward_pe: q.forwardPE || null,
           pb_ratio: q.priceToBook || null,
           dividend_yield: q.trailingAnnualDividendYield ? q.trailingAnnualDividendYield * 100 : null,
           dividend_rate: q.trailingAnnualDividendRate || null,
-          market_cap: q.marketCap || null,
-          enterprise_value: q.enterpriseValue || null,
+          market_cap: q.marketCap || null, enterprise_value: q.enterpriseValue || null,
           profit_margins: q.profitMargins ? q.profitMargins * 100 : null,
           roe: q.returnOnEquity ? q.returnOnEquity * 100 : null,
           roa: q.returnOnAssets ? q.returnOnAssets * 100 : null,
           revenue_growth: q.revenueGrowth ? q.revenueGrowth * 100 : null,
           earnings_growth: q.earningsQuarterlyGrowth ? q.earningsQuarterlyGrowth * 100 : null,
           debt_to_equity: q.debtToEquity ? q.debtToEquity / 100 : null,
-          current_ratio: q.currentRatio || null,
-          quick_ratio: q.quickRatio || null,
+          current_ratio: q.currentRatio || null, quick_ratio: q.quickRatio || null,
           operating_margins: q.operatingMargins ? q.operatingMargins * 100 : null,
           gross_margins: q.grossMargins ? q.grossMargins * 100 : null,
-          ebitda: q.ebitda || null,
-          total_revenue: q.totalRevenue || null,
-          free_cashflow: q.freeCashflow || null,
-          operating_cashflow: q.operatingCashflow || null,
-          eps_trailing: q.trailingEps || null,
-          eps_forward: q.epsForward || null,
-          beta: q.beta || null,
-          book_value: q.bookValue || null,
-          shares_outstanding: q.sharesOutstanding || null,
-          peg_ratio: q.pegRatio || null,
-          target_mean_price: q.targetMeanPrice || null,
-          target_high_price: q.targetHighPrice || null,
-          target_low_price: q.targetLowPrice || null,
-          recommendation: q.recommendationKey || null,
+          ebitda: q.ebitda || null, total_revenue: q.totalRevenue || null,
+          free_cashflow: q.freeCashflow || null, operating_cashflow: q.operatingCashflow || null,
+          eps_trailing: q.trailingEps || null, eps_forward: q.epsForward || null,
+          beta: q.beta || null, book_value: q.bookValue || null,
+          shares_outstanding: q.sharesOutstanding || null, peg_ratio: q.pegRatio || null,
+          target_mean_price: q.targetMeanPrice || null, target_high_price: q.targetHighPrice || null,
+          target_low_price: q.targetLowPrice || null, recommendation: q.recommendationKey || null,
           num_analysts: q.numberOfAnalystOpinions || null,
-          week_52_high: q.fiftyTwoWeekHigh || null,
-          week_52_low: q.fiftyTwoWeekLow || null,
-          fifty_day_avg: q.fiftyDayAverage || null,
-          two_hundred_day_avg: q.twoHundredDayAverage || null,
-          avg_volume: q.averageDailyVolume3Month || null,
-          avg_volume_10d: q.averageDailyVolume10Day || null,
+          week_52_high: q.fiftyTwoWeekHigh || null, week_52_low: q.fiftyTwoWeekLow || null,
+          fifty_day_avg: q.fiftyDayAverage || null, two_hundred_day_avg: q.twoHundredDayAverage || null,
+          avg_volume: q.averageDailyVolume3Month || null, avg_volume_10d: q.averageDailyVolume10Day || null,
         };
       }
     } catch {}
   }
 
-  // Try quoteSummary API
   const resp2 = await fetchSafe(
-    `${YF_BASE}/v10/finance/quoteSummary/${encodeURIComponent(yfSymbol)}?modules=summaryDetail,defaultKeyStatistics,financialData`,
-    0
+    `${YF_BASE}/v10/finance/quoteSummary/${encodeURIComponent(yfSymbol)}?modules=summaryDetail,defaultKeyStatistics,financialData`, 0
   );
 
   if (resp2) {
@@ -198,11 +178,9 @@ async function getFundamentals(symbol: string) {
     } catch {}
   }
 
-  // Fallback: extract from chart API meta which is more reliable
   if (Object.values(quoteFundamentals).every(v => v == null) || Object.keys(quoteFundamentals).length === 0) {
     const chartResp = await fetchSafe(
-      `${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=5d&includePrePost=false`,
-      1
+      `${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=5d&includePrePost=false`, 1
     );
     if (chartResp) {
       try {
@@ -212,23 +190,16 @@ async function getFundamentals(symbol: string) {
           return {
             pe_ratio: null, forward_pe: null, pb_ratio: null,
             market_cap: meta.marketCap || null,
-            week_52_high: meta.fiftyTwoWeekHigh || null,
-            week_52_low: meta.fiftyTwoWeekLow || null,
-            fifty_day_avg: meta.fiftyDayAverage || null,
-            two_hundred_day_avg: meta.twoHundredDayAverage || null,
-            dividend_yield: null, dividend_rate: null,
-            roe: null, roa: null, debt_to_equity: null,
-            revenue_growth: null, earnings_growth: null,
-            profit_margins: null, operating_margins: null, gross_margins: null,
-            current_ratio: null, quick_ratio: null, beta: null,
-            book_value: null, shares_outstanding: null,
-            ebitda: null, total_revenue: null,
-            free_cashflow: null, operating_cashflow: null,
-            eps_trailing: null, eps_forward: null,
-            peg_ratio: null, enterprise_value: null,
+            week_52_high: meta.fiftyTwoWeekHigh || null, week_52_low: meta.fiftyTwoWeekLow || null,
+            fifty_day_avg: meta.fiftyDayAverage || null, two_hundred_day_avg: meta.twoHundredDayAverage || null,
+            dividend_yield: null, dividend_rate: null, roe: null, roa: null, debt_to_equity: null,
+            revenue_growth: null, earnings_growth: null, profit_margins: null,
+            operating_margins: null, gross_margins: null, current_ratio: null, quick_ratio: null,
+            beta: null, book_value: null, shares_outstanding: null,
+            ebitda: null, total_revenue: null, free_cashflow: null, operating_cashflow: null,
+            eps_trailing: null, eps_forward: null, peg_ratio: null, enterprise_value: null,
             target_mean_price: null, target_high_price: null, target_low_price: null,
-            recommendation: null, num_analysts: null,
-            avg_volume: null, avg_volume_10d: null,
+            recommendation: null, num_analysts: null, avg_volume: null, avg_volume_10d: null,
           };
         }
       } catch {}
@@ -310,6 +281,26 @@ function calculateTechnicals(candles: any[]) {
   const ema12 = ema(closes, 12), ema26 = ema(closes, 26);
   const macd = ema12 && ema26 ? ema12 - ema26 : null;
 
+  // MACD Signal Line (9-period EMA of MACD line)
+  let macdSignal: number | null = null;
+  let macdHistogram: number | null = null;
+  if (closes.length >= 35) {
+    const macdLine: number[] = [];
+    for (let i = 26; i <= closes.length; i++) {
+      const slice = closes.slice(0, i);
+      const e12 = ema(slice, 12);
+      const e26 = ema(slice, 26);
+      if (e12 != null && e26 != null) macdLine.push(e12 - e26);
+    }
+    if (macdLine.length >= 9) {
+      const k = 2 / 10;
+      let sig = macdLine.slice(0, 9).reduce((a, b) => a + b, 0) / 9;
+      for (let i = 9; i < macdLine.length; i++) sig = macdLine[i] * k + sig * (1 - k);
+      macdSignal = sig;
+      macdHistogram = macd != null ? macd - sig : null;
+    }
+  }
+
   const lastC = candles[candles.length - 1];
   const pivot = (lastC.high + lastC.low + lastC.close) / 3;
   const s1 = 2 * pivot - lastC.high, r1 = 2 * pivot - lastC.low;
@@ -364,7 +355,9 @@ function calculateTechnicals(candles: any[]) {
     sma_20: round(sma20), sma_50: round(sma50), sma_200: round(sma200),
     ema_9: round(ema(closes, 9)), ema_20: round(ema(closes, 20)),
     ema_50: round(ema(closes, 50)), ema_200: round(ema(closes, 200)),
-    rsi_14: round(rsi), macd: round(macd), atr_14: round(calcATR()),
+    rsi_14: round(rsi), macd: round(macd),
+    macd_signal: round(macdSignal), macd_histogram: round(macdHistogram),
+    atr_14: round(calcATR()),
     pivot: round(pivot), s1: round(s1), s2: round(s2), s3: round(s3),
     r1: round(r1), r2: round(r2), r3: round(r3),
     bollinger_upper: round(sma20 ? sma20 + 2 * bbStd : null),
@@ -388,13 +381,11 @@ async function getBatchQuotes(symbols: string[]) {
 }
 
 async function searchStocks(query: string) {
-  // Try Yahoo Finance search with broader filtering
   const resp = await fetchSafe(`${YF_BASE}/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=25&newsCount=0&listsCount=0`);
   if (!resp) return [];
   const data = await resp.json();
   const results = (data.quotes || [])
     .filter((q: any) => {
-      // Accept Indian exchanges + any .NS or .BO symbols
       const isIndian = ["NSI", "BSE", "NSE", "BOM"].includes(q.exchange) ||
         q.symbol?.endsWith(".NS") || q.symbol?.endsWith(".BO");
       return isIndian;
@@ -405,148 +396,236 @@ async function searchStocks(query: string) {
       exchange: q.exchange === "BSE" || q.exchange === "BOM" ? "BSE" : "NSE",
       type: q.quoteType,
     }));
-  
   return results;
 }
 
-// ── Live NSE Options Chain (OI data) ──────────────────────
-async function fetchNSEOptionsChain(symbol: string) {
-  const nseSymbol = symbol.toUpperCase().trim();
+// ── Yahoo Finance Options Chain (replaces failing NSE scraping) ──
+async function fetchYahooOptionsChain(symbol: string) {
+  const upper = symbol.toUpperCase().trim();
   
-  // Try multiple approaches to get NSE data
-  const userAgents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
-  ];
+  // Map to Yahoo options symbols
+  const optionsSymbolMap: Record<string, string> = {
+    "NIFTY": "^NSEI",
+    "NIFTY 50": "^NSEI",
+    "BANKNIFTY": "^NSEBANK",
+    "BANK NIFTY": "^NSEBANK",
+    "FINNIFTY": "NIFTY_FIN_SERVICE.NS",
+    "MIDCPNIFTY": "^NSMIDCP",
+  };
+  
+  const yfSymbol = optionsSymbolMap[upper] || toYahooSymbol(symbol);
+  if (!yfSymbol) return null;
 
-  for (const ua of userAgents) {
-    try {
-      // Step 1: Initialize session with NSE main page
-      const sessionResp = await fetch("https://www.nseindia.com/option-chain", {
-        headers: {
-          "User-Agent": ua,
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-          "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
-          "Accept-Encoding": "gzip, deflate, br",
-          "Connection": "keep-alive",
-          "Upgrade-Insecure-Requests": "1",
-          "Sec-Fetch-Dest": "document",
-          "Sec-Fetch-Mode": "navigate",
-          "Sec-Fetch-Site": "none",
-          "Cache-Control": "max-age=0",
-        },
-        redirect: "follow",
-      });
-
-      // Extract all cookies
-      const rawCookies: string[] = [];
-      sessionResp.headers.forEach((value, key) => {
-        if (key.toLowerCase() === "set-cookie") {
-          const cookiePart = value.split(";")[0];
-          rawCookies.push(cookiePart);
-        }
-      });
-      const cookieString = rawCookies.join("; ");
-
-      if (!cookieString) {
-        console.warn("No cookies from NSE session, trying next UA");
-        continue;
-      }
-
-      // Small delay to mimic browser
-      await new Promise(r => setTimeout(r, 300));
-
-      // Step 2: Fetch the actual option chain API
-      const endpoint = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY"].includes(nseSymbol)
-        ? `https://www.nseindia.com/api/option-chain-indices?symbol=${nseSymbol}`
-        : `https://www.nseindia.com/api/option-chain-equities?symbol=${nseSymbol}`;
-
-      const resp = await fetch(endpoint, {
-        headers: {
-          "User-Agent": ua,
-          "Accept": "application/json, text/plain, */*",
-          "Accept-Language": "en-US,en;q=0.9",
-          "Referer": "https://www.nseindia.com/option-chain",
-          "Cookie": cookieString,
-          "Sec-Fetch-Dest": "empty",
-          "Sec-Fetch-Mode": "cors",
-          "Sec-Fetch-Site": "same-origin",
-          "X-Requested-With": "XMLHttpRequest",
-        },
-      });
-
-      if (!resp.ok) {
-        console.error(`NSE OC fetch failed: ${resp.status} with UA ${ua.substring(0, 30)}`);
-        continue;
-      }
-
-      const data = await resp.json();
-      const records = data?.records;
-      const filtered = data?.filtered;
-      if (!records || !filtered) continue;
-
-      const underlyingValue = records.underlyingValue || 0;
-      const expiryDates = records.expiryDates || [];
-      const timestamp = records.timestamp || "";
-
-      const chain = (filtered.data || []).map((row: any) => ({
-        strike: row.strikePrice,
-        ce: row.CE ? {
-          oi: row.CE.openInterest || 0,
-          chg_oi: row.CE.changeinOpenInterest || 0,
-          volume: row.CE.totalTradedVolume || 0,
-          iv: row.CE.impliedVolatility || 0,
-          ltp: row.CE.lastPrice || 0,
-          change: row.CE.change || 0,
-          bid: row.CE.bidprice || 0,
-          ask: row.CE.askPrice || 0,
-        } : { oi: 0, chg_oi: 0, volume: 0, iv: 0, ltp: 0, change: 0, bid: 0, ask: 0 },
-        pe: row.PE ? {
-          oi: row.PE.openInterest || 0,
-          chg_oi: row.PE.changeinOpenInterest || 0,
-          volume: row.PE.totalTradedVolume || 0,
-          iv: row.PE.impliedVolatility || 0,
-          ltp: row.PE.lastPrice || 0,
-          change: row.PE.change || 0,
-          bid: row.PE.bidprice || 0,
-          ask: row.PE.askPrice || 0,
-        } : { oi: 0, chg_oi: 0, volume: 0, iv: 0, ltp: 0, change: 0, bid: 0, ask: 0 },
-      }));
-
-      const totalCallOI = filtered.CE?.totOI || chain.reduce((s: number, r: any) => s + r.ce.oi, 0);
-      const totalPutOI = filtered.PE?.totOI || chain.reduce((s: number, r: any) => s + r.pe.oi, 0);
-      const totalCallVol = filtered.CE?.totVol || chain.reduce((s: number, r: any) => s + r.ce.volume, 0);
-      const totalPutVol = filtered.PE?.totVol || chain.reduce((s: number, r: any) => s + r.pe.volume, 0);
-      const pcr = totalCallOI > 0 ? round(totalPutOI / totalCallOI) : 0;
-
-      let minPain = Infinity, maxPainStrike = underlyingValue;
-      for (const row of chain) {
-        let pain = 0;
-        for (const r of chain) {
-          if (r.strike < row.strike) pain += r.ce.oi * (row.strike - r.strike);
-          if (r.strike > row.strike) pain += r.pe.oi * (r.strike - row.strike);
-        }
-        if (pain < minPain) { minPain = pain; maxPainStrike = row.strike; }
-      }
-
-      return {
-        chain, underlyingValue, expiryDates, timestamp,
-        analytics: { totalCallOI, totalPutOI, totalCallVol, totalPutVol, pcr, maxPain: maxPainStrike },
-        live: true,
-      };
-    } catch (e) {
-      console.error(`NSE OC attempt failed with UA: ${e}`);
-      continue;
+  try {
+    // Fetch options data from Yahoo Finance
+    const resp = await fetchSafe(
+      `${YF_BASE}/v7/finance/options/${encodeURIComponent(yfSymbol)}`, 1
+    );
+    if (!resp) {
+      console.warn(`Yahoo options fetch failed for ${yfSymbol}, using VIX-based estimation`);
+      return await estimateOptionsFromVIX(upper, yfSymbol);
     }
-  }
 
-  console.error("All NSE Options Chain attempts failed");
-  return null;
+    const data = await resp.json();
+    const optionChain = data?.optionChain?.result?.[0];
+    if (!optionChain) {
+      console.warn(`No Yahoo options data for ${yfSymbol}, using VIX-based estimation`);
+      return await estimateOptionsFromVIX(upper, yfSymbol);
+    }
+
+    const quote = optionChain.quote;
+    const spot = quote?.regularMarketPrice || 0;
+    const expiryDates = (optionChain.expirationDates || []).map((ts: number) =>
+      new Date(ts * 1000).toISOString().split("T")[0]
+    );
+
+    const options = optionChain.options?.[0];
+    if (!options) {
+      return await estimateOptionsFromVIX(upper, yfSymbol);
+    }
+
+    const calls = options.calls || [];
+    const puts = options.puts || [];
+
+    // Build unified chain
+    const strikeMap: Record<number, any> = {};
+    
+    for (const c of calls) {
+      const strike = c.strike;
+      if (!strikeMap[strike]) strikeMap[strike] = { strike, ce: null, pe: null };
+      strikeMap[strike].ce = {
+        oi: c.openInterest || 0,
+        chg_oi: c.openInterest || 0,
+        volume: c.volume || 0,
+        iv: c.impliedVolatility ? round(c.impliedVolatility * 100) : 0,
+        ltp: c.lastPrice || 0,
+        change: c.change || 0,
+        bid: c.bid || 0,
+        ask: c.ask || 0,
+      };
+    }
+    
+    for (const p of puts) {
+      const strike = p.strike;
+      if (!strikeMap[strike]) strikeMap[strike] = { strike, ce: null, pe: null };
+      strikeMap[strike].pe = {
+        oi: p.openInterest || 0,
+        chg_oi: p.openInterest || 0,
+        volume: p.volume || 0,
+        iv: p.impliedVolatility ? round(p.impliedVolatility * 100) : 0,
+        ltp: p.lastPrice || 0,
+        change: p.change || 0,
+        bid: p.bid || 0,
+        ask: p.ask || 0,
+      };
+    }
+
+    const emptyOpt = { oi: 0, chg_oi: 0, volume: 0, iv: 0, ltp: 0, change: 0, bid: 0, ask: 0 };
+    const chain = Object.values(strikeMap)
+      .map((row: any) => ({
+        strike: row.strike,
+        ce: row.ce || emptyOpt,
+        pe: row.pe || emptyOpt,
+      }))
+      .sort((a: any, b: any) => a.strike - b.strike);
+
+    // Analytics
+    const totalCallOI = chain.reduce((s: number, r: any) => s + r.ce.oi, 0);
+    const totalPutOI = chain.reduce((s: number, r: any) => s + r.pe.oi, 0);
+    const totalCallVol = chain.reduce((s: number, r: any) => s + r.ce.volume, 0);
+    const totalPutVol = chain.reduce((s: number, r: any) => s + r.pe.volume, 0);
+    const pcr = totalCallOI > 0 ? round(totalPutOI / totalCallOI) : 0;
+
+    // Max Pain calculation
+    let minPain = Infinity, maxPainStrike = spot;
+    for (const row of chain) {
+      let pain = 0;
+      for (const r of chain) {
+        if (r.strike < row.strike) pain += r.ce.oi * (row.strike - r.strike);
+        if (r.strike > row.strike) pain += r.pe.oi * (r.strike - row.strike);
+      }
+      if (pain < minPain) { minPain = pain; maxPainStrike = row.strike; }
+    }
+
+    return {
+      chain, underlyingValue: spot, expiryDates, timestamp: new Date().toISOString(),
+      analytics: { totalCallOI, totalPutOI, totalCallVol, totalPutVol, pcr, maxPain: maxPainStrike },
+      live: true, source: "yahoo",
+    };
+  } catch (e) {
+    console.error(`Yahoo options chain error: ${e}`);
+    return await estimateOptionsFromVIX(upper, yfSymbol);
+  }
 }
 
-// ── Market Metrics (VIX, PCR, Expected Move, F&O) ──────────
+// ── VIX-Based Options Estimation (fallback when Yahoo options unavailable) ──
+async function estimateOptionsFromVIX(indexName: string, yfSymbol: string) {
+  // Get spot price and VIX
+  const [spotResp, vixResp] = await Promise.all([
+    fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSymbol)}?interval=1d&range=2d`),
+    fetchSafe(`${YF_BASE}/v8/finance/chart/%5EINDIAVIX?interval=1d&range=2d`),
+  ]);
+
+  let spot = 0;
+  if (spotResp) {
+    const d = await spotResp.json();
+    spot = d?.chart?.result?.[0]?.meta?.regularMarketPrice || 0;
+  }
+  if (!spot) return null;
+
+  let vixValue = 13; // Default VIX assumption
+  if (vixResp) {
+    const d = await vixResp.json();
+    vixValue = d?.chart?.result?.[0]?.meta?.regularMarketPrice || 13;
+  }
+
+  // Calculate days to next Thursday expiry
+  const now = new Date();
+  let dte = (4 - now.getDay() + 7) % 7;
+  if (dte === 0 && now.getHours() >= 15) dte = 7;
+  if (dte === 0) dte = 0.5; // Same-day expiry
+
+  const iv = vixValue / 100;
+  const sqrtT = Math.sqrt(Math.max(dte, 1) / 365);
+  
+  // ATM straddle estimate using Black-Scholes approximation
+  // ATM Call ≈ ATM Put ≈ S * N(d1) - S * N(-d1) ≈ S * σ * √T * 0.7979 (for ATM)
+  const atmCallPrice = round(spot * iv * sqrtT * 0.3989);
+  const atmPutPrice = round(spot * iv * sqrtT * 0.3989);
+  const atmStraddle = round((atmCallPrice || 0) + (atmPutPrice || 0));
+  const expectedMove = round(atmStraddle ? atmStraddle * 0.85 : 0);
+
+  // Generate synthetic chain around spot
+  const stepSize = indexName.includes("BANK") ? 100 : 50;
+  const atmStrike = Math.round(spot / stepSize) * stepSize;
+  const chain = [];
+
+  for (let offset = -10; offset <= 10; offset++) {
+    const strike = atmStrike + offset * stepSize;
+    const moneyness = (strike - spot) / spot;
+    
+    // Simplified OI distribution (bell curve around ATM)
+    const oiFactor = Math.exp(-moneyness * moneyness * 50);
+    const callOI = Math.round(50000 * oiFactor * (1 + moneyness * 2));
+    const putOI = Math.round(50000 * oiFactor * (1 - moneyness * 2));
+    
+    // Simple Black-Scholes-like premium
+    const intrinsicCall = Math.max(spot - strike, 0);
+    const intrinsicPut = Math.max(strike - spot, 0);
+    const timeValue = spot * iv * sqrtT * Math.exp(-moneyness * moneyness * 2) * 0.3989;
+    
+    chain.push({
+      strike,
+      ce: {
+        oi: Math.max(callOI, 100), chg_oi: 0,
+        volume: Math.round(callOI * 0.3),
+        iv: round(vixValue * (1 + Math.abs(moneyness) * 0.5)),
+        ltp: round(intrinsicCall + timeValue),
+        change: 0, bid: 0, ask: 0,
+      },
+      pe: {
+        oi: Math.max(putOI, 100), chg_oi: 0,
+        volume: Math.round(putOI * 0.3),
+        iv: round(vixValue * (1 + Math.abs(moneyness) * 0.5)),
+        ltp: round(intrinsicPut + timeValue),
+        change: 0, bid: 0, ask: 0,
+      },
+    });
+  }
+
+  const totalCallOI = chain.reduce((s, r) => s + r.ce.oi, 0);
+  const totalPutOI = chain.reduce((s, r) => s + r.pe.oi, 0);
+  const pcr = totalCallOI > 0 ? round(totalPutOI / totalCallOI) : 1;
+
+  // Max pain from synthetic chain
+  let minPain = Infinity, maxPainStrike = atmStrike;
+  for (const row of chain) {
+    let pain = 0;
+    for (const r of chain) {
+      if (r.strike < row.strike) pain += r.ce.oi * (row.strike - r.strike);
+      if (r.strike > row.strike) pain += r.pe.oi * (r.strike - row.strike);
+    }
+    if (pain < minPain) { minPain = pain; maxPainStrike = row.strike; }
+  }
+
+  return {
+    chain, underlyingValue: spot,
+    expiryDates: [],
+    timestamp: new Date().toISOString(),
+    analytics: {
+      totalCallOI, totalPutOI,
+      totalCallVol: Math.round(totalCallOI * 0.3),
+      totalPutVol: Math.round(totalPutOI * 0.3),
+      pcr, maxPain: maxPainStrike,
+    },
+    live: false, source: "vix-estimate",
+    estimate: { vix: vixValue, dte, atmStraddle, expectedMove, atmIV: vixValue },
+  };
+}
+
+// ── Market Metrics (VIX + Yahoo/VIX-based PCR, Expected Move, F&O) ──
 async function getMarketMetrics() {
-  // 1. Fetch India VIX from Yahoo
+  // 1. Fetch India VIX
   const vixPromise = fetchSafe(`${YF_BASE}/v8/finance/chart/%5EINDIAVIX?interval=1d&range=5d`).then(async (r) => {
     if (!r) return null;
     const data = await r.json();
@@ -562,22 +641,43 @@ async function getMarketMetrics() {
     };
   }).catch(() => null);
 
-  // 2. Fetch NIFTY & BANKNIFTY options chain for PCR + ATM straddle
-  const niftyOCPromise = fetchNSEOptionsChain("NIFTY").catch(() => null);
-  const bnfOCPromise = fetchNSEOptionsChain("BANKNIFTY").catch(() => null);
+  // 2. Yahoo Finance options for NIFTY & BANKNIFTY (replaces NSE scraping)
+  const niftyOCPromise = fetchYahooOptionsChain("NIFTY").catch(() => null);
+  const bnfOCPromise = fetchYahooOptionsChain("BANKNIFTY").catch(() => null);
 
   const [vix, niftyOC, bnfOC] = await Promise.all([vixPromise, niftyOCPromise, bnfOCPromise]);
 
-  // Calculate days to next Thursday (weekly expiry)
+  // Days to next Thursday (weekly expiry)
   const now = new Date();
-  let daysToExpiry = (4 - now.getDay() + 7) % 7; // 4 = Thursday
+  let daysToExpiry = (4 - now.getDay() + 7) % 7;
   if (daysToExpiry === 0) {
-    const hours = now.getHours();
-    daysToExpiry = hours >= 15 ? 7 : 0; // After 3:30 PM, next week
+    daysToExpiry = now.getHours() >= 15 ? 7 : 0;
   }
 
   function calcMetrics(oc: any) {
-    if (!oc || !oc.chain || oc.chain.length === 0) return null;
+    if (!oc) return null;
+    
+    // If we have VIX-based estimates directly
+    if (oc.estimate) {
+      return {
+        spot: oc.underlyingValue,
+        pcr: oc.analytics?.pcr || 1,
+        totalCallOI: oc.analytics?.totalCallOI || 0,
+        totalPutOI: oc.analytics?.totalPutOI || 0,
+        totalCallVol: oc.analytics?.totalCallVol || 0,
+        totalPutVol: oc.analytics?.totalPutVol || 0,
+        maxPain: oc.analytics?.maxPain || 0,
+        atmStrike: Math.round(oc.underlyingValue / 50) * 50,
+        atmStraddle: oc.estimate.atmStraddle,
+        expectedMove: oc.estimate.expectedMove,
+        atmIV: oc.estimate.atmIV,
+        premiumTurnover: 0,
+        source: oc.source,
+      };
+    }
+    
+    // Real options data
+    if (!oc.chain || oc.chain.length === 0) return null;
     const spot = oc.underlyingValue || 0;
     const pcr = oc.analytics?.pcr || 0;
     const totalCallOI = oc.analytics?.totalCallOI || 0;
@@ -594,14 +694,10 @@ async function getMarketMetrics() {
       if (dist < minDist) { minDist = dist; atmRow = row; }
     }
 
-    // ATM straddle = CE LTP + PE LTP
     const atmStraddle = round((atmRow?.ce?.ltp || 0) + (atmRow?.pe?.ltp || 0));
-    // Expected move ≈ ATM straddle * 0.85 (1SD approximation)
     const expectedMove = round(atmStraddle ? atmStraddle * 0.85 : 0);
-    // IV from ATM options
     const atmIV = round(((atmRow?.ce?.iv || 0) + (atmRow?.pe?.iv || 0)) / 2);
 
-    // F&O premium turnover estimate: sum of (volume * ltp) for all strikes
     let premiumTurnover = 0;
     for (const row of oc.chain) {
       premiumTurnover += (row.ce?.volume || 0) * (row.ce?.ltp || 0);
@@ -611,15 +707,22 @@ async function getMarketMetrics() {
     return {
       spot, pcr, totalCallOI, totalPutOI, totalCallVol, totalPutVol, maxPain,
       atmStrike: atmRow?.strike, atmStraddle, expectedMove, atmIV,
-      premiumTurnover: round(premiumTurnover / 10000000), // In crores
+      premiumTurnover: round(premiumTurnover / 10000000),
+      source: oc.source,
     };
   }
 
   const niftyMetrics = calcMetrics(niftyOC);
   const bnfMetrics = calcMetrics(bnfOC);
 
-  // Total F&O turnover (crude estimate from both)
   const totalFnOTurnover = round((niftyMetrics?.premiumTurnover || 0) + (bnfMetrics?.premiumTurnover || 0));
+
+  // Determine market status
+  const hour = now.getHours();
+  const minute = now.getMinutes();
+  const day = now.getDay();
+  const isWeekday = day >= 1 && day <= 5;
+  const marketOpen = isWeekday && ((hour === 9 && minute >= 15) || (hour > 9 && hour < 15) || (hour === 15 && minute <= 30));
 
   return {
     vix,
@@ -629,10 +732,12 @@ async function getMarketMetrics() {
     fnoTurnover: totalFnOTurnover,
     timestamp: new Date().toISOString(),
     live: !!(vix || niftyMetrics || bnfMetrics),
+    marketOpen,
+    dataSource: niftyMetrics?.source || "unavailable",
   };
 }
 
-// ── Batch EMA Calculator ──────────────────────────────────
+// ── Batch EMA Calculator ──
 async function getBatchEMA(symbols: string[]) {
   const results = await Promise.allSettled(
     symbols.slice(0, 30).map(async (sym) => {
@@ -680,7 +785,6 @@ async function getBatchEMA(symbols: string[]) {
 async function getIndices() {
   const indices = ["^NSEI", "^BSESN", "^NSEBANK"];
   const names = ["NIFTY 50", "SENSEX", "BANKNIFTY"];
-  // Use range=2d so chartPreviousClose = yesterday's close (not 5 days ago)
   const results = await Promise.allSettled(
     indices.map(idx => fetchSafe(`${YF_BASE}/v8/finance/chart/${idx}?interval=1d&range=2d`).then(r => r?.json()))
   );
@@ -690,7 +794,6 @@ async function getIndices() {
     if (!res?.meta) return { symbol: names[i], error: true };
     const meta = res.meta;
     const closes = res.indicators?.quote?.[0]?.close || [];
-    // chartPreviousClose with range=2d = yesterday's close
     const prev = meta.chartPreviousClose || meta.previousClose || (closes.length >= 2 ? closes[closes.length - 2] : 0) || 0;
     return {
       symbol: names[i], ltp: round(meta.regularMarketPrice),
@@ -745,7 +848,7 @@ serve(async (req) => {
       case "search": result = await searchStocks(query); break;
       case "indices": result = await getIndices(); break;
       case "market-metrics": result = await getMarketMetrics(); break;
-      case "options-chain": result = await fetchNSEOptionsChain(symbol || "NIFTY"); break;
+      case "options-chain": result = await fetchYahooOptionsChain(symbol || "NIFTY"); break;
       default: result = { error: "Unknown action" };
     }
 
