@@ -275,21 +275,6 @@ export default function AiAssistant() {
               )}
             </div>
 
-            {/* Pending image preview */}
-            {pendingImage && (
-              <div className="px-3 py-2 border-t border-border/30 bg-secondary/20">
-                <div className="flex items-center gap-2">
-                  <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-border/30">
-                    <img src={pendingImage} alt="Chart to analyze" className="w-full h-full object-cover" />
-                    <button onClick={() => setPendingImage(null)}
-                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center text-[8px] font-bold shadow-sm">
-                      ×
-                    </button>
-                  </div>
-                  <p className="text-[9px] text-muted-foreground flex-1">Chart attached — add a question or send directly</p>
-                </div>
-              </div>
-            )}
 
             {/* Input */}
             <div className="p-3 border-t border-border/40 bg-card/80">
