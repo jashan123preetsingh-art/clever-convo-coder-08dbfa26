@@ -92,7 +92,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
     <div className="flex flex-col h-screen bg-background overflow-hidden">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-lg focus:text-sm focus:font-semibold">Skip to content</a>
       {/* ═══ Premium Top Bar ═══ */}
-      <header className="h-12 md:h-12 bg-card/70 glass border-b border-border/30 flex items-center justify-between px-3 md:px-5 flex-shrink-0 z-30">
+      <header className="h-12 md:h-12 bg-gradient-to-r from-card/90 via-card/70 to-card/90 glass border-b border-border/20 flex items-center justify-between px-3 md:px-5 flex-shrink-0 z-30">
         <div className="flex items-center gap-3 md:gap-5">
           {/* Mobile hamburger */}
           <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'} className="md:hidden p-1.5 rounded-lg hover:bg-secondary/60 text-muted-foreground transition-colors">
@@ -278,26 +278,30 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
 
       <div className="flex flex-1 overflow-hidden">
         {/* ═══ Premium Desktop Sidebar ═══ */}
-        <aside className={`hidden md:flex ${sidebarOpen ? 'w-48' : 'w-14'} flex-shrink-0 bg-[hsl(var(--sidebar-background))] border-r border-sidebar-border/40 flex-col transition-all duration-300 ease-out`}>
-          <nav className="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
+        <aside className={`hidden md:flex ${sidebarOpen ? 'w-48' : 'w-14'} flex-shrink-0 flex-col transition-all duration-300 ease-out relative overflow-hidden`}>
+          {/* Gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--sidebar-background))] via-[hsl(var(--sidebar-background))] to-[hsl(var(--sidebar-accent)/0.5)]" />
+          <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-sidebar-border/40 to-transparent" />
+          
+          <nav className="relative flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
             {NAV_ITEMS.map((item) => {
               const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
               return (
                 <Link key={item.path} to={item.path}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] transition-all duration-200 group relative
                     ${isActive
-                      ? 'bg-primary/8 text-primary font-bold'
-                      : 'text-sidebar-foreground hover:text-foreground hover:bg-secondary/30'}`}>
+                      ? 'bg-gradient-to-r from-primary/12 to-primary/4 text-primary font-bold shadow-[inset_0_0_20px_hsl(var(--primary)/0.05)]'
+                      : 'text-sidebar-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-secondary/40 hover:to-secondary/10'}`}>
                   {isActive && (
-                    <motion.div layoutId="sidebar-active" className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]" />
+                    <motion.div layoutId="sidebar-active" className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-gradient-to-b from-primary to-[hsl(var(--terminal-cyan))] shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />
                   )}
-                  <span className={`w-5 text-center text-[14px] flex-shrink-0 transition-all duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                  <span className={`w-5 text-center text-[14px] flex-shrink-0 transition-all duration-200 ${isActive ? 'text-primary drop-shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'text-muted-foreground group-hover:text-foreground'}`}>
                     {item.icon}
                   </span>
                   {sidebarOpen && (
                     <>
                       <span className="flex-1 tracking-wide">{item.label}</span>
-                      <span className="text-[8px] text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity font-mono">{item.shortcut}</span>
+                      <span className="text-[8px] text-muted-foreground/30 opacity-0 group-hover:opacity-100 transition-opacity font-mono">{item.shortcut}</span>
                     </>
                   )}
                 </Link>
@@ -307,16 +311,16 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
               <Link to="/admin"
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] transition-all duration-200 group relative
                   ${location.pathname === '/admin'
-                    ? 'bg-primary/8 text-primary font-bold'
-                    : 'text-sidebar-foreground hover:text-foreground hover:bg-secondary/30'}`}>
+                    ? 'bg-gradient-to-r from-primary/12 to-primary/4 text-primary font-bold'
+                    : 'text-sidebar-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-secondary/40 hover:to-secondary/10'}`}>
                 <span className="w-5 text-center text-[14px] flex-shrink-0">⚙️</span>
                 {sidebarOpen && <span className="flex-1 tracking-wide">Admin</span>}
               </Link>
             )}
           </nav>
-          <div className="p-2.5 border-t border-sidebar-border/30">
+          <div className="relative p-2.5 border-t border-sidebar-border/20">
             <button onClick={toggleSidebar}
-              className="w-full flex items-center justify-center gap-2 text-muted-foreground/60 hover:text-foreground text-[11px] transition-all py-2 rounded-xl hover:bg-secondary/30">
+              className="w-full flex items-center justify-center gap-2 text-muted-foreground/50 hover:text-foreground text-[11px] transition-all py-2 rounded-xl hover:bg-gradient-to-r hover:from-secondary/40 hover:to-transparent">
               <span className="text-sm">{sidebarOpen ? '◂' : '▸'}</span>
               {sidebarOpen && <span className="text-[10px]">Collapse</span>}
             </button>
@@ -332,10 +336,10 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
       </div>
 
       {/* ═══ Status Bar ═══ */}
-      <footer className="h-7 bg-card/40 glass border-t border-border/20 items-center justify-between px-5 flex-shrink-0 hidden md:flex">
+      <footer className="h-7 bg-gradient-to-r from-card/50 via-card/30 to-card/50 glass border-t border-border/15 items-center justify-between px-5 flex-shrink-0 hidden md:flex">
         <div className="flex items-center gap-5">
           <div className="flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_4px_hsl(var(--primary)/0.4)]" />
+            <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)]" />
             <span className="text-[9px] text-muted-foreground/60 font-medium font-data">CONNECTED</span>
           </div>
           <span className="text-[9px] text-muted-foreground/40">NSE · BSE</span>
@@ -345,21 +349,21 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
           <span className="text-[9px] text-muted-foreground/40">
             {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
           </span>
-          <span className="text-[9px] text-primary/60 font-semibold">Trade Arsenal v3.2</span>
+          <span className="text-[9px] text-primary/50 font-semibold tracking-wide">Trade Arsenal v3.2</span>
         </div>
       </footer>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden flex-shrink-0 bg-card/80 glass border-t border-border/30 flex items-center justify-around px-1 py-2 safe-area-bottom">
+      <nav className="md:hidden flex-shrink-0 bg-gradient-to-t from-card/95 to-card/70 glass border-t border-border/20 flex items-center justify-around px-1 py-2 safe-area-bottom">
         {NAV_ITEMS.slice(0, 5).map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
           return (
             <Link key={item.path} to={item.path}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all min-w-0 relative
-                ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-              {isActive && <motion.div layoutId="mobile-nav" className="absolute -top-2 w-8 h-0.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.4)]" />}
-              <span className="text-[15px]">{item.icon}</span>
-              <span className="text-[8px] font-medium truncate">{item.label}</span>
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all min-w-0 relative
+                ${isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}>
+              {isActive && <motion.div layoutId="mobile-nav" className="absolute -top-2 w-8 h-0.5 rounded-full bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))] shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />}
+              <span className={`text-[15px] ${isActive ? 'drop-shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : ''}`}>{item.icon}</span>
+              <span className={`text-[8px] font-medium truncate ${isActive ? 'font-bold' : ''}`}>{item.label}</span>
             </Link>
           );
         })}
