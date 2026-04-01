@@ -286,8 +286,14 @@ export default function Dashboard() {
       <div>
         <p className="text-[10px] text-muted-foreground/50 font-bold mb-3 uppercase tracking-[0.15em]">📈 Key Metrics</p>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          <MetricWidget icon="📊" label="Nifty PCR" value="1.24" sub="BNF: 0.89" color="text-primary" />
-          <MetricWidget icon="⚡" label="India VIX" value="25.27" sub="-5.4%" color="text-accent" />
+          <MetricWidget icon="📊" label="Nifty PCR"
+            value={niftyMM ? niftyMM.pcr.toFixed(2) : '—'}
+            sub={bnfMM ? `BNF: ${bnfMM.pcr.toFixed(2)}` : 'Loading...'}
+            color={niftyMM ? (niftyMM.pcr > 1 ? 'text-primary' : 'text-destructive') : undefined} />
+          <MetricWidget icon="⚡" label="India VIX"
+            value={vix ? vix.value.toFixed(2) : '—'}
+            sub={vix ? `${vix.change_pct >= 0 ? '+' : ''}${vix.change_pct.toFixed(1)}%` : 'Loading...'}
+            color={vix ? (vix.change_pct <= 0 ? 'text-primary' : 'text-destructive') : 'text-accent'} />
           <MetricWidget icon="📈" label="Adv / Dec" value={`${advances} / ${declines}`} sub={`${unchanged} unch`}
             color={advances > declines ? 'text-primary' : 'text-destructive'} />
           <MetricWidget icon="🏦" label="FII Net"
@@ -298,41 +304,50 @@ export default function Dashboard() {
             value={fiiDiiParsed ? `${fiiDiiParsed.diiNet >= 0 ? '+' : ''}₹${Math.abs(Math.round(fiiDiiParsed.diiNet)).toLocaleString('en-IN')} Cr` : '—'}
             sub={fiiDiiParsed?.date || 'Loading...'}
             color={fiiDiiParsed ? (fiiDiiParsed.diiNet >= 0 ? 'text-primary' : 'text-destructive') : undefined} />
-          <MetricWidget icon="💹" label="F&O Turnover" value="₹98.5K Cr" sub="Premium" />
+          <MetricWidget icon="💹" label="F&O Turnover"
+            value={fnoTurnover != null ? `₹${fnoTurnover > 1000 ? (fnoTurnover / 1000).toFixed(1) + 'K' : fnoTurnover.toFixed(0)} Cr` : '—'}
+            sub={mm?.live ? 'Premium' : 'Loading...'} />
         </div>
       </div>
 
       {/* ═══ Expected Move ═══ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {[
-          { label: 'NIFTY', ltp: niftyLtp, move: expectedMove, iv: '13.4%' },
-          { label: 'BANKNIFTY', ltp: bnfLtp, move: bnfExpectedMove, iv: '15.2%' },
-        ].map((item, i) => (
-          <motion.div key={item.label} variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.15 + i * 0.05 }}
-            className="rounded-2xl bg-card/50 border border-border/15 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-[12px] font-black text-foreground tracking-tight">📊 Expected Move — {item.label}</span>
-              <span className="text-[8px] px-2.5 py-0.5 rounded-lg bg-accent/8 text-accent font-bold">4D to Expiry</span>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">±IE Move</p>
-                <p className="text-xl font-black text-primary font-data">±{item.move}</p>
-                <p className="text-[8px] text-muted-foreground/40">{(item.move / item.ltp * 100).toFixed(1)}%</p>
+          { label: 'NIFTY', ltp: niftyLtp, metrics: niftyMM },
+          { label: 'BANKNIFTY', ltp: bnfLtp, metrics: bnfMM },
+        ].map((item, i) => {
+          const move = item.metrics?.expectedMove || Math.round(item.ltp * 0.014);
+          const straddle = item.metrics?.atmStraddle || Math.round(move * 0.85);
+          const iv = item.metrics?.atmIV;
+          return (
+            <motion.div key={item.label} variants={fadeUp} initial="hidden" animate="visible" transition={{ delay: 0.15 + i * 0.05 }}
+              className="rounded-2xl bg-card/50 border border-border/15 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[12px] font-black text-foreground tracking-tight">📊 Expected Move — {item.label}</span>
+                <span className="text-[8px] px-2.5 py-0.5 rounded-lg bg-accent/8 text-accent font-bold">
+                  {daysToExpiry !== '—' ? `${daysToExpiry}D to Expiry` : 'Loading...'}
+                </span>
               </div>
-              <div>
-                <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">ATM Straddle</p>
-                <p className="text-xl font-black text-foreground font-data">₹{Math.round(item.move * 0.85)}</p>
-                <p className="text-[8px] text-muted-foreground/40">Implied</p>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">±1σ Move</p>
+                  <p className="text-xl font-black text-primary font-data">±{move}</p>
+                  <p className="text-[8px] text-muted-foreground/40">{(move / item.ltp * 100).toFixed(1)}%</p>
+                </div>
+                <div>
+                  <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">ATM Straddle</p>
+                  <p className="text-xl font-black text-foreground font-data">₹{straddle}</p>
+                  <p className="text-[8px] text-muted-foreground/40">{item.metrics ? 'Live' : 'Estimated'}</p>
+                </div>
+                <div>
+                  <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">ATM IV</p>
+                  <p className="text-xl font-black text-accent font-data">{iv ? `${iv.toFixed(1)}%` : '—'}</p>
+                  <p className="text-[8px] text-muted-foreground/40">{item.metrics ? 'Implied' : 'Loading...'}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-[8px] text-muted-foreground/50 uppercase tracking-[0.15em] mb-1">IV Rank</p>
-                <p className="text-xl font-black text-accent font-data">{item.iv}</p>
-                <p className="text-[8px] text-muted-foreground/40">Annualized</p>
-              </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* ═══ Watchlist ═══ */}
