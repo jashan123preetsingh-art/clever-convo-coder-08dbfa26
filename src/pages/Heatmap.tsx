@@ -317,9 +317,10 @@ export default function Heatmap() {
                     const displaySymbol = node.symbol.length > maxChars ? node.symbol.slice(0, maxChars) : node.symbol;
                     
                     const pctFontSize = isXL ? 11 : isLarge ? 10 : isMedium ? 8 : 7;
+                    const pctVal = node.change_pct ?? 0;
                     const pctText = isXL || isLarge 
-                      ? `${node.change_pct >= 0 ? '+' : ''}${node.change_pct.toFixed(2)}%`
-                      : `${node.change_pct >= 0 ? '+' : ''}${node.change_pct.toFixed(1)}%`;
+                      ? `${pctVal >= 0 ? '+' : ''}${pctVal.toFixed(2)}%`
+                      : `${pctVal >= 0 ? '+' : ''}${pctVal.toFixed(1)}%`;
 
                     const showPct = (isXL || isLarge || isMedium) && h > 28;
                     const textColor = getTextColor(node.change_pct, isDark);
