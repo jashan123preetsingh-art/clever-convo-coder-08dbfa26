@@ -71,20 +71,30 @@ export default function Auth() {
         {/* Card */}
         <div className="bg-card border border-border rounded-xl p-6 shadow-lg">
           {/* Tabs */}
-          <div className="flex mb-6 bg-secondary/50 rounded-lg p-1">
-            <button
-              onClick={() => setIsLogin(true)}
-              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${isLogin ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => setIsLogin(false)}
-              className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${!isLogin ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-            >
-              Sign Up
-            </button>
-          </div>
+          {!showForgot && (
+            <div className="flex mb-6 bg-secondary/50 rounded-lg p-1">
+              <button
+                onClick={() => setIsLogin(true)}
+                className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${isLogin ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => setIsLogin(false)}
+                className={`flex-1 py-2 rounded-md text-sm font-semibold transition-all ${!isLogin ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
+
+          {showForgot && (
+            <div className="mb-4">
+              <button onClick={() => setShowForgot(false)} className="text-xs text-primary hover:underline mb-2">← Back to Sign In</button>
+              <h2 className="text-base font-bold text-foreground">Reset Password</h2>
+              <p className="text-xs text-muted-foreground mt-1">Enter your email and we'll send you a reset link.</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!isLogin && (
