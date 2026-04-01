@@ -858,6 +858,19 @@ serve(async (req) => {
       });
     }
 
+    // ── Check cache first (skip if chart image provided — unique each time) ──
+    const cacheKey = getCacheKey(symbol, mode, optionsConfig);
+    if (!chartImage) {
+      const cached = getFromCache(cacheKey);
+      if (cached) {
+        console.log(`TradingAgents [${mode}] CACHE HIT for ${symbol}`);
+        return new Response(
+          JSON.stringify({ ...cached, cached: true }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -870,7 +883,6 @@ serve(async (req) => {
     if (stockData) {
       const base = `Stock: ${symbol}, Price: ₹${stockData.price?.toFixed(2)}, Change: ${stockData.changePct?.toFixed(2)}%, SMA20: ₹${stockData.sma20?.toFixed(2)}, SMA50: ₹${stockData.sma50?.toFixed(2)}, Volume: ${stockData.volume?.toLocaleString()}, Avg Vol: ${stockData.avgVolume?.toLocaleString()}, 52W High: ₹${stockData.high52?.toFixed(2)}, 52W Low: ₹${stockData.low52?.toFixed(2)}, Recent closes: ${stockData.recentCloses?.slice(-10)?.map((c: number) => c?.toFixed(2))?.join(", ")}`;
       if (mode === "scalp") {
-        // Enhanced intraday context with ATR, PDH/PDL, volume ratio, swing points, OHLCV candles
         const intradayCtx = `\nATR(14): ₹${stockData.atr14?.toFixed(2)}, Vol Ratio (today/avg): ${stockData.volRatio}x, PDH: ₹${stockData.pdh?.toFixed(2)}, PDL: ₹${stockData.pdl?.toFixed(2)}, PDC: ₹${stockData.pdc?.toFixed(2)}\nRecent Swing Points: ${stockData.swingPoints?.join(", ") || "None detected"}\nLast 5 Candles (OHLCV):\n${stockData.recentCandles?.slice(-5)?.map((c: any, i: number) => `  [${i+1}] O:₹${c.o?.toFixed(2)} H:₹${c.h?.toFixed(2)} L:₹${c.l?.toFixed(2)} C:₹${c.c?.toFixed(2)} V:${(c.v || 0).toLocaleString()}`).join("\n") || "N/A"}`;
         dataCtx = base + intradayCtx;
       } else {
@@ -893,16 +905,23 @@ serve(async (req) => {
 
     console.log(`TradingAgents [${mode}] pipeline complete for ${symbol}`);
 
+    const responseData = {
+      symbol, mode, hasChartAnalysis: hasChart,
+      stockData: stockData ? {
+        price: stockData.price, change: stockData.change, changePct: stockData.changePct,
+        volume: stockData.volume, sma20: stockData.sma20, sma50: stockData.sma50,
+        high52: stockData.high52, low52: stockData.low52,
+      } : null,
+      agents: result.agents,
+    };
+
+    // Store in cache (skip chart-based analyses)
+    if (!chartImage) {
+      setCache(cacheKey, responseData);
+    }
+
     return new Response(
-      JSON.stringify({
-        symbol, mode, hasChartAnalysis: hasChart,
-        stockData: stockData ? {
-          price: stockData.price, change: stockData.change, changePct: stockData.changePct,
-          volume: stockData.volume, sma20: stockData.sma20, sma50: stockData.sma50,
-          high52: stockData.high52, low52: stockData.low52,
-        } : null,
-        agents: result.agents,
-      }),
+      JSON.stringify({ ...responseData, cached: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
