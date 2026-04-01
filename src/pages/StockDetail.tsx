@@ -504,7 +504,7 @@ export default function StockDetail() {
                     ) : <p className="text-[10px] text-muted-foreground mb-3">No patterns detected</p>}
                     <div className="grid grid-cols-2 gap-2 text-[10px]">
                       <div className="bg-secondary/20 rounded-lg p-2">
-                        <span className="text-muted-foreground">RSI (14)</span>
+                        <span className="text-muted-foreground">RSI (14) · Daily</span>
                         <p className={`text-base font-black font-data ${(technicals.rsi_14 || 50) > 70 ? 'text-destructive' : (technicals.rsi_14 || 50) < 30 ? 'text-primary' : 'text-foreground'}`}>
                           {technicals.rsi_14?.toFixed(1) || '—'}
                         </p>
@@ -513,7 +513,7 @@ export default function StockDetail() {
                         </span>
                       </div>
                       <div className="bg-secondary/20 rounded-lg p-2">
-                        <span className="text-muted-foreground">ATR (14)</span>
+                        <span className="text-muted-foreground">ATR (14) · Daily</span>
                         <p className="text-base font-black text-foreground font-data">{technicals.atr_14?.toFixed(2) || '—'}</p>
                         <span className="text-[8px] text-muted-foreground font-bold">VOLATILITY</span>
                       </div>
