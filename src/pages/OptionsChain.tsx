@@ -604,7 +604,7 @@ export default function OptionsChain() {
 
               {customLegs.length > 0 && (
                 <StrategyDisplay legs={activeLegs} netPremium={netPremium} maxProfit={maxProfit} maxLoss={maxLoss}
-                  breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} />
+                  breakevens={breakevens} payoffData={payoffData} underlyingValue={underlyingValue} strikeDiff={strikeDiff} lotSize={lotSize} symbol={symbol} />
               )}
             </div>
           )}
