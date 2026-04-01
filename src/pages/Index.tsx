@@ -190,7 +190,7 @@ export default function Index() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-primary to-[hsl(var(--terminal-cyan))] flex items-center justify-center">
-                <span className="text-[7px] font-black text-primary-foreground">TA</span>
+                <span className="text-[8px] font-black text-primary-foreground">TA</span>
               </div>
               <span className="text-xs font-bold text-foreground">Trade Arsenal</span>
             </div>

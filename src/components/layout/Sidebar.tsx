@@ -1,6 +1,21 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Home, Briefcase, LayoutGrid, ScanSearch, Target, Layers, ArrowLeftRight, TrendingUp, Newspaper, Bot, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import useStore from '@/store/useStore';
+
+const ICON_MAP: Record<string, React.ReactNode> = {
+  '⌂': <Home className="w-4 h-4" />,
+  '💼': <Briefcase className="w-4 h-4" />,
+  '▦': <LayoutGrid className="w-4 h-4" />,
+  '⊕': <ScanSearch className="w-4 h-4" />,
+  '◎': <Target className="w-4 h-4" />,
+  '◫': <Layers className="w-4 h-4" />,
+  '⇄': <ArrowLeftRight className="w-4 h-4" />,
+  '📈': <TrendingUp className="w-4 h-4" />,
+  '◉': <Newspaper className="w-4 h-4" />,
+  '🤖': <Bot className="w-4 h-4" />,
+  '⚙️': <Settings className="w-4 h-4" />,
+};
 
 interface NavItem {
   path: string;
@@ -23,11 +38,11 @@ export default function Sidebar({ navItems, isAdmin }: SidebarProps) {
       <div className="absolute inset-0 bg-gradient-to-b from-[hsl(var(--sidebar-background))] via-[hsl(var(--sidebar-background))] to-[hsl(var(--sidebar-accent)/0.5)]" />
       <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-sidebar-border/40 to-transparent" />
 
-      <nav className="relative flex-1 py-4 px-2 space-y-0.5 overflow-y-auto">
+      <nav className="relative flex-1 py-4 px-2 space-y-0.5 overflow-y-auto" aria-label="Main navigation">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
           return (
-            <Link key={item.path} to={item.path}
+            <Link key={item.path} to={item.path} aria-current={isActive ? 'page' : undefined}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] transition-all duration-200 group relative
                 ${isActive
                   ? 'bg-gradient-to-r from-primary/12 to-primary/4 text-primary font-bold shadow-[inset_0_0_20px_hsl(var(--primary)/0.05)]'
@@ -35,8 +50,8 @@ export default function Sidebar({ navItems, isAdmin }: SidebarProps) {
               {isActive && (
                 <motion.div layoutId="sidebar-active" className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-gradient-to-b from-primary to-[hsl(var(--terminal-cyan))] shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />
               )}
-              <span className={`w-5 text-center text-[14px] flex-shrink-0 transition-all duration-200 ${isActive ? 'text-primary drop-shadow-[0_0_6px_hsl(var(--primary)/0.3)]' : 'text-muted-foreground group-hover:text-foreground'}`}>
-                {item.icon}
+              <span className={`w-5 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                {ICON_MAP[item.icon] || <Home className="w-4 h-4" />}
               </span>
               {sidebarOpen && (
                 <>
@@ -48,20 +63,20 @@ export default function Sidebar({ navItems, isAdmin }: SidebarProps) {
           );
         })}
         {isAdmin && (
-          <Link to="/admin"
+          <Link to="/admin" aria-current={location.pathname === '/admin' ? 'page' : undefined}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] transition-all duration-200 group relative
               ${location.pathname === '/admin'
                 ? 'bg-gradient-to-r from-primary/12 to-primary/4 text-primary font-bold'
                 : 'text-sidebar-foreground hover:text-foreground hover:bg-gradient-to-r hover:from-secondary/40 hover:to-secondary/10'}`}>
-            <span className="w-5 text-center text-[14px] flex-shrink-0">⚙️</span>
+            <span className="w-5 flex items-center justify-center flex-shrink-0">{ICON_MAP['⚙️']}</span>
             {sidebarOpen && <span className="flex-1 tracking-wide">Admin</span>}
           </Link>
         )}
       </nav>
       <div className="relative p-2.5 border-t border-sidebar-border/20">
-        <button onClick={toggleSidebar}
+        <button onClick={toggleSidebar} aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
           className="w-full flex items-center justify-center gap-2 text-muted-foreground/50 hover:text-foreground text-[11px] transition-all py-2 rounded-xl hover:bg-gradient-to-r hover:from-secondary/40 hover:to-transparent">
-          <span className="text-sm">{sidebarOpen ? '◂' : '▸'}</span>
+          {sidebarOpen ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           {sidebarOpen && <span className="text-[10px]">Collapse</span>}
         </button>
       </div>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { INDICES as MOCK_INDICES } from '@/data/mockData';
-import { useIndices } from '@/hooks/useStockData';
+import { useLocation } from 'react-router-dom';
+import { useIndicesWithFallback } from '@/hooks/useIndicesWithFallback';
 import { useAuth } from '@/hooks/useAuth';
 import { AlertBell } from '@/components/PriceAlerts';
 import { useTheme } from '@/hooks/useTheme';
@@ -10,7 +9,7 @@ import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileNav from '@/components/layout/MobileNav';
 import StatusBar from '@/components/layout/StatusBar';
-import type { IndexData } from '@/types/stock';
+import RouteErrorBoundary from '@/components/RouteErrorBoundary';
 
 const AiAssistant = lazy(() => import('@/components/AiAssistant'));
 
@@ -24,12 +23,11 @@ const NAV_ITEMS = [
   { path: '/fii-dii', label: 'FII/DII', shortcut: 'F7', icon: '⇄' },
   { path: '/oi-analysis', label: 'OI Analysis', shortcut: 'F8', icon: '📈' },
   { path: '/news', label: 'News', shortcut: 'F9', icon: '◉' },
-  { path: '/trading-agent', label: 'AI Agent', shortcut: 'F9', icon: '🤖' },
+  { path: '/trading-agent', label: 'AI Agent', shortcut: 'F10', icon: '🤖' },
 ];
 
 export default function TerminalLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, isAdmin, profile, signOut } = useAuth();
   const { theme, toggle: toggleTheme } = useTheme();
   const [time, setTime] = useState('');
@@ -38,8 +36,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const { data: liveIndices } = useIndices();
-  const INDICES: IndexData[] = liveIndices?.length > 0 && !liveIndices[0]?.error ? liveIndices : MOCK_INDICES;
+  const { indices } = useIndicesWithFallback();
 
   useEffect(() => {
     const update = () => setTime(new Date().toLocaleTimeString('en-IN', { hour12: false, hour: '2-digit', minute: '2-digit' }));
@@ -82,7 +79,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
         setSearchInput={setSearchInput}
         showSearch={showSearch}
         setShowSearch={setShowSearch}
-        indices={INDICES}
+        indices={indices}
         marketOpen={marketOpen}
         time={time}
         theme={theme}
@@ -100,7 +97,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
 
       <MobileNav
         navItems={NAV_ITEMS}
-        indices={INDICES}
+        indices={indices}
         isAdmin={isAdmin}
         mobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
@@ -109,16 +106,16 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
       <div className="flex flex-1 overflow-hidden">
         <Sidebar navItems={NAV_ITEMS} isAdmin={isAdmin} />
 
-        <main id="main-content" className="flex-1 overflow-y-auto bg-background" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="min-h-full">
-            {children}
-          </div>
+        <main id="main-content" className="flex-1 overflow-y-auto bg-background touch-auto">
+          <RouteErrorBoundary>
+            <div className="min-h-full">
+              {children}
+            </div>
+          </RouteErrorBoundary>
         </main>
       </div>
 
       <StatusBar />
-
-      {/* Bottom tab bar is inside MobileNav */}
 
       {showSearch && <div className="fixed inset-0 z-20" onClick={() => setShowSearch(false)} />}
       {userMenuOpen && <div className="fixed inset-0 z-[85]" onClick={() => setUserMenuOpen(false)} />}

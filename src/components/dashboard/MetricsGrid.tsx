@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { memo } from 'react';
+import { BarChart3, Zap, TrendingUp, Landmark } from 'lucide-react';
 import DataBadge from './DataBadge';
 import type { DataStatus, MarketMetrics } from '@/types/stock';
 
@@ -7,16 +8,16 @@ interface MetricWidgetProps {
   value: string;
   sub?: string;
   color?: string;
-  icon?: string;
+  icon?: React.ReactNode;
   status?: DataStatus;
 }
 
-function MetricWidget({ label, value, sub, color, icon, status }: MetricWidgetProps) {
+const MetricWidget = memo(function MetricWidget({ label, value, sub, color, icon, status }: MetricWidgetProps) {
   const isLoading = status === 'loading' || value === '—';
   return (
     <div className={`rounded-xl bg-card/40 p-3 sm:p-4 border border-border/10 hover:border-border/25 transition-all duration-300 group ${isLoading ? 'animate-pulse' : ''}`}>
       <div className="flex items-center gap-1.5 mb-2">
-        {icon && <span className="text-[10px] opacity-60 group-hover:opacity-100 transition-opacity">{icon}</span>}
+        {icon && <span className="opacity-60 group-hover:opacity-100 transition-opacity">{icon}</span>}
         <p className="text-[8px] text-muted-foreground/70 uppercase tracking-[0.15em] font-bold flex-1">{label}</p>
         {status && status !== 'loading' && <DataBadge status={status} />}
       </div>
@@ -24,7 +25,7 @@ function MetricWidget({ label, value, sub, color, icon, status }: MetricWidgetPr
       {sub && <p className="text-[8px] text-muted-foreground/70 mt-0.5">{sub}</p>}
     </div>
   );
-}
+});
 
 interface MetricsGridProps {
   marketMetrics: MarketMetrics | null;
@@ -71,25 +72,25 @@ export default function MetricsGrid({ marketMetrics, metricsLoading, marketOpen,
         )}
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 sm:gap-2">
-        <MetricWidget icon="📊" label="Nifty PCR"
+        <MetricWidget icon={<BarChart3 className="w-3 h-3" />} label="Nifty PCR"
           value={niftyMM ? (niftyMM.pcr ?? 0).toFixed(2) : '—'}
           sub={mm?.banknifty ? `BNF: ${(mm.banknifty.pcr ?? 0).toFixed(2)}` : undefined}
           color={niftyMM ? ((niftyMM.pcr ?? 0) > 1 ? 'text-primary' : 'text-destructive') : undefined}
           status={getMetricStatus(!!niftyMM)} />
-        <MetricWidget icon="⚡" label="India VIX"
+        <MetricWidget icon={<Zap className="w-3 h-3" />} label="India VIX"
           value={vix ? (vix.value ?? 0).toFixed(2) : '—'}
           sub={vix ? `${(vix.change_pct ?? 0) >= 0 ? '+' : ''}${(vix.change_pct ?? 0).toFixed(1)}%` : undefined}
           color={vix ? ((vix.change_pct ?? 0) <= 0 ? 'text-primary' : 'text-destructive') : 'text-accent'}
           status={getMetricStatus(!!vix)} />
-        <MetricWidget icon="📈" label="Adv / Dec" value={`${advances} / ${declines}`} sub={`${unchanged} unch`}
+        <MetricWidget icon={<TrendingUp className="w-3 h-3" />} label="Adv / Dec" value={`${advances} / ${declines}`} sub={`${unchanged} unch`}
           color={advances > declines ? 'text-primary' : 'text-destructive'}
           status={getDataStatus(hasBreadth)} />
-        <MetricWidget icon="🏦" label="FII Net"
+        <MetricWidget icon={<Landmark className="w-3 h-3" />} label="FII Net"
           value={fiiDiiParsed ? `${fiiDiiParsed.fiiNet >= 0 ? '+' : ''}₹${Math.abs(Math.round(fiiDiiParsed.fiiNet)).toLocaleString('en-IN')} Cr` : '—'}
           sub={fiiDiiParsed?.date || undefined}
           color={fiiDiiParsed ? (fiiDiiParsed.fiiNet >= 0 ? 'text-primary' : 'text-destructive') : undefined}
           status={getDataStatus(!!fiiDiiParsed)} />
-        <MetricWidget icon="📊" label="DII Net"
+        <MetricWidget icon={<Landmark className="w-3 h-3" />} label="DII Net"
           value={fiiDiiParsed ? `${fiiDiiParsed.diiNet >= 0 ? '+' : ''}₹${Math.abs(Math.round(fiiDiiParsed.diiNet)).toLocaleString('en-IN')} Cr` : '—'}
           sub={fiiDiiParsed?.date || undefined}
           color={fiiDiiParsed ? (fiiDiiParsed.diiNet >= 0 ? 'text-primary' : 'text-destructive') : undefined}
