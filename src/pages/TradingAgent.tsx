@@ -141,10 +141,6 @@ function extractVerdict(agents: Record<string, string>, mode: TradeMode) {
     if (upper.includes('INVEST') && !upper.includes('DON\'T INVEST')) action = 'INVEST';
     else if (upper.includes('PASS') || upper.includes('AVOID')) action = 'PASS';
     else if (upper.includes('BUY') || upper.includes('ACCUMULATE')) action = 'BUY';
-  } else if (mode === 'options') {
-    if (upper.includes('BUY') || upper.includes('BULL') || upper.includes('CALL')) action = 'BUY';
-    else if (upper.includes('SELL') || upper.includes('BEAR') || upper.includes('PUT') || upper.includes('SHORT')) action = 'SELL';
-    else if (upper.includes('NEUTRAL') || upper.includes('IRON CONDOR') || upper.includes('STRANGLE')) action = 'HOLD';
   } else {
     if (upper.includes('STRONG BUY') || (upper.includes('BUY') && !upper.includes('DON\'T BUY'))) action = 'BUY';
     else if (upper.includes('SELL') || upper.includes('SHORT')) action = 'SELL';
