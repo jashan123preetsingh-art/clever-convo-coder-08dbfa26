@@ -159,7 +159,7 @@ export default function AiAssistant() {
     } finally {
       setLoading(false);
     }
-  }, [messages, loading, pendingImage, location.pathname, fetchContextData, liveData]);
+  }, [messages, loading, location.pathname, fetchContextData, liveData]);
 
   const hasLiveData = liveData.indices.length > 0;
 
