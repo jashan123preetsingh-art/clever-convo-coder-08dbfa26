@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllStocks } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import type { Stock } from '@/data/mockData';
 import { motion, AnimatePresence } from 'framer-motion';
+import { stockApi } from '@/lib/api';
 
 // ═══ QUALITY SCORE ENGINE ═══
 interface QualityScore {
