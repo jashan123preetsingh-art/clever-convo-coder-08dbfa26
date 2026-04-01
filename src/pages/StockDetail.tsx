@@ -531,7 +531,7 @@ export default function StockDetail() {
                               <div className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
                                 <span className="text-muted-foreground">Zone {i + 1}</span>
-                                <span className="text-[7px] px-1 py-0.5 bg-destructive/8 text-destructive rounded font-bold">{'★'.repeat(z.strength)}</span>
+                                <span className="text-[8px] text-destructive/60 font-bold">{'●'.repeat(Math.min(z.strength, 5))}</span>
                               </div>
                               <span className="text-foreground font-data font-medium">{formatCurrency(z.low)} – {formatCurrency(z.high)}</span>
                             </div>
@@ -544,7 +544,7 @@ export default function StockDetail() {
                               <div className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-primary" />
                                 <span className="text-muted-foreground">Zone {i + 1}</span>
-                                <span className="text-[7px] px-1 py-0.5 bg-primary/8 text-primary rounded font-bold">{'★'.repeat(z.strength)}</span>
+                                <span className="text-[8px] text-primary/60 font-bold">{'●'.repeat(Math.min(z.strength, 5))}</span>
                               </div>
                               <span className="text-foreground font-data font-medium">{formatCurrency(z.low)} – {formatCurrency(z.high)}</span>
                             </div>
