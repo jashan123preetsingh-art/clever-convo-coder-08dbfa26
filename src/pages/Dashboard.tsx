@@ -45,7 +45,7 @@ function isMarketHours(): boolean {
 function DataBadge({ status, source }: { status: 'live' | 'delayed' | 'estimated' | 'loading' | 'unavailable' | 'market-closed'; source?: string }) {
   const config: Record<string, { text: string; bg: string; color: string; dot: boolean; ring?: string }> = {
     live: { text: 'LIVE', bg: 'bg-primary/12', color: 'text-primary', dot: true, ring: 'ring-1 ring-primary/20' },
-    delayed: { text: 'DELAYED', bg: 'bg-accent/10', color: 'text-accent', dot: false },
+    delayed: { text: 'MKT CLOSED', bg: 'bg-muted/15', color: 'text-muted-foreground/50', dot: false },
     estimated: { text: source === 'vix-estimate' ? 'VIX EST.' : 'EST.', bg: 'bg-accent/10', color: 'text-accent', dot: false },
     loading: { text: '···', bg: 'bg-muted/20', color: 'text-muted-foreground/60', dot: false },
     unavailable: { text: 'N/A', bg: 'bg-destructive/8', color: 'text-destructive/60', dot: false },
