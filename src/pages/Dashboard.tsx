@@ -78,7 +78,7 @@ function SectionHeader({ title, badge, link, linkText }: { title: string; badge?
   );
 }
 
-const fadeUp = { hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0 } };
+const fadeUp = { hidden: { opacity: 0, y: 8 }, visible: { opacity: 1, y: 0 } };
 
 export default function Dashboard() {
   const { data: liveIndices } = useIndices();
