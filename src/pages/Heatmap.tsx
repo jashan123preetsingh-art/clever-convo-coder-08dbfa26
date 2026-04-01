@@ -158,6 +158,8 @@ function HeatmapSkeleton() {
 }
 
 export default function Heatmap() {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const mockStocks = useMemo(() => getAllStocks(), []);
 
   // Only fetch top 120 stocks by market cap (covers 95%+ of heatmap visual area)
