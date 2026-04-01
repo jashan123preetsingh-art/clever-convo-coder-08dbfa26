@@ -709,6 +709,11 @@ export default function StockDetail() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── AI Fundamentals (always visible below tabs) ─── */}
+      <div className="mt-4">
+        <AIFundamentalsPanel symbol={symbol!} quote={quote} technicals={technicals} partialFundamentals={fundamentals} />
+      </div>
     </div>
   );
 }
