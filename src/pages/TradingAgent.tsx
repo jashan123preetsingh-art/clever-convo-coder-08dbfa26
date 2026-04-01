@@ -717,7 +717,7 @@ export default function TradingAgent() {
         return;
       }
 
-      setResult(data);
+      setResult({ ...data, mode: data.mode || mode });
       setCurrentStep(steps.length);
       
       if (data.cached) {
