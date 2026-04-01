@@ -275,6 +275,11 @@ export default function Dashboard() {
             {isLive && i === 0 && <DataBadge status="live" />}
           </div>
         ))}
+        {isLive && (
+          <span className="text-[7px] text-muted-foreground/30 font-data whitespace-nowrap px-2">
+            {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} IST
+          </span>
+        )}
       </div>
 
       {/* ═══ AI Market Brief ═══ */}
