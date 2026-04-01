@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { INDICES, getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
 import { useIndices, useFiiDiiData, useMarketBreadth, useBatchQuotes } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent, formatVolume, timeAgo } from '@/utils/format';
