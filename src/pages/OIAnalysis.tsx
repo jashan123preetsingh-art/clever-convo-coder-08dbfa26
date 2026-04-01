@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { generateOptionsChain } from '@/data/mockData';
+import { useOptionsChain } from '@/hooks/useStockData';
 import { formatNumber, formatVolume } from '@/utils/format';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, ReferenceLine, Area, AreaChart, Cell } from 'recharts';
 
