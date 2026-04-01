@@ -77,30 +77,25 @@ export default function AiAssistant() {
   useEffect(() => { if (open && inputRef.current) inputRef.current.focus(); }, [open]);
 
 
+  const getContext = () => {
+    const path = location.pathname;
+    const parts = path.split('/');
+    return {
+      currentPage: path,
+      currentStock: parts[1] === 'stock' ? parts[2] : undefined,
+      liveIndices: liveData.indices,
+      fiiDii: liveData.fiiDii,
+      stockData: liveData.stockData,
+    };
+  };
+
   const sendMessage = useCallback(async (text: string) => {
-    if ((!text.trim() && !pendingImage) || loading) return;
+    if (!text.trim() || loading) return;
 
-    const hasImage = !!pendingImage;
-    const userText = text.trim() || (hasImage ? 'Analyze this chart' : '');
-
-    let userContent: MessageContent;
-    let imagePreview: string | undefined;
-
-    if (hasImage) {
-      userContent = [
-        { type: 'text', text: userText },
-        { type: 'image_url', image_url: { url: pendingImage! } },
-      ];
-      imagePreview = pendingImage!;
-    } else {
-      userContent = userText;
-    }
-
-    const userMsg: Message = { role: 'user', content: userContent, imagePreview };
+    const userMsg: Message = { role: 'user', content: text.trim() };
     const allMessages = [...messages, userMsg];
     setMessages(allMessages);
     setInput('');
-    setPendingImage(null);
     setLoading(true);
 
     if (location.pathname.startsWith('/stock/')) await fetchContextData();
