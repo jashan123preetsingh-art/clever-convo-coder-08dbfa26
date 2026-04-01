@@ -673,11 +673,8 @@ export default function TradingAgent() {
         symbol: symbol.toUpperCase().trim(),
         mode,
       };
-      if (mode !== 'invest' && mode !== 'options' && chartImage) {
+      if (mode !== 'invest' && chartImage) {
         bodyPayload.chartImage = chartImage;
-      }
-      if (mode === 'options') {
-        bodyPayload.optionsConfig = { riskReward, tradeType: optionsTradeType };
       }
 
       const resp = await fetch(`${FUNCTIONS_URL}/trading-agent`, {
