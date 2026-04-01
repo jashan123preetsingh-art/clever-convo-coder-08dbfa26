@@ -45,11 +45,17 @@ export const stockApi = {
   getBatchQuotes: (symbols: string[]) =>
     callFunction("stock-data", { action: "batch", symbols: symbols.join(",") }),
 
+  getBatchEMA: (symbols: string[]) =>
+    callFunction("stock-data", { action: "batch-ema", symbols: symbols.join(",") }),
+
   search: (query: string) =>
     callFunction("stock-data", { action: "search", q: query }),
 
   getIndices: () =>
     callFunction("stock-data", { action: "indices" }),
+
+  getMarketMetrics: () =>
+    callFunction("stock-data", { action: "market-metrics" }),
 
   getOptionsChain: (symbol: string) =>
     callFunction("stock-data", { action: "options-chain", symbol }),

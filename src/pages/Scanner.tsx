@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllStocks } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import type { Stock } from '@/data/mockData';
 import { motion, AnimatePresence } from 'framer-motion';
+import { stockApi } from '@/lib/api';
 
 // ═══ QUALITY SCORE ENGINE ═══
 interface QualityScore {
@@ -208,43 +209,46 @@ const DEFAULT_SCANS: ScanPreset[] = [
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 2 },
     ] },
 
-  // ─── EMA ───
-  { id: 'ema1', name: 'Golden Crossover', description: 'Price > 50 EMA crossing above 200 EMA zone', icon: '✨', category: 'ema',
+  // ─── EMA (real EMA data) ───
+  { id: 'ema1', name: 'Golden Crossover', description: 'EMA 50 crossing above EMA 200 — bullish', icon: '✨', category: 'ema',
     conditions: [
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.0 },
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0.5', compareMeasure: '', multiplier: 1 },
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'week_52_low', multiplier: 1.3 },
+      { measure: 'ema50', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
     ] },
-  { id: 'ema2', name: 'Death Crossover', description: 'Price below key EMAs – bearish signal', icon: '💀', category: 'ema',
+  { id: 'ema2', name: 'Death Crossover', description: 'EMA 50 below EMA 200 — bearish', icon: '💀', category: 'ema',
     conditions: [
-      { measure: 'change_pct', operator: '<', compareType: 'number', value: '-0.5', compareMeasure: '', multiplier: 1 },
-      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'week_52_high', multiplier: 0.8 },
+      { measure: 'ema50', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
+      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
     ] },
   { id: 'ema3', name: 'EMA 20 > EMA 50 Crossover', description: 'Short-term trend turning bullish', icon: '📊', category: 'ema',
     conditions: [
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0.3', compareMeasure: '', multiplier: 1 },
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.003 },
+      { measure: 'ema20', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.0 },
       { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.2 },
     ] },
-  { id: 'ema4', name: 'Price Above All EMAs', description: 'Above 20, 50, 100, 200 EMA – strong uptrend', icon: '🟢', category: 'ema',
+  { id: 'ema4', name: 'Price Above All EMAs', description: 'Above EMA 20, 50, 100, 200 — strong uptrend', icon: '🟢', category: 'ema',
     conditions: [
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'week_52_low', multiplier: 1.5 },
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'prev_close', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
     ] },
-  { id: 'ema5', name: 'Price Below All EMAs', description: 'Below all key EMAs – strong downtrend', icon: '🔴', category: 'ema',
+  { id: 'ema5', name: 'Price Below All EMAs', description: 'Below all key EMAs — strong downtrend', icon: '🔴', category: 'ema',
     conditions: [
-      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'week_52_high', multiplier: 0.7 },
+      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.0 },
+      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
+      { measure: 'close', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
     ] },
-  { id: 'ema6', name: 'EMA Bounce (20 EMA Support)', description: 'Price bouncing off 20 EMA support', icon: '↗️', category: 'ema',
+  { id: 'ema6', name: 'EMA 20 Bounce', description: 'Price bouncing off EMA 20 support with volume', icon: '↗️', category: 'ema',
     conditions: [
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '1', compareMeasure: '', multiplier: 1 },
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'low', multiplier: 1.01 },
-      { measure: 'volume', operator: '>', compareType: 'measure', value: '', compareMeasure: 'avg_volume_10d', multiplier: 1.2 },
+      { measure: 'low', operator: '<', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.01 },
+      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema20', multiplier: 1.0 },
+      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0.5', compareMeasure: '', multiplier: 1 },
     ] },
-  { id: 'ema7', name: 'Bullish EMA Stack', description: '20>50>100>200 EMA alignment – momentum', icon: '📈', category: 'ema',
+  { id: 'ema7', name: 'Bullish EMA Stack', description: 'EMA 20 > 50 > 100 > 200 alignment — momentum', icon: '📈', category: 'ema',
     conditions: [
-      { measure: 'close', operator: '>', compareType: 'measure', value: '', compareMeasure: 'week_52_low', multiplier: 1.4 },
-      { measure: 'change_pct', operator: '>', compareType: 'number', value: '0', compareMeasure: '', multiplier: 1 },
+      { measure: 'ema20', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema50', multiplier: 1.0 },
+      { measure: 'ema50', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema100', multiplier: 1.0 },
+      { measure: 'ema100', operator: '>', compareType: 'measure', value: '', compareMeasure: 'ema200', multiplier: 1.0 },
     ] },
 
   // ─── MOMENTUM ───
@@ -523,24 +527,35 @@ const RESULT_COLUMNS = [
 
 const PAGE_SIZE = 50;
 
-function getStockValue(stock: Stock, key: string): number | null {
+// EMA measures that require server-side data
+const EMA_MEASURES = new Set(['ema9', 'ema20', 'ema50', 'ema100', 'ema200', 'sma20', 'sma50', 'sma200']);
+
+function scanUsesEMA(conditions: Omit<Condition, 'id'>[]): boolean {
+  return conditions.some(c => EMA_MEASURES.has(c.measure) || EMA_MEASURES.has(c.compareMeasure));
+}
+
+function getStockValue(stock: Stock, key: string, emaData?: Record<string, any>): number | null {
   if (key === 'close') return stock.ltp;
   if (key === 'score') return computeQualityScore(stock).total;
+  if (EMA_MEASURES.has(key)) {
+    const data = emaData?.[stock.symbol];
+    return data?.emas?.[key] ?? null;
+  }
   return (stock as any)[key] ?? null;
 }
 
-function runConditions(conditions: Omit<Condition, 'id'>[]): Stock[] {
+function runConditions(conditions: Omit<Condition, 'id'>[], emaData?: Record<string, any>): Stock[] {
   const stocks = getAllStocks();
   return stocks.filter(stock => {
     return conditions.every(cond => {
-      const leftVal = getStockValue(stock, cond.measure);
+      const leftVal = getStockValue(stock, cond.measure, emaData);
       if (leftVal === null) return false;
       let rightVal: number;
       if (cond.compareType === 'number') {
         rightVal = parseFloat(cond.value);
         if (isNaN(rightVal)) return false;
       } else {
-        const base = getStockValue(stock, cond.compareMeasure);
+        const base = getStockValue(stock, cond.compareMeasure, emaData);
         if (base === null) return false;
         rightVal = base * cond.multiplier;
       }
@@ -691,23 +706,74 @@ export default function Scanner() {
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
+  const [emaData, setEmaData] = useState<Record<string, any>>({});
+  const [emaLoading, setEmaLoading] = useState(false);
+
+  // Fetch EMA data once for EMA scans (cached for 5 min via react-query in hook, but here we do it imperatively)
+  const fetchEMAData = useCallback(async () => {
+    if (Object.keys(emaData).length > 0) return emaData; // already loaded
+    setEmaLoading(true);
+    try {
+      const stocks = getAllStocks();
+      // Fetch in batches of 30
+      const allSymbols = stocks.map(s => s.symbol);
+      const batches: string[][] = [];
+      for (let i = 0; i < allSymbols.length; i += 30) batches.push(allSymbols.slice(i, i + 30));
+      
+      const results = await Promise.all(batches.map(b => stockApi.getBatchEMA(b).catch(() => [])));
+      const map: Record<string, any> = {};
+      for (const batch of results) {
+        if (!Array.isArray(batch)) continue;
+        for (const item of batch) {
+          if (item.emas) map[item.symbol] = item;
+        }
+      }
+      setEmaData(map);
+      return map;
+    } catch {
+      return {};
+    } finally {
+      setEmaLoading(false);
+    }
+  }, [emaData]);
 
   const scanCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    DEFAULT_SCANS.forEach(s => { counts[s.id] = runConditions(s.conditions).length; });
+    DEFAULT_SCANS.forEach(s => {
+      // Skip EMA scans in count if no EMA data loaded yet
+      if (scanUsesEMA(s.conditions) && Object.keys(emaData).length === 0) {
+        counts[s.id] = -1; // will show "..." 
+      } else {
+        counts[s.id] = runConditions(s.conditions, emaData).length;
+      }
+    });
     return counts;
-  }, []);
+  }, [emaData]);
 
   const filteredScans = useMemo(() => {
     if (selectedCategory === 'all') return DEFAULT_SCANS;
     return DEFAULT_SCANS.filter(s => s.category === selectedCategory);
   }, [selectedCategory]);
 
-  const selectScan = useCallback((scan: ScanPreset) => {
+  const selectScan = useCallback(async (scan: ScanPreset) => {
     setActiveScan(scan);
-    setScanResults(runConditions(scan.conditions));
     setPage(0); setSearch(''); setSortKey('change_pct'); setSortDir('desc'); setExpandedStock(null);
-  }, []);
+    
+    if (scanUsesEMA(scan.conditions)) {
+      // Fetch EMA data first, then run conditions
+      const data = await fetchEMAData();
+      setScanResults(runConditions(scan.conditions, data));
+    } else {
+      setScanResults(runConditions(scan.conditions, emaData));
+    }
+  }, [fetchEMAData, emaData]);
+
+  // Auto-fetch EMA data when EMA category is selected
+  useEffect(() => {
+    if (selectedCategory === 'ema' && Object.keys(emaData).length === 0) {
+      fetchEMAData();
+    }
+  }, [selectedCategory]);
 
   const sortedResults = useMemo(() => {
     if (!scanResults) return null;
@@ -825,10 +891,12 @@ export default function Scanner() {
                 <div className="flex items-start justify-between mb-1.5">
                   <span className="text-base group-hover:scale-110 transition-transform duration-200">{scan.icon}</span>
                   <span className={`text-[10px] font-black font-data px-2 py-0.5 rounded-full transition-colors
-                    ${count > 0
-                      ? isActive ? 'bg-primary/15 text-primary' : 'bg-primary/8 text-primary'
-                      : 'bg-secondary/60 text-muted-foreground/50'}`}>
-                    {count}
+                    ${count === -1
+                      ? 'bg-secondary/60 text-muted-foreground/50'
+                      : count > 0
+                        ? isActive ? 'bg-primary/15 text-primary' : 'bg-primary/8 text-primary'
+                        : 'bg-secondary/60 text-muted-foreground/50'}`}>
+                    {count === -1 ? '...' : count}
                   </span>
                 </div>
                 <p className={`text-[10px] font-bold mb-0.5 transition-colors ${isActive ? 'text-primary' : 'text-foreground group-hover:text-foreground'}`}>
