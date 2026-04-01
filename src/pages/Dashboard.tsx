@@ -336,8 +336,13 @@ export default function Dashboard() {
         <div className="flex items-center gap-2 mb-2 sm:mb-3">
           <p className="text-[9px] sm:text-[10px] text-muted-foreground/50 font-bold uppercase tracking-[0.15em]">📈 Key Metrics</p>
           {dataSource && <DataBadge status={dataSource === 'yahoo' ? 'live' : dataSource === 'vix-estimate' ? 'estimated' : metricsLoading ? 'loading' : 'unavailable'} source={dataSource} />}
+          {mm?.timestamp && (
+            <span className="text-[7px] text-muted-foreground/40 font-data ml-auto">
+              Updated: {new Date(mm.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} IST
+            </span>
+          )}
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-2.5">
           <MetricWidget icon="📊" label="Nifty PCR"
             value={niftyMM ? (niftyMM.pcr ?? 0).toFixed(2) : '—'}
             sub={bnfMM ? `BNF: ${(bnfMM.pcr ?? 0).toFixed(2)}` : undefined}
