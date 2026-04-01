@@ -186,7 +186,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
             <span className={`text-[9px] font-bold tracking-wider ${marketOpen ? 'text-primary' : 'text-muted-foreground'}`}>
               {marketOpen ? 'LIVE' : 'CLOSED'}
             </span>
-            <span className="text-[9px] text-muted-foreground/50 font-data">{time.toLocaleTimeString('en-IN', { hour12: false })}</span>
+            <span className="text-[9px] text-muted-foreground/50 font-data">{time}</span>
           </div>
 
           {/* User avatar */}
