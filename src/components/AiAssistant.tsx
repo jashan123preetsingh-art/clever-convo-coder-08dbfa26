@@ -204,7 +204,7 @@ export default function AiAssistant() {
                 <div className="flex items-center gap-1.5">
                   <span className={`w-1.5 h-1.5 rounded-full ${hasLiveData ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
                   <p className="text-[9px] text-muted-foreground">
-                    {hasLiveData ? 'Live Data · Chart Analysis' : 'Connecting...'}
+                    {hasLiveData ? 'Live Data' : 'Connecting...'}
                   </p>
                 </div>
               </div>
