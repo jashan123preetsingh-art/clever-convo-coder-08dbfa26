@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { generateOptionsChain } from '@/data/mockData';
+import { useOptionsChain } from '@/hooks/useStockData';
 import { formatNumber, formatVolume } from '@/utils/format';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, ReferenceLine, Area, AreaChart, Cell } from 'recharts';
 
@@ -90,8 +91,20 @@ function OIChangeHeatmap({ chain, symbol }: { chain: any[]; symbol: string }) {
 
 export default function OIAnalysis() {
   const [activeSymbol, setActiveSymbol] = useState<typeof SYMBOLS[number]>('NIFTY');
+  // Tick counter to force mock data regeneration every 60s when not live
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const data = useMemo(() => generateOptionsChain(activeSymbol), [activeSymbol]);
+  // Fetch live OI from NSE, fallback to mock
+  const { data: liveOI, isLoading: oiLoading } = useOptionsChain(activeSymbol);
+  const data = useMemo(() => {
+    if (liveOI?.chain?.length > 0 && liveOI.live) return liveOI;
+    return generateOptionsChain(activeSymbol);
+  }, [activeSymbol, liveOI, tick]);
+  const isLive = liveOI?.live === true && liveOI?.chain?.length > 0;
   const { chain, underlyingValue, analytics } = data;
 
   // Build OI distribution chart data
@@ -132,8 +145,20 @@ export default function OIAnalysis() {
       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-sm font-bold text-foreground tracking-wide">OI ANALYSIS</h1>
-            <p className="text-[9px] text-muted-foreground">Open Interest trends, OI Change Heatmap & PCR Charts for Index F&O</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-bold text-foreground tracking-wide">OI ANALYSIS</h1>
+              {isLive && (
+                <span className="text-[7px] text-primary font-bold flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)] animate-pulse" /> LIVE · NSE
+                </span>
+              )}
+              {oiLoading && (
+                <span className="text-[7px] text-muted-foreground font-bold px-2 py-0.5 rounded-full bg-secondary">Loading...</span>
+              )}
+            </div>
+            <p className="text-[9px] text-muted-foreground">
+              {isLive ? `Live OI from NSE • Auto-refreshes every 60s • ${liveOI?.timestamp || ''}` : 'Open Interest trends, OI Change Heatmap & PCR Charts for Index F&O'}
+            </p>
           </div>
           <div className="flex items-center gap-1.5">
             {SYMBOLS.map(s => (
