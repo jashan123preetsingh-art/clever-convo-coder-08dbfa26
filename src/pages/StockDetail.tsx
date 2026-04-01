@@ -5,6 +5,7 @@ import { useFullStockData, useStockChart } from '@/hooks/useStockData';
 import { getStock, generateCandleData } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import { useWatchlist } from '@/hooks/useWatchlist';
+import AIFundamentalsPanel from '@/components/stock/AIFundamentalsPanel';
 
 // ─── Shared Components ───
 
@@ -708,6 +709,11 @@ export default function StockDetail() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ─── AI Fundamentals (always visible below tabs) ─── */}
+      <div className="mt-4">
+        <AIFundamentalsPanel symbol={symbol!} quote={quote} technicals={technicals} partialFundamentals={fundamentals} />
+      </div>
     </div>
   );
 }
