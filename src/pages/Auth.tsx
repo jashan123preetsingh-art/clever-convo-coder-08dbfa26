@@ -97,7 +97,7 @@ export default function Auth() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!isLogin && (
+            {!isLogin && !showForgot && (
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">Full Name</label>
                 <input
