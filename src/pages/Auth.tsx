@@ -152,10 +152,10 @@ export default function Auth() {
               {submitting ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  {isLogin ? 'Signing in...' : 'Creating account...'}
+                  {showForgot ? 'Sending...' : isLogin ? 'Signing in...' : 'Creating account...'}
                 </span>
               ) : (
-                isLogin ? 'Sign In' : 'Create Account'
+                showForgot ? 'Send Reset Link' : isLogin ? 'Sign In' : 'Create Account'
               )}
             </button>
           </form>
