@@ -92,7 +92,13 @@ function OIChangeHeatmap({ chain, symbol }: { chain: any[]; symbol: string }) {
 export default function OIAnalysis() {
   const [activeSymbol, setActiveSymbol] = useState<typeof SYMBOLS[number]>('NIFTY');
 
-  const data = useMemo(() => generateOptionsChain(activeSymbol), [activeSymbol]);
+  // Fetch live OI from NSE, fallback to mock
+  const { data: liveOI, isLoading: oiLoading } = useOptionsChain(activeSymbol);
+  const data = useMemo(() => {
+    if (liveOI?.chain?.length > 0 && liveOI.live) return liveOI;
+    return generateOptionsChain(activeSymbol);
+  }, [activeSymbol, liveOI]);
+  const isLive = liveOI?.live === true && liveOI?.chain?.length > 0;
   const { chain, underlyingValue, analytics } = data;
 
   // Build OI distribution chart data
