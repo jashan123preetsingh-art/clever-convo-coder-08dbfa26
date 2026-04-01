@@ -835,9 +835,19 @@ serve(async (req) => {
 
     const dataRange = mode === "invest" ? "1y" : "3mo";
     const stockData = await fetchStockData(symbol, dataRange);
-    const dataCtx = stockData
-      ? `Stock: ${symbol}, Price: ₹${stockData.price?.toFixed(2)}, Change: ${stockData.changePct?.toFixed(2)}%, SMA20: ₹${stockData.sma20?.toFixed(2)}, SMA50: ₹${stockData.sma50?.toFixed(2)}, Volume: ${stockData.volume?.toLocaleString()}, Avg Vol: ${stockData.avgVolume?.toLocaleString()}, 52W High: ₹${stockData.high52?.toFixed(2)}, 52W Low: ₹${stockData.low52?.toFixed(2)}, Recent closes: ${stockData.recentCloses?.slice(-10)?.map((c: number) => c?.toFixed(2))?.join(", ")}`
-      : `Stock: ${symbol} (limited data)`;
+    let dataCtx: string;
+    if (stockData) {
+      const base = `Stock: ${symbol}, Price: ₹${stockData.price?.toFixed(2)}, Change: ${stockData.changePct?.toFixed(2)}%, SMA20: ₹${stockData.sma20?.toFixed(2)}, SMA50: ₹${stockData.sma50?.toFixed(2)}, Volume: ${stockData.volume?.toLocaleString()}, Avg Vol: ${stockData.avgVolume?.toLocaleString()}, 52W High: ₹${stockData.high52?.toFixed(2)}, 52W Low: ₹${stockData.low52?.toFixed(2)}, Recent closes: ${stockData.recentCloses?.slice(-10)?.map((c: number) => c?.toFixed(2))?.join(", ")}`;
+      if (mode === "scalp") {
+        // Enhanced intraday context with ATR, PDH/PDL, volume ratio, swing points, OHLCV candles
+        const intradayCtx = `\nATR(14): ₹${stockData.atr14?.toFixed(2)}, Vol Ratio (today/avg): ${stockData.volRatio}x, PDH: ₹${stockData.pdh?.toFixed(2)}, PDL: ₹${stockData.pdl?.toFixed(2)}, PDC: ₹${stockData.pdc?.toFixed(2)}\nRecent Swing Points: ${stockData.swingPoints?.join(", ") || "None detected"}\nLast 5 Candles (OHLCV):\n${stockData.recentCandles?.slice(-5)?.map((c: any, i: number) => `  [${i+1}] O:₹${c.o?.toFixed(2)} H:₹${c.h?.toFixed(2)} L:₹${c.l?.toFixed(2)} C:₹${c.c?.toFixed(2)} V:${(c.v || 0).toLocaleString()}`).join("\n") || "N/A"}`;
+        dataCtx = base + intradayCtx;
+      } else {
+        dataCtx = base;
+      }
+    } else {
+      dataCtx = `Stock: ${symbol} (limited data)`;
+    }
 
     let result;
     if (mode === "scalp") {
