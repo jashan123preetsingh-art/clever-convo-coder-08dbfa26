@@ -693,7 +693,7 @@ export default function OptionsChain() {
 }
 
 // ── Shared strategy display component ──
-function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, payoffData, underlyingValue, strikeDiff }: {
+function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, payoffData, underlyingValue, strikeDiff, lotSize, symbol }: {
   legs: StrategyLeg[];
   netPremium: number;
   maxProfit: number;
@@ -702,6 +702,8 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
   payoffData: { price: number; pnl: number }[];
   underlyingValue: number;
   strikeDiff: number;
+  lotSize: number;
+  symbol: string;
 }) {
   if (legs.length === 0) return null;
 
