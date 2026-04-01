@@ -56,7 +56,8 @@ export function useBatchQuotes(symbols: string[]) {
     queryKey: ["batch-quotes", symbols.join(",")],
     queryFn: () => stockApi.getBatchQuotes(symbols),
     enabled: symbols.length > 0,
-    staleTime: 30_000,
+    staleTime: 15_000,
+    refetchInterval: 15_000,
     retry: 1,
   });
 }
