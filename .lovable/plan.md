@@ -1,69 +1,69 @@
 
 
-# World-Class Enhancements Plan
+# Improvements Plan for Trade Arsenal Terminal
 
-## What's Already Strong
-The app has a solid Bloomberg-terminal aesthetic, live data hooks, a 12-agent AI system, options chain with strategy builder, squarified treemap heatmap, and quality-scored scanner. The foundation is excellent.
+## Issues Found
 
-## Proposed Enhancements (Priority Order)
+### 1. Console Warnings — Sectors Page
+`SectorIcon` and `MiniHeatmap` function components are being passed refs by framer-motion but don't use `forwardRef`. This causes React warnings.
 
-### 1. Watchlist & Portfolio Tracker (Persistent)
-- Add a database-backed watchlist so users can save favorite stocks
-- Show a "My Watchlist" widget on the Dashboard with live P&L tracking
-- Add a quick "★" button on every stock row/card to add/remove
-- Store in a `watchlists` table with user_id, symbol, added_price, quantity (optional)
+### 2. Heatmap Colors Hardcoded
+`getHeatColor()` in Heatmap.tsx uses hardcoded HSL values instead of theme CSS variables, so it doesn't adapt to light/dark mode.
 
-### 2. Real-Time Price Alerts
-- Let users set price alerts (e.g., "Notify me when RELIANCE crosses ₹2,900")
-- Store alerts in a `price_alerts` table
-- Show a notification bell in the header with active/triggered alerts
-- Use toast notifications when conditions are met during the session
+### 3. Missing Loading States
+The `QueryClient` is created with no default options — no `staleTime`, no `retry` config. Individual queries set these inconsistently.
 
-### 3. Interactive TradingView-Style Charts
-- Replace the current basic chart on StockDetail with a proper candlestick chart using `lightweight-charts` (TradingView's open-source library)
-- Support drawing tools, indicators (RSI, MACD, Bollinger Bands)
-- Multiple timeframes (1m, 5m, 15m, 1h, 1D, 1W)
-- Volume bars below the candle chart
+### 4. Auth Page — No "Forgot Password" Flow
+Users have no way to reset their password.
 
-### 4. Dark/Light Theme Toggle + Custom Accent Colors
-- Add a theme switcher in the header (dark is default, add a clean light mode)
-- Let users pick accent color (green, blue, cyan, amber) for personalization
-- Store preference in localStorage or user profile
+### 5. Landing Page Polish
+The landing page (`Index.tsx`) could use social proof, a demo video placeholder, and a more compelling CTA section.
 
-### 5. Keyboard Power-User Shortcuts
-- Global command palette (Cmd+K / Ctrl+K) for quick navigation, stock search, actions
-- Keyboard shortcuts already partially exist (F1-F9) — extend with stock-specific actions
-- Show a shortcut cheat sheet overlay (press `?`)
+### 6. Accessibility Gaps
+- No `aria-label` on icon-only buttons (theme toggle, hamburger, alert bell)
+- Very small font sizes (`text-[7px]`) may fail WCAG minimum size guidelines
+- No skip-to-content link
 
-### 6. Dashboard Customizable Layout
-- Let users drag-and-drop widgets to rearrange the Dashboard
-- Choose which widgets to show/hide (indices, gainers, losers, sectors, news, watchlist)
-- Save layout preference per user in the database
+### 7. Empty States
+Pages like Watchlist, Scanner results, and News don't have polished empty/error states.
 
-### 7. Performance & PWA
-- Add a service worker for offline access to cached data
-- Add a manifest.json for "Add to Home Screen" on mobile
-- Implement skeleton loading states across all pages for perceived speed
+### 8. SEO & Meta Tags
+`index.html` likely has default Vite meta tags — should have proper title, description, OG tags for sharing.
 
-## Technical Approach
+---
 
-### Database Changes (2 new tables)
-- `watchlists` — user_id, symbol, added_price, quantity, created_at
-- `price_alerts` — user_id, symbol, condition (above/below), target_price, triggered, created_at
+## Proposed Improvements (Priority Order)
 
-### New Dependencies
-- `lightweight-charts` for TradingView-style candlestick charts
+### Phase 1: Bug Fixes & Polish
+1. **Fix Sectors forwardRef warnings** — Wrap `SectorIcon` and `MiniHeatmap` with `React.forwardRef`
+2. **Theme-aware Heatmap colors** — Replace hardcoded HSL in `getHeatColor()` with CSS variable-based colors that respect light/dark mode
+3. **Minimum font size audit** — Bump all `text-[7px]` instances to `text-[8px]` minimum for accessibility
 
-### Files to Create/Modify
-- **New**: `src/components/Watchlist.tsx`, `src/components/CommandPalette.tsx`, `src/components/CandlestickChart.tsx`, `src/components/PriceAlerts.tsx`
-- **Modify**: `src/pages/Dashboard.tsx` (add watchlist widget), `src/pages/StockDetail.tsx` (replace chart), `src/components/TerminalLayout.tsx` (add command palette, alert bell, theme toggle)
+### Phase 2: UX Enhancements
+4. **Add "Forgot Password" to Auth page** — Add a password reset flow using the auth system's `resetPasswordForEmail`
+5. **Add aria-labels to icon buttons** — Theme toggle, hamburger menu, alert bell, search icon
+6. **Better empty/error states** — Add illustrated empty states for Scanner (no results), Watchlist (empty), and API errors
 
-### Implementation Order
-1. Watchlist + DB tables (most user-visible impact)
-2. TradingView charts (biggest "wow" factor)
-3. Command palette (power-user delight)
-4. Price alerts
-5. Theme toggle
-6. Dashboard layout customization
-7. PWA/performance
+### Phase 3: Performance & SEO
+7. **Global QueryClient defaults** — Set sensible `staleTime` (60s), `retry` (2), and `refetchOnWindowFocus: false` at the QueryClient level
+8. **SEO meta tags** — Update `index.html` with proper title, description, OG image, and favicon
+9. **Add skip-to-content link** — For keyboard navigation accessibility
+
+---
+
+## Technical Details
+
+### Files Modified
+- `src/pages/Sectors.tsx` — forwardRef on SectorIcon and MiniHeatmap
+- `src/pages/Heatmap.tsx` — theme-aware color function
+- `src/pages/Auth.tsx` — forgot password UI + logic
+- `src/App.tsx` — QueryClient default options
+- `src/components/TerminalLayout.tsx` — aria-labels, skip-to-content
+- `index.html` — meta tags, OG tags
+- Multiple files — font size audit (`text-[7px]` → `text-[8px]`)
+
+### No New Dependencies Required
+
+### Estimated Scope
+~9 files modified, no database changes needed.
 
