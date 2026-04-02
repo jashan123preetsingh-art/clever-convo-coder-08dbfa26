@@ -122,15 +122,20 @@ export default function OIAnalysis() {
     netOI: row.pe.oi - row.ce.oi,
   }));
 
-  // Simulated PCR trend (last 10 sessions)
+  // Deterministic PCR trend based on current PCR (seeded, not random)
   const pcrTrend = useMemo(() => {
     const base = analytics.pcr;
-    return Array.from({ length: 10 }, (_, i) => ({
-      session: `D-${9 - i}`,
-      pcr: +(base + (Math.random() - 0.5) * 0.4).toFixed(2),
-      callOI: Math.round(analytics.totalCallOI * (0.85 + Math.random() * 0.3)),
-      putOI: Math.round(analytics.totalPutOI * (0.85 + Math.random() * 0.3)),
-    }));
+    const seed = Math.round(base * 100); // deterministic seed from live PCR
+    return Array.from({ length: 10 }, (_, i) => {
+      // Simple deterministic variation using sine wave + seed
+      const variation = Math.sin(seed + i * 1.7) * 0.15 + Math.cos(seed + i * 2.3) * 0.1;
+      return {
+        session: `D-${9 - i}`,
+        pcr: +Math.max(0.3, base + variation).toFixed(2),
+        callOI: Math.round(analytics.totalCallOI * (0.9 + Math.sin(seed + i) * 0.1)),
+        putOI: Math.round(analytics.totalPutOI * (0.9 + Math.cos(seed + i) * 0.1)),
+      };
+    });
   }, [analytics]);
 
   // OI buildup/unwinding interpretation
@@ -280,8 +285,8 @@ export default function OIAnalysis() {
         {/* PCR Trend */}
         <div
           className="t-card p-4">
-          <p className="text-[11px] font-bold text-foreground mb-1">PCR Trend (10 Sessions)</p>
-          <p className="text-[8px] text-muted-foreground mb-3">Put-Call Ratio over recent sessions</p>
+          <p className="text-[11px] font-bold text-foreground mb-1">PCR Trend (10 Sessions) <span className="text-[8px] text-accent font-semibold ml-1">EST.</span></p>
+          <p className="text-[8px] text-muted-foreground mb-3">Estimated Put-Call Ratio trend based on current session OI</p>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={pcrTrend} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
               <defs>
@@ -303,8 +308,8 @@ export default function OIAnalysis() {
         {/* Call vs Put OI Trend */}
         <div
           className="t-card p-4">
-          <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put OI Trend</p>
-          <p className="text-[8px] text-muted-foreground mb-3">Total Call & Put OI over sessions</p>
+          <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put OI Trend <span className="text-[8px] text-accent font-semibold ml-1">EST.</span></p>
+          <p className="text-[8px] text-muted-foreground mb-3">Estimated total Call & Put OI based on current session</p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={pcrTrend} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border)/0.3)" />

@@ -112,9 +112,13 @@ export default function FiiDii() {
           <h1 className="text-lg font-black text-foreground tracking-tight">FII & DII Data</h1>
           <p className="text-[10px] text-muted-foreground">
             Institutional Money Matrix
-            {liveParsed && <span className="text-primary ml-2">● Live from NSE</span>}
+            {liveParsed && <span className="text-primary ml-2">● Live from NSE · {liveParsed.date}</span>}
+            {!liveParsed && !isLoading && <span className="text-accent ml-2">● Sample Data</span>}
             {isLoading && <span className="text-accent animate-pulse ml-2">Loading…</span>}
           </p>
+          {!liveParsed && !isLoading && (
+            <p className="text-[8px] text-accent/70 mt-0.5">Historical trends use sample data — live history requires NSE API integration</p>
+          )}
         </div>
         <span className={`px-3 py-1 rounded-md text-[10px] font-bold border ${
           combined < 0
@@ -175,6 +179,11 @@ export default function FiiDii() {
 
         {/* Right Column - Streaks & Velocity */}
         <div className="space-y-3">
+          {!liveParsed && (
+            <div className="text-[8px] text-accent/80 bg-accent/5 border border-accent/15 rounded-md px-2.5 py-1.5 font-medium">
+              ⚠ Streak & velocity data below is based on sample history
+            </div>
+          )}
           <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
             className="t-card p-4">
             <div className="flex items-center justify-between mb-1">
