@@ -126,6 +126,9 @@ serve(async (req) => {
       case "fii-dii":
         result = await getFiiDiiData();
         break;
+      case "fno-participants":
+        result = await getFnOParticipantData();
+        break;
       case "breadth":
         result = await getMarketBreadth();
         break;
