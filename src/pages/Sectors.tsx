@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getSectorPerformance, getStocksBySector } from '@/data/mockData';
+import { getSectorPerformance, getStocksBySector, getAllStocks } from '@/data/mockData';
+import type { Stock } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import { ArrowUpRight, ArrowDownRight, TrendingUp, ChevronLeft, BarChart3 } from 'lucide-react';
-import { useBatchQuotes } from '@/hooks/useStockData';
+import { useBatchQuotes, useMarketBreadth } from '@/hooks/useStockData';
 
 const SectorIcon = React.forwardRef<HTMLSpanElement, { change: number }>(({ change, ...props }, ref) => {
   if (change >= 0) return <span ref={ref} {...props}><ArrowUpRight className="w-3.5 h-3.5 text-primary" /></span>;
@@ -36,7 +37,15 @@ const MiniHeatmap = React.forwardRef<HTMLDivElement, { stocks: { symbol: string;
 MiniHeatmap.displayName = 'MiniHeatmap';
 
 function SectorDetail({ sectorName }: { sectorName: string }) {
-  const sectors = getSectorPerformance();
+  const { data: liveBreadth } = useMarketBreadth();
+  const liveStocks = useMemo(() => {
+    if (!Array.isArray(liveBreadth?.stocks) || liveBreadth.stocks.length === 0) return [];
+    return (liveBreadth.stocks as Stock[]).filter((s) => s && typeof s.ltp === 'number' && s.ltp > 0);
+  }, [liveBreadth]);
+  const sectors = useMemo(() => {
+    const source = liveStocks.length > 0 ? liveStocks : getAllStocks();
+    return getSectorPerformance(source);
+  }, [liveStocks]);
   const rawStocks = getStocksBySector(sectorName);
   const sectorData = sectors.find(s => s.sector === sectorName);
 
@@ -135,7 +144,17 @@ function SectorDetail({ sectorName }: { sectorName: string }) {
 
 export default function Sectors() {
   const { sector: paramSector } = useParams();
-  const sectors = getSectorPerformance();
+  const { data: liveBreadth } = useMarketBreadth();
+
+  const liveStocks = useMemo(() => {
+    if (!Array.isArray(liveBreadth?.stocks) || liveBreadth.stocks.length === 0) return [];
+    return (liveBreadth.stocks as Stock[]).filter((s) => s && typeof s.ltp === 'number' && s.ltp > 0);
+  }, [liveBreadth]);
+
+  const sectors = useMemo(() => {
+    const source = liveStocks.length > 0 ? liveStocks : getAllStocks();
+    return getSectorPerformance(source);
+  }, [liveStocks]);
 
   const sortedSectors = [...sectors].sort((a, b) => b.avg_change - a.avg_change);
   const gainers = sortedSectors.filter(s => s.avg_change >= 0);
