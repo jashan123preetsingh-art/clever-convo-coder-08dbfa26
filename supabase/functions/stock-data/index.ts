@@ -375,12 +375,66 @@ function calculateTechnicals(candles: any[]) {
 function round(v: number | null | undefined) { return v != null ? Math.round(v * 100) / 100 : null; }
 
 async function getBatchQuotes(symbols: string[]) {
-  const results = await Promise.allSettled(symbols.slice(0, 20).map(s => getQuote(s)));
-  return results.map((r, i) => ({
-    symbol: symbols[i],
-    data: r.status === "fulfilled" ? r.value : null,
-    error: r.status === "rejected" ? r.reason?.message : null,
-  }));
+  // Use v6 quote API for bulk fetching (much faster, handles 50+ symbols)
+  const allSymbols = symbols.slice(0, 100);
+  const batchSize = 30;
+  const allResults: any[] = [];
+
+  for (let i = 0; i < allSymbols.length; i += batchSize) {
+    const batch = allSymbols.slice(i, i + batchSize);
+    const yfSymbols = batch.map(s => {
+      const upper = s.toUpperCase().trim();
+      if (INDEX_MAP[upper]) return INDEX_MAP[upper];
+      if (s.startsWith("^") || s.includes(".")) return s;
+      return `${upper}.NS`;
+    }).join(",");
+
+    try {
+      const resp = await fetchSafe(`${YF_BASE}/v6/finance/quote?symbols=${encodeURIComponent(yfSymbols)}`, 1);
+      if (resp) {
+        const data = await resp.json();
+        const quotes = data?.quoteResponse?.result || [];
+        for (const q of quotes) {
+          const origSymbol = batch.find(s => {
+            const yf = s.toUpperCase().trim();
+            return q.symbol === `${yf}.NS` || q.symbol === INDEX_MAP[yf] || q.symbol === yf;
+          }) || q.symbol.replace(".NS", "");
+
+          allResults.push({
+            symbol: origSymbol,
+            data: {
+              symbol: origSymbol,
+              name: q.longName || q.shortName || origSymbol,
+              ltp: q.regularMarketPrice || 0,
+              prev_close: q.regularMarketPreviousClose || 0,
+              change: q.regularMarketChange || 0,
+              change_pct: q.regularMarketChangePercent || 0,
+              volume: q.regularMarketVolume || 0,
+              market_cap: q.marketCap || null,
+              week_52_high: q.fiftyTwoWeekHigh || null,
+              week_52_low: q.fiftyTwoWeekLow || null,
+              open: q.regularMarketOpen || 0,
+              high: q.regularMarketDayHigh || 0,
+              low: q.regularMarketDayLow || 0,
+            },
+            error: null,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Batch quote error:", e);
+    }
+  }
+
+  // Fill missing symbols
+  const foundSymbols = new Set(allResults.map(r => r.symbol.toUpperCase()));
+  for (const sym of allSymbols) {
+    if (!foundSymbols.has(sym.toUpperCase())) {
+      allResults.push({ symbol: sym, data: null, error: "Not found" });
+    }
+  }
+
+  return allResults;
 }
 
 // Popular NSE stocks for local fallback search
