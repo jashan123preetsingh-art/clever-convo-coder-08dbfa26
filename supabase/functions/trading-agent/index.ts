@@ -391,7 +391,6 @@ Analyze ONLY from provided data, in priority order:
 - **EMA Stack**: Compare EXACT EMA 9/20/50 values. State which are above/below price with % distance.
 - **Volume & VWAP**: EXACT volume ratio. Above/below 1.0x average. Note if climactic.
 - **RSI**: EXACT value. Divergence status. Overbought (>70), oversold (<30), neutral.
-- **MACD**: Signal status from data. Confirm with price action.
 - **Bollinger**: EXACT values. Band width for squeeze/expansion detection.
 - **Trade Setup**: Entry, target, SL ALL derived from above levels. Targets within 0.5-1.5x ATR.
 
