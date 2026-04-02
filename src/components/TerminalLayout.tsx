@@ -25,6 +25,9 @@ const NAV_ITEMS = [
   { path: '/oi-analysis', label: 'OI Analysis', shortcut: 'F8', icon: '📈' },
   { path: '/news', label: 'News', shortcut: 'F9', icon: '◉' },
   { path: '/commodities', label: 'Commodities', shortcut: 'F10', icon: '💎' },
+  { path: '/forex', label: 'Forex', shortcut: '', icon: '💱' },
+  { path: '/calendar', label: 'Calendar', shortcut: '', icon: '📅' },
+  { path: '/ipo', label: 'IPO', shortcut: '', icon: '🚀' },
   { path: '/trading-agent', label: 'AI Agent', shortcut: 'F11', icon: '🤖' },
 ];
 
