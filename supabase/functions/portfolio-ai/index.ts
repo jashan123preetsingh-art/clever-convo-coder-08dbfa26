@@ -21,10 +21,10 @@ serve(async (req) => {
       });
     }
 
-    // Build portfolio context
     let totalInvested = 0;
     let totalCurrent = 0;
     const lines: string[] = [];
+    const sectorExposure: Record<string, number> = {};
 
     for (const pos of positions) {
       const ltp = quotes?.[pos.symbol] ?? pos.entry_price;
@@ -34,16 +34,22 @@ serve(async (req) => {
       const pnlPct = ((ltp - pos.entry_price) / pos.entry_price) * 100;
       totalInvested += invested;
       totalCurrent += current;
-      lines.push(`• ${pos.symbol}: ${pos.quantity} shares @ ₹${pos.entry_price} → LTP ₹${ltp.toFixed(2)} | P&L: ₹${pnl.toFixed(0)} (${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(1)}%)`);
+      lines.push(`• ${pos.symbol}: ${pos.quantity} shares @ ₹${pos.entry_price} → LTP ₹${ltp.toFixed(2)} | P&L: ₹${pnl.toFixed(0)} (${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(1)}%) | Weight: ${totalInvested > 0 ? ((invested / totalInvested) * 100).toFixed(1) : 0}%`);
     }
 
     const totalPnl = totalCurrent - totalInvested;
     const totalPnlPct = totalInvested > 0 ? ((totalPnl / totalInvested) * 100).toFixed(2) : "0";
+    const posCount = positions.length;
+    const winnersCount = positions.filter((p: any) => {
+      const ltp = quotes?.[p.symbol] ?? p.entry_price;
+      return ltp > p.entry_price;
+    }).length;
 
-    const portfolioContext = `Portfolio Summary:
+    const portfolioContext = `Portfolio Summary (${posCount} positions, ${winnersCount} winners):
 Total Invested: ₹${totalInvested.toFixed(0)}
 Current Value: ₹${totalCurrent.toFixed(0)}
 Unrealized P&L: ₹${totalPnl.toFixed(0)} (${totalPnl >= 0 ? "+" : ""}${totalPnlPct}%)
+Win Rate: ${posCount > 0 ? ((winnersCount / posCount) * 100).toFixed(0) : 0}%
 
 Positions:
 ${lines.join("\n")}`;
@@ -52,24 +58,34 @@ ${lines.join("\n")}`;
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "google/gemini-2.5-flash",
+        temperature: 0.15,
         messages: [
           {
             role: "system",
-            content: `You are Trade Arsenal Portfolio AI — a concise Indian stock market portfolio analyst.
-Given a user's portfolio positions with live prices, provide a BRIEF analysis in markdown (max 150 words).
+            content: `You are Trade Arsenal Portfolio AI — a SEBI-registered investment advisor analyzing an Indian stock portfolio.
 
-Include:
-1. **Portfolio Health** — one line assessment (concentrated/diversified, risk level)
-2. **Key Risks** — 1-2 biggest risks (sector concentration, single stock exposure, stocks near 52W high/low)
-3. **Action Items** — 1-2 specific actionable suggestions (book profit, add SL, rebalance)
+ACCURACY RULES:
+- Use ONLY the exact position data provided. Never fabricate prices or P&L numbers.
+- All ₹ levels must come from the provided data.
+- Be honest about risks — don't sugarcoat losses.
+- If a position is significantly in loss (>15%), flag it clearly.
+- If portfolio is concentrated (any single stock >25% weight), flag it.
+
+Provide a BRIEF analysis in markdown (max 200 words):
+
+1. **Portfolio Health** — Assessment with specific data (total P&L, win rate, concentration)
+2. **Biggest Risks** — 2-3 specific risks citing actual positions and their performance
+3. **Action Items** — 2-3 SPECIFIC, actionable suggestions with exact ₹ levels where possible:
+   - For losers: suggest SL levels or exit criteria
+   - For winners: suggest profit booking levels or trailing stops
+   - For concentration: suggest rebalancing with specific %
 
 Rules:
-- Be extremely concise — bullet points only
-- Use ₹ for prices
-- No disclaimers needed, keep it actionable
-- If portfolio is in loss, focus on risk management
-- If in profit, suggest profit booking levels`,
+- Use ₹ for all prices
+- Reference specific symbols from the portfolio
+- If portfolio has <3 positions, suggest diversification
+- Be direct and actionable, not generic`,
           },
           { role: "user", content: portfolioContext },
         ],
