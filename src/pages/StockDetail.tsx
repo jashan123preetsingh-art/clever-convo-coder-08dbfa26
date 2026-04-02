@@ -141,7 +141,8 @@ export default function StockDetail() {
     promoter_holding: (apiFundamentals as any)?.promoter_holding ?? (mockStock as any)?.promoter_holding ?? null,
     roce: (apiFundamentals as any)?.roce ?? (mockStock as any)?.roce ?? null,
   } : null;
-  const realChartData = chartData?.length > 0 ? chartData : generateCandleData(symbol || '', 250);
+  const currentQuotePrice = quote?.ltp || mockStock?.ltp || undefined;
+  const realChartData = chartData?.length > 0 ? chartData : generateCandleData(symbol || '', 250, currentQuotePrice);
 
   // ─── Multi-TF S/R Levels ───
   const multiTFLevels = React.useMemo(() => {
