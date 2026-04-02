@@ -117,8 +117,7 @@ const TECHNICAL_FRAMEWORK = `**TECHNICAL ANALYSIS FRAMEWORK** (analyze in exact 
    - Volume-price confirmation/divergence — USE EXACT RATIO
    - RSI divergence (price making new high/low but RSI not confirming)
    - Bollinger squeeze/expansion — USE EXACT VALUES
-   - MACD crossover context (if provided)
-   - Climactic volume, no-demand bars
+    - Climactic volume, no-demand bars
 
 5. **CANDLE PATTERNS** (5% weight — only at key S/R or S/D zones)
    - Engulfing, pin bars, inside bars AT confirmed levels only
