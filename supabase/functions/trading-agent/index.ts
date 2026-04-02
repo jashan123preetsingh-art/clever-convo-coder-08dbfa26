@@ -69,10 +69,10 @@ async function setDBCache(cacheKey: string, symbol: string, mode: string, result
 
 // ── Model Selection (cost-optimized tiers) ──────────────────
 const MODELS = {
-  scalp:   { analysis: "google/gemini-3-flash-preview", decision: "google/gemini-3-flash-preview" },
-  swing:   { research: "google/gemini-2.5-pro", debate: "google/gemini-3-flash-preview", decision: "google/gemini-2.5-pro" },
-  invest:  { fundamentals: "google/gemini-2.5-pro", context: "google/gemini-2.5-pro", decision: "google/gemini-2.5-pro" },
-  options: { analysis: "google/gemini-3-flash-preview", decision: "google/gemini-3-flash-preview" },
+  scalp:   { analysis: "google/gemini-2.5-flash", decision: "google/gemini-2.5-flash" },
+  swing:   { research: "google/gemini-2.5-flash", debate: "google/gemini-2.5-flash", decision: "google/gemini-2.5-flash" },
+  invest:  { fundamentals: "google/gemini-2.5-flash", context: "google/gemini-2.5-flash", decision: "google/gemini-2.5-flash" },
+  options: { analysis: "google/gemini-2.5-flash", decision: "google/gemini-2.5-flash" },
 };
 
 // ── ACCURACY RULES (injected into every prompt) ──────────
