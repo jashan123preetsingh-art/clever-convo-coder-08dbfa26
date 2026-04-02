@@ -18,6 +18,7 @@ import TopMovers from '@/components/dashboard/TopMovers';
 import SectorsList from '@/components/dashboard/SectorsList';
 import NewsWidget from '@/components/dashboard/NewsWidget';
 import type { Stock, FiiDiiEntry } from '@/types/stock';
+import LiveRefreshBadge from '@/components/LiveRefreshBadge';
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
