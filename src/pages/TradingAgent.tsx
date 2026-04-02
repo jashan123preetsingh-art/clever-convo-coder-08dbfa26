@@ -848,25 +848,27 @@ export default function TradingAgent() {
 
       {/* Chart upload section - only for scalp/swing */}
       {mode !== 'invest' && (
-        <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-border/15 p-3 sm:p-4 mb-4">
-          <div className="flex items-center gap-2 mb-2 sm:mb-3">
-            <span className="text-sm sm:text-base">📸</span>
-            <h3 className="text-[10px] sm:text-[11px] font-bold text-foreground uppercase tracking-wider">Chart Analysis</h3>
-            <span className="text-[8px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-semibold border border-[hsl(var(--terminal-cyan))]/20">Optional</span>
+        <div className="rounded-2xl bg-gradient-to-br from-card/50 to-card/20 border border-border/10 p-4 sm:p-5 mb-5">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-7 h-7 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 flex items-center justify-center">
+              <ImageIcon className="w-3.5 h-3.5 text-[hsl(var(--terminal-cyan))]" />
+            </div>
+            <h3 className="text-[11px] font-bold text-foreground uppercase tracking-wider">Chart Analysis</h3>
+            <span className="text-[8px] px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-semibold border border-[hsl(var(--terminal-cyan))]/15">Optional</span>
           </div>
 
           {chartImage ? (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              className="flex items-start gap-4 p-3 rounded-xl bg-[hsl(var(--terminal-cyan))]/5 border border-[hsl(var(--terminal-cyan))]/15">
-              <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-border/30 flex-shrink-0">
+              className="flex items-start gap-4 p-3.5 rounded-xl bg-[hsl(var(--terminal-cyan))]/5 border border-[hsl(var(--terminal-cyan))]/15">
+              <div className="relative w-36 h-24 rounded-xl overflow-hidden border border-border/20 flex-shrink-0 shadow-sm">
                 <img src={chartImage} alt="Uploaded chart" className="w-full h-full object-cover" />
                 <button onClick={() => setChartImage(null)}
-                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center text-[10px] font-bold shadow-sm hover:scale-110 transition-transform">
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:scale-110 transition-transform">
                   <X className="w-3 h-3" />
                 </button>
               </div>
               <div className="flex-1">
-                <p className="text-[11px] font-semibold text-foreground">✅ Chart attached</p>
+                <p className="text-[11px] font-bold text-foreground">✅ Chart attached</p>
                 <p className="text-[9px] text-muted-foreground mt-1 leading-relaxed">
                   The Technical Analyst will visually analyze chart patterns, candlesticks, and support/resistance zones.
                 </p>
@@ -877,44 +879,44 @@ export default function TradingAgent() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={loading}
-                className="w-full rounded-xl border-2 border-dashed border-border/30 hover:border-primary/30 bg-secondary/20 hover:bg-primary/5 p-5 transition-all group disabled:opacity-50"
+                className="w-full rounded-2xl border-2 border-dashed border-border/20 hover:border-primary/25 bg-secondary/10 hover:bg-primary/5 p-6 transition-all group disabled:opacity-40"
               >
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-10 h-10 rounded-full bg-secondary/50 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                <div className="flex flex-col items-center gap-2.5">
+                  <div className="w-12 h-12 rounded-2xl bg-secondary/30 group-hover:bg-primary/10 flex items-center justify-center transition-all group-hover:scale-105">
                     <ImageIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                   </div>
-                  <p className="text-[11px] font-semibold text-foreground">Click to upload chart screenshot</p>
+                  <p className="text-[11px] font-bold text-foreground">Click to upload chart screenshot</p>
                   <p className="text-[9px] text-muted-foreground">
-                    or paste with <kbd className="text-[8px] bg-secondary/60 px-1.5 py-0.5 rounded border border-border/30 font-mono">Ctrl+V</kbd> / drag & drop
+                    or paste with <kbd className="text-[8px] bg-secondary/60 px-1.5 py-0.5 rounded border border-border/20 font-mono">Ctrl+V</kbd> / drag & drop
                   </p>
                 </div>
               </button>
               {mode === 'scalp' && (
-                <div className="mt-3 rounded-xl bg-secondary/30 border border-border/15 p-3">
-                  <p className="text-[9px] font-bold text-foreground uppercase tracking-wider mb-2">⏱️ Recommended Timeframes</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-lg bg-background/50 border border-[hsl(var(--terminal-red))]/15 p-2">
+                <div className="mt-3 rounded-xl bg-secondary/20 border border-border/10 p-3.5">
+                  <p className="text-[9px] font-bold text-foreground uppercase tracking-wider mb-2.5">⏱️ Recommended Timeframes</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="rounded-xl bg-background/50 border border-[hsl(var(--terminal-red))]/10 p-2.5">
                       <p className="text-[9px] font-bold text-[hsl(var(--terminal-red))]">⚡ Scalp</p>
-                      <p className="text-[10px] font-semibold text-foreground">1 – 5 min</p>
+                      <p className="text-[10px] font-black text-foreground">1 – 5 min</p>
                     </div>
-                    <div className="rounded-lg bg-background/50 border border-[hsl(var(--terminal-amber))]/15 p-2">
+                    <div className="rounded-xl bg-background/50 border border-[hsl(var(--terminal-amber))]/10 p-2.5">
                       <p className="text-[9px] font-bold text-[hsl(var(--terminal-amber))]">🔥 Intraday</p>
-                      <p className="text-[10px] font-semibold text-foreground">5 – 30 min</p>
+                      <p className="text-[10px] font-black text-foreground">5 – 30 min</p>
                     </div>
                   </div>
                 </div>
               )}
               {mode === 'swing' && (
-                <div className="mt-3 rounded-xl bg-secondary/30 border border-border/15 p-3">
-                  <p className="text-[9px] font-bold text-foreground uppercase tracking-wider mb-2">⏱️ Recommended Timeframes</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-lg bg-background/50 border border-[hsl(var(--terminal-cyan))]/15 p-2">
+                <div className="mt-3 rounded-xl bg-secondary/20 border border-border/10 p-3.5">
+                  <p className="text-[9px] font-bold text-foreground uppercase tracking-wider mb-2.5">⏱️ Recommended Timeframes</p>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="rounded-xl bg-background/50 border border-[hsl(var(--terminal-cyan))]/10 p-2.5">
                       <p className="text-[9px] font-bold text-[hsl(var(--terminal-cyan))]">📈 Swing</p>
-                      <p className="text-[10px] font-semibold text-foreground">1H – 1D</p>
+                      <p className="text-[10px] font-black text-foreground">1H – 1D</p>
                     </div>
-                    <div className="rounded-lg bg-background/50 border border-[hsl(var(--terminal-green))]/15 p-2">
+                    <div className="rounded-xl bg-background/50 border border-[hsl(var(--terminal-green))]/10 p-2.5">
                       <p className="text-[9px] font-bold text-[hsl(var(--terminal-green))]">🏦 Position</p>
-                      <p className="text-[10px] font-semibold text-foreground">1D & above</p>
+                      <p className="text-[10px] font-black text-foreground">1D & above</p>
                     </div>
                   </div>
                 </div>
@@ -927,20 +929,22 @@ export default function TradingAgent() {
 
       {/* Invest mode info */}
       {mode === 'invest' && !loading && !result && (
-        <div className="rounded-2xl bg-card/50 border border-primary/15 p-4 mb-4">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">🏦</span>
+        <div className="rounded-2xl bg-gradient-to-br from-card/50 to-card/20 border border-primary/10 p-5 mb-5">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0">
+              <Landmark className="w-6 h-6 text-primary" />
+            </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground mb-1">Warren Buffett Mode</h3>
+              <h3 className="text-sm font-black text-foreground mb-1.5">Warren Buffett Mode</h3>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
                 Deep fundamental analysis inspired by Warren Buffett's investment philosophy. Evaluates economic moats, management quality,
                 intrinsic value, and margin of safety. No chart upload needed — this mode focuses on business quality over price action.
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
-                <span className="text-[8px] px-2 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 font-semibold">🏰 Moat Analysis</span>
-                <span className="text-[8px] px-2 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 font-semibold">📊 DCF Valuation</span>
-                <span className="text-[8px] px-2 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 font-semibold">📈 1-10 Year Horizon</span>
-                <span className="text-[8px] px-2 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20 font-semibold">🛡️ Margin of Safety</span>
+                <span className="text-[8px] px-2.5 py-1 rounded-xl bg-primary/10 text-primary border border-primary/15 font-bold">🏰 Moat Analysis</span>
+                <span className="text-[8px] px-2.5 py-1 rounded-xl bg-primary/10 text-primary border border-primary/15 font-bold">📊 DCF Valuation</span>
+                <span className="text-[8px] px-2.5 py-1 rounded-xl bg-primary/10 text-primary border border-primary/15 font-bold">📈 1-10 Year Horizon</span>
+                <span className="text-[8px] px-2.5 py-1 rounded-xl bg-primary/10 text-primary border border-primary/15 font-bold">🛡️ Margin of Safety</span>
               </div>
             </div>
           </div>
