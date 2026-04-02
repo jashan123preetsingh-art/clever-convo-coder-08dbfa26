@@ -601,15 +601,18 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
 
 function EmptyState({ onSelectSymbol }: { onSelectSymbol: (s: string) => void }) {
   return (
-    <div className="rounded-2xl bg-card/40 border border-border/15 p-6 md:p-10 text-center">
-      <h2 className="text-sm font-bold text-foreground mb-2">Select a Mode & Enter Symbol</h2>
-      <p className="text-[10px] text-muted-foreground max-w-md mx-auto mb-5 leading-relaxed">
-        Choose your trading style above, then enter a stock symbol to run the AI analysis pipeline.
+    <div className="rounded-2xl bg-gradient-to-br from-card/50 to-card/20 border border-border/10 p-8 md:p-12 text-center">
+      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/15 to-[hsl(var(--terminal-cyan))]/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
+        <Target className="w-7 h-7 text-primary" />
+      </div>
+      <h2 className="text-sm font-black text-foreground mb-1.5">Select a Mode & Enter Symbol</h2>
+      <p className="text-[10px] text-muted-foreground max-w-md mx-auto mb-6 leading-relaxed">
+        Choose your trading style above, then enter a stock symbol to run the multi-agent AI analysis pipeline.
       </p>
       <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
         {['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'TATAMOTORS'].map(s => (
           <button key={s} onClick={() => onSelectSymbol(s)}
-            className="px-3 py-1.5 text-[10px] font-semibold bg-secondary/50 border border-border/30 rounded-xl text-muted-foreground hover:text-foreground hover:border-primary/20 hover:bg-primary/5 transition-all">
+            className="px-3.5 py-1.5 text-[10px] font-bold bg-secondary/30 border border-border/20 rounded-xl text-muted-foreground hover:text-foreground hover:border-primary/20 hover:bg-primary/5 transition-all hover:shadow-sm">
             {s}
           </button>
         ))}
