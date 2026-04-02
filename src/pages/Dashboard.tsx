@@ -8,6 +8,7 @@ import { formatPercent } from '@/utils/format';
 import { isMarketHours } from '@/utils/marketHours';
 import MarketBrief from '@/components/MarketBrief';
 import WatchlistWidget from '@/components/WatchlistWidget';
+import EventsFeed from '@/components/dashboard/EventsFeed';
 import DataBadge from '@/components/dashboard/DataBadge';
 import DataStatusBanner from '@/components/DataStatusBanner';
 import QuickActionsGrid from '@/components/dashboard/QuickActions';
