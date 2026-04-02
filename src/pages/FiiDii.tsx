@@ -164,7 +164,6 @@ export default function FiiDii() {
           </span>
         </div>
       </div>
-      </div>
 
       {/* Tab Navigation - Bottom style like reference */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border md:relative md:bottom-auto md:left-auto md:right-auto md:bg-transparent md:backdrop-blur-none md:border-0 md:z-auto">
