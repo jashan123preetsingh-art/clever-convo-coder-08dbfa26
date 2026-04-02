@@ -423,25 +423,27 @@ function AgentReportCard({ agentKey, content, delay, forceExpand }: { agentKey: 
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, type: 'spring', stiffness: 300, damping: 30 }}
-      className={`rounded-2xl bg-card/50 border border-border/20 overflow-hidden ${isFullSpan ? 'md:col-span-2 lg:col-span-3' : ''}`}
+      className={`rounded-2xl bg-gradient-to-br from-card/60 to-card/30 border border-border/15 overflow-hidden hover:border-border/30 transition-colors ${isFullSpan ? 'md:col-span-2 lg:col-span-3' : ''}`}
     >
       <button
         onClick={() => setLocalExpanded(!localExpanded)}
-        className="w-full flex items-center justify-between p-3 hover:bg-primary/5 transition-colors text-left group"
+        className="w-full flex items-center justify-between p-3.5 hover:bg-primary/5 transition-colors text-left group"
       >
-        <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <span className="text-lg group-hover:scale-110 transition-transform">{meta.icon}</span>
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-secondary/40 flex items-center justify-center text-base group-hover:scale-110 transition-transform flex-shrink-0">
+            {meta.icon}
+          </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="text-[11px] font-bold text-foreground">{meta.label}</h3>
               <SentimentBadge sentiment={sentiment} />
             </div>
             {!expanded && (
-              <p className="text-[9px] text-muted-foreground line-clamp-1 mt-0.5">{content.slice(0, 100)}...</p>
+              <p className="text-[9px] text-muted-foreground line-clamp-1 mt-0.5">{content.slice(0, 120)}...</p>
             )}
           </div>
         </div>
-        <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-muted-foreground/50 transition-transform duration-300 flex-shrink-0 ${expanded ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence>
         {expanded && (
@@ -452,7 +454,7 @@ function AgentReportCard({ agentKey, content, delay, forceExpand }: { agentKey: 
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
             className="overflow-hidden"
           >
-            <div className="px-3 pb-3 text-[11px] text-foreground/90 leading-relaxed border-t border-border/20 pt-2 prose prose-sm prose-invert max-w-none [&_p]:text-[11px] [&_p]:leading-relaxed [&_li]:text-[11px] [&_strong]:text-foreground [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-[11px]">
+            <div className="px-4 pb-4 text-[11px] text-foreground/90 leading-relaxed border-t border-border/10 pt-3 prose prose-sm prose-invert max-w-none [&_p]:text-[11px] [&_p]:leading-relaxed [&_li]:text-[11px] [&_strong]:text-foreground [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-[11px]">
               <ReactMarkdown>{content}</ReactMarkdown>
             </div>
           </motion.div>
