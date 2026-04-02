@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getSectorPerformance, getStocksBySector } from '@/data/mockData';
+import { getSectorPerformance, getStocksBySector, getAllStocks } from '@/data/mockData';
+import type { Stock } from '@/data/mockData';
 import { formatCurrency, formatPercent, formatVolume, formatMarketCap } from '@/utils/format';
 import { ArrowUpRight, ArrowDownRight, TrendingUp, ChevronLeft, BarChart3 } from 'lucide-react';
-import { useBatchQuotes } from '@/hooks/useStockData';
+import { useBatchQuotes, useMarketBreadth } from '@/hooks/useStockData';
 
 const SectorIcon = React.forwardRef<HTMLSpanElement, { change: number }>(({ change, ...props }, ref) => {
   if (change >= 0) return <span ref={ref} {...props}><ArrowUpRight className="w-3.5 h-3.5 text-primary" /></span>;
