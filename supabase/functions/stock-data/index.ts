@@ -375,10 +375,12 @@ function calculateTechnicals(candles: any[]) {
 function round(v: number | null | undefined) { return v != null ? Math.round(v * 100) / 100 : null; }
 
 async function getBatchQuotes(symbols: string[]) {
-  // Use v6 quote API for bulk fetching (much faster, handles 50+ symbols)
-  const allSymbols = symbols.slice(0, 100);
-  const batchSize = 30;
+  const allSymbols = symbols.slice(0, 120);
   const allResults: any[] = [];
+
+  // Strategy 1: Try v6 quote API (fast, bulk)
+  const batchSize = 30;
+  let v6Success = false;
 
   for (let i = 0; i < allSymbols.length; i += batchSize) {
     const batch = allSymbols.slice(i, i + batchSize);
@@ -419,17 +421,72 @@ async function getBatchQuotes(symbols: string[]) {
             },
             error: null,
           });
+          v6Success = true;
         }
       }
     } catch (e) {
-      console.error("Batch quote error:", e);
+      console.warn("v6 batch quote error:", e);
     }
   }
 
-  // Fill missing symbols
+  // Strategy 2: Fallback to v8 chart API for missing symbols
   const foundSymbols = new Set(allResults.map(r => r.symbol.toUpperCase()));
+  const missing = allSymbols.filter(s => !foundSymbols.has(s.toUpperCase()));
+
+  if (missing.length > 0) {
+    // Process in parallel batches of 15
+    const chartBatchSize = 15;
+    for (let i = 0; i < missing.length; i += chartBatchSize) {
+      const batch = missing.slice(i, i + chartBatchSize);
+      const results = await Promise.allSettled(
+        batch.map(async (sym) => {
+          const yfSym = toYahooSymbol(sym);
+          if (!yfSym) return null;
+          const resp = await fetchSafe(
+            `${YF_BASE}/v8/finance/chart/${encodeURIComponent(yfSym)}?interval=1d&range=2d&includePrePost=false`, 0
+          );
+          if (!resp) return null;
+          const data = await resp.json();
+          const result = data?.chart?.result?.[0];
+          if (!result?.meta?.regularMarketPrice) return null;
+          const meta = result.meta;
+          const quote = result.indicators?.quote?.[0];
+          const prev = meta.chartPreviousClose || meta.previousClose || 0;
+          const ltp = meta.regularMarketPrice;
+          const last = (result.timestamp || []).length - 1;
+          return {
+            symbol: sym,
+            data: {
+              symbol: sym,
+              name: meta.longName || meta.shortName || sym,
+              ltp: round(ltp),
+              prev_close: round(prev),
+              change: round(ltp - prev),
+              change_pct: round(prev > 0 ? ((ltp - prev) / prev) * 100 : 0),
+              volume: quote?.volume?.[last] ?? 0,
+              market_cap: meta.marketCap || null,
+              week_52_high: meta.fiftyTwoWeekHigh || null,
+              week_52_low: meta.fiftyTwoWeekLow || null,
+              open: quote?.open?.[last] ?? ltp,
+              high: quote?.high?.[last] ?? ltp,
+              low: quote?.low?.[last] ?? ltp,
+            },
+            error: null,
+          };
+        })
+      );
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) {
+          allResults.push(r.value);
+        }
+      }
+    }
+  }
+
+  // Fill remaining missing symbols
+  const finalFound = new Set(allResults.map(r => r.symbol.toUpperCase()));
   for (const sym of allSymbols) {
-    if (!foundSymbols.has(sym.toUpperCase())) {
+    if (!finalFound.has(sym.toUpperCase())) {
       allResults.push({ symbol: sym, data: null, error: "Not found" });
     }
   }
