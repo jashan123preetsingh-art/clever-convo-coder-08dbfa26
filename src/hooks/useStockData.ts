@@ -95,8 +95,8 @@ export function useMarketMetrics() {
   return useQuery({
     queryKey: ["market-metrics"],
     queryFn: () => stockApi.getMarketMetrics(),
-    staleTime: 60_000, // 1 min
-    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     retry: 2,
   });
 }
