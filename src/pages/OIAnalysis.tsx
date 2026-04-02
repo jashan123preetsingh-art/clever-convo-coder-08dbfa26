@@ -94,7 +94,7 @@ export default function OIAnalysis() {
   // Tick counter to force mock data regeneration every 60s when not live
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const interval = setInterval(() => setTick(t => t + 1), 60_000);
+    const interval = setInterval(() => setTick(t => t + 1), 15_000);
     return () => clearInterval(interval);
   }, []);
 
