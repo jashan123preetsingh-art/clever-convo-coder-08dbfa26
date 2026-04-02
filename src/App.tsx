@@ -23,6 +23,7 @@ const StockDetail = lazy(() => import("./pages/StockDetail"));
 const Admin = lazy(() => import("./pages/Admin"));
 const TradingAgent = lazy(() => import("./pages/TradingAgent"));
 const Portfolio = lazy(() => import("./pages/Portfolio"));
+const Commodities = lazy(() => import("./pages/Commodities"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const Disclaimer = lazy(() => import("./pages/Disclaimer"));
