@@ -94,7 +94,7 @@ export default function OIAnalysis() {
   // Tick counter to force mock data regeneration every 60s when not live
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const interval = setInterval(() => setTick(t => t + 1), 60_000);
+    const interval = setInterval(() => setTick(t => t + 1), 15_000);
     return () => clearInterval(interval);
   }, []);
 
@@ -165,7 +165,7 @@ export default function OIAnalysis() {
               )}
             </div>
             <p className="text-[9px] text-muted-foreground">
-              {isLive ? `${activeSymbol} OI Data • Auto-refreshes every 60s • ${liveOI?.timestamp || ''}` : 'Open Interest trends, OI Change Heatmap & PCR Charts for Index F&O'}
+              {isLive ? `${activeSymbol} OI Data • Auto-refreshes every 15s • ${liveOI?.timestamp || ''}` : `${activeSymbol} OI Data • Auto-refreshes every 15s`}
             </p>
           </div>
           <div className="flex items-center gap-1.5">
