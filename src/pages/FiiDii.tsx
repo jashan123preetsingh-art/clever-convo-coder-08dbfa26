@@ -33,7 +33,7 @@ function formatCr(value: number, showSign = true) {
 type MainTab = 'fii-dii' | 'fno' | 'flow' | 'sectors';
 
 export default function FiiDii() {
-  const { data: liveData, isLoading } = useFiiDiiData();
+  const { data: liveData, isLoading, isFetching, refetch } = useFiiDiiData();
   const [mainTab, setMainTab] = useState<MainTab>('fii-dii');
   const [flowSubTab, setFlowSubTab] = useState<'daily' | 'weekly' | 'monthly' | 'annual'>('daily');
   const [flowFilter, setFlowFilter] = useState<'all' | 'bloodbath' | 'absorption' | 'divergence'>('all');
