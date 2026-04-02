@@ -82,7 +82,7 @@ serve(async (req) => {
       if (quote.week_52_high) context.push(`52W High: ₹${quote.week_52_high}, 52W Low: ₹${quote.week_52_low}`);
     }
     if (technicals) {
-      context.push(`RSI: ${technicals.rsi_14}, MACD: ${technicals.macd}, Trend: ${technicals.trend}`);
+      context.push(`RSI: ${technicals.rsi_14}, Trend: ${technicals.trend}`);
       if (technicals.sma_50) context.push(`SMA50: ${technicals.sma_50}, SMA200: ${technicals.sma_200}`);
     }
     if (partialFundamentals) {

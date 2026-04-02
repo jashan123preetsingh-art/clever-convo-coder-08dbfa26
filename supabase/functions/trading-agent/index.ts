@@ -117,8 +117,7 @@ const TECHNICAL_FRAMEWORK = `**TECHNICAL ANALYSIS FRAMEWORK** (analyze in exact 
    - Volume-price confirmation/divergence — USE EXACT RATIO
    - RSI divergence (price making new high/low but RSI not confirming)
    - Bollinger squeeze/expansion — USE EXACT VALUES
-   - MACD crossover context (if provided)
-   - Climactic volume, no-demand bars
+    - Climactic volume, no-demand bars
 
 5. **CANDLE PATTERNS** (5% weight — only at key S/R or S/D zones)
    - Engulfing, pin bars, inside bars AT confirmed levels only
@@ -243,23 +242,8 @@ async function fetchStockData(symbol: string, range = "3mo") {
     const ema50 = calcEMA(closes, 50);
     const ema200 = calcEMA(closes, 200);
 
-    // MACD calculation (12,26,9)
-    const ema12 = calcEMA(closes, 12);
-    const ema26 = calcEMA(closes, 26);
-    const macdLine = (ema12 && ema26) ? ema12 - ema26 : null;
-    // Simple MACD signal approximation
-    let macdSignal: string | null = null;
-    if (macdLine !== null) {
-      const prevEma12 = calcEMA(closes.slice(0, -1), 12);
-      const prevEma26 = calcEMA(closes.slice(0, -1), 26);
-      const prevMacd = (prevEma12 && prevEma26) ? prevEma12 - prevEma26 : null;
-      if (prevMacd !== null) {
-        if (macdLine > 0 && prevMacd <= 0) macdSignal = "BULLISH CROSSOVER";
-        else if (macdLine < 0 && prevMacd >= 0) macdSignal = "BEARISH CROSSOVER";
-        else if (macdLine > 0) macdSignal = "BULLISH";
-        else macdSignal = "BEARISH";
-      }
-    }
+
+
 
     const recentCandles = [];
     for (let i = Math.max(0, closes.length - 10); i < closes.length; i++) {
@@ -372,7 +356,7 @@ async function fetchStockData(symbol: string, range = "3mo") {
       sma20, sma50, high52, low52,
       ema9, ema20, ema50, ema200,
       atr14, rsi14, volRatio, pdh, pdl, pdc,
-      macdLine, macdSignal, rsiDivergence, trendStructure,
+      rsiDivergence, trendStructure,
       bbWidth, distFrom52H, distFrom52L,
       pivot, s1: 2 * pivot - lastHigh, s2: pivot - (lastHigh - lastLow),
       r1: 2 * pivot - lastLow, r2: pivot + (lastHigh - lastLow),
@@ -407,7 +391,6 @@ Analyze ONLY from provided data, in priority order:
 - **EMA Stack**: Compare EXACT EMA 9/20/50 values. State which are above/below price with % distance.
 - **Volume & VWAP**: EXACT volume ratio. Above/below 1.0x average. Note if climactic.
 - **RSI**: EXACT value. Divergence status. Overbought (>70), oversold (<30), neutral.
-- **MACD**: Signal status from data. Confirm with price action.
 - **Bollinger**: EXACT values. Band width for squeeze/expansion detection.
 - **Trade Setup**: Entry, target, SL ALL derived from above levels. Targets within 0.5-1.5x ATR.
 
@@ -502,7 +485,6 @@ Apply framework for swing analysis using ONLY provided data:
 - **EMA alignment**: EXACT EMA 9/20/50/200 values with % distance from price
 - **Volume**: EXACT volume ratio, climactic/dry-up assessment
 - **RSI**: EXACT value + divergence status from data
-- **MACD**: Signal from data
 - **Bollinger**: Width for volatility regime
 Keep under 250 words.
 
@@ -562,7 +544,7 @@ Build the STRONGEST possible bull case using ONLY evidence from the analysis:
 - Which S/D zones (with exact ₹) support upside? How many times were they tested?
 - Is EMA alignment bullish? State exact values and % distance.
 - Volume confirmation? Is smart money accumulating?
-- RSI and MACD supportive?  
+- RSI supportive?  
 - Upside targets — ONLY from provided S/R levels and within ATR range
 - **Counter the bear's strongest argument**: Why is the biggest risk manageable?
 Keep under 200 words.

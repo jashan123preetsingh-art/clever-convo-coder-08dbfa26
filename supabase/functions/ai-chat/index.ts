@@ -277,7 +277,7 @@ CORE ACCURACY RULES (NEVER VIOLATE):
 6. For chart analysis: describe what you see, don't fabricate patterns that aren't visible.
 
 You help traders with:
-1. **Chart Analysis**: Price action, S/R, S/D zones, trend analysis, candlestick patterns, MAs, RSI, MACD, Bollinger Bands, volume. When a chart image is uploaded, analyze it thoroughly with specific ₹ levels.
+1. **Chart Analysis**: Price action, S/R, S/D zones, trend analysis, candlestick patterns, MAs, RSI, Bollinger Bands, volume. When a chart image is uploaded, analyze it thoroughly with specific ₹ levels.
 2. **Options Strategy**: Option chain analysis, Greeks, IV analysis, spreads, straddles — always mention risk and margin requirements.
 3. **Trade Setups**: Entry/exit with ₹ levels from data, stop-loss at structural levels (not arbitrary), realistic R:R.
 4. **Market Context**: Nifty/BankNifty levels from provided data, FII/DII flows, sector rotation.
@@ -368,7 +368,7 @@ serve(async (req) => {
       if (sd.technicals) {
         const t = sd.technicals;
         liveDataBlock += `\n📊 TECHNICALS:\n`;
-        liveDataBlock += `• RSI(14): ${t.rsi_14 ?? 'N/A'} | MACD: ${t.macd ?? 'N/A'} | ATR: ${t.atr_14 ?? 'N/A'}\n`;
+        liveDataBlock += `• RSI(14): ${t.rsi_14 ?? 'N/A'} | ATR: ${t.atr_14 ?? 'N/A'}\n`;
         liveDataBlock += `• SMA20: ${t.sma_20 ?? 'N/A'} | SMA50: ${t.sma_50 ?? 'N/A'} | SMA200: ${t.sma_200 ?? 'N/A'}\n`;
         liveDataBlock += `• EMA20: ${t.ema_20 ?? 'N/A'} | EMA50: ${t.ema_50 ?? 'N/A'}\n`;
         liveDataBlock += `• Trend: ${t.trend ?? 'N/A'} | Strength: ${t.trend_strength ?? 'N/A'} | Volume Ratio: ${t.volume_ratio ?? 'N/A'}x\n`;
