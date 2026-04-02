@@ -356,7 +356,7 @@ async function fetchStockData(symbol: string, range = "3mo") {
       sma20, sma50, high52, low52,
       ema9, ema20, ema50, ema200,
       atr14, rsi14, volRatio, pdh, pdl, pdc,
-      macdLine, macdSignal, rsiDivergence, trendStructure,
+      rsiDivergence, trendStructure,
       bbWidth, distFrom52H, distFrom52L,
       pivot, s1: 2 * pivot - lastHigh, s2: pivot - (lastHigh - lastLow),
       r1: 2 * pivot - lastLow, r2: pivot + (lastHigh - lastLow),
