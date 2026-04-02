@@ -5,6 +5,67 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const FUNDAMENTALS_MODEL = "google/gemini-2.5-pro";
+
+type Verdict = "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL";
+type RangeTuple = [number, number];
+type TargetBand = {
+  low: RangeTuple;
+  mid: RangeTuple;
+  high: RangeTuple;
+};
+
+const TARGET_BANDS: Record<Verdict, TargetBand> = {
+  "STRONG BUY": { low: [0.95, 1.02], mid: [1.08, 1.18], high: [1.15, 1.3] },
+  BUY: { low: [0.92, 1.0], mid: [1.04, 1.12], high: [1.1, 1.22] },
+  HOLD: { low: [0.88, 0.98], mid: [0.98, 1.05], high: [1.03, 1.12] },
+  SELL: { low: [0.72, 0.88], mid: [0.8, 0.92], high: [0.88, 0.98] },
+  "STRONG SELL": { low: [0.6, 0.82], mid: [0.7, 0.86], high: [0.8, 0.94] },
+};
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function toNumber(value: unknown): number | null {
+  const num = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function roundTarget(value: number, cmp: number) {
+  const step = cmp >= 5000 ? 50 : cmp >= 1000 ? 10 : cmp >= 200 ? 5 : 1;
+  return Math.round(value / step) * step;
+}
+
+function midpoint([min, max]: RangeTuple) {
+  return (min + max) / 2;
+}
+
+function normalizeTargetRange(targetRange: any, cmp: number, verdictRaw: string, week52High?: number | null, week52Low?: number | null) {
+  const verdict = (String(verdictRaw || "HOLD").toUpperCase() as Verdict);
+  const band = TARGET_BANDS[verdict] ?? TARGET_BANDS.HOLD;
+
+  const lowMin = Math.max(cmp * band.low[0], week52Low && week52Low > 0 ? week52Low * 0.95 : 0);
+  const lowMax = cmp * band.low[1];
+  const lowBase = toNumber(targetRange?.low) ?? cmp * midpoint(band.low);
+  const low = roundTarget(clamp(lowBase, lowMin, Math.max(lowMin, lowMax)), cmp);
+
+  const midMin = Math.max(cmp * band.mid[0], low);
+  const midMax = Math.max(midMin, cmp * band.mid[1]);
+  const midBase = toNumber(targetRange?.mid) ?? cmp * midpoint(band.mid);
+  const mid = roundTarget(clamp(midBase, midMin, midMax), cmp);
+
+  let highMax = cmp * band.high[1];
+  if (week52High && week52High > 0) {
+    highMax = Math.min(highMax, week52High * 1.08);
+  }
+  const highMin = Math.max(cmp * band.high[0], mid);
+  const highBase = toNumber(targetRange?.high) ?? cmp * midpoint(band.high);
+  const high = roundTarget(clamp(highBase, highMin, Math.max(highMin, highMax)), cmp);
+
+  return { low, mid, high };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -13,7 +74,6 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Build context from available data
     const context: string[] = [`Stock: ${symbol}`];
     if (quote) {
       context.push(`LTP: ₹${quote.ltp}, Change: ${quote.change_pct}%`);
@@ -35,57 +95,21 @@ serve(async (req) => {
     }
 
     const cmp = quote?.ltp || 0;
-    const systemPrompt = `You are an expert Indian stock market fundamental analyst. Given the available data for a stock, provide a comprehensive fundamental analysis report. You MUST respond with valid JSON only, no markdown.
+    const week52High = quote?.week_52_high ?? null;
+    const week52Low = quote?.week_52_low ?? null;
 
-CRITICAL RULES FOR TARGET PRICES:
-- The current market price (CMP) is ₹${cmp}. 
-- Your target_range MUST be realistic and anchored to CMP.
-- For HOLD/SELL verdicts: targets should be within -10% to +15% of CMP.
-- For BUY verdicts: targets can be +5% to +25% of CMP maximum.
-- For STRONG BUY: targets can be +10% to +35% of CMP maximum.
-- NEVER give targets that are 2x or 3x the CMP — that is unrealistic for a 12-month horizon.
-- "low" target should be near or slightly below CMP (downside risk).
-- "mid" target is the most likely fair value in 6-12 months.
-- "high" target is the optimistic scenario (bull case).
-- All targets must be reasonable round numbers close to CMP.
+    const systemPrompt = `You are an expert Indian stock market fundamental analyst. Use ONLY the live input data as the source of truth and respond with a structured report.
 
-Respond with this exact JSON structure:
-{
-  "verdict": "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL",
-  "confidence": 1-100,
-  "summary": "2-3 sentence overview",
-  "valuation": {
-    "assessment": "Undervalued" | "Fairly Valued" | "Overvalued",
-    "reasoning": "1-2 sentences",
-    "score": 1-10
-  },
-  "profitability": {
-    "assessment": "Strong" | "Moderate" | "Weak",
-    "reasoning": "1-2 sentences",
-    "score": 1-10
-  },
-  "growth": {
-    "assessment": "High Growth" | "Moderate Growth" | "Low Growth" | "Declining",
-    "reasoning": "1-2 sentences",
-    "score": 1-10
-  },
-  "financial_health": {
-    "assessment": "Excellent" | "Good" | "Moderate" | "Concerning",
-    "reasoning": "1-2 sentences",
-    "score": 1-10
-  },
-  "dividend": {
-    "assessment": "Strong" | "Moderate" | "Low" | "None",
-    "reasoning": "1 sentence",
-    "score": 1-10
-  },
-  "risks": ["risk1", "risk2", "risk3"],
-  "catalysts": ["catalyst1", "catalyst2", "catalyst3"],
-  "target_range": { "low": number, "mid": number, "high": number },
-  "sector_outlook": "1 sentence about sector"
-}
-
-Remember: CMP is ₹${cmp}. Targets MUST be realistic (within 10-30% of CMP). Use the available data to make informed assessments. If data is limited, use your knowledge of the company (${symbol} on NSE India). Be specific and actionable.`;
+CRITICAL GROUNDING RULES:
+- The stock may have undergone splits, bonuses, or face-value changes.
+- NEVER anchor to stale pre-split prices, legacy historic prices, or memorized older price ranges.
+- The current split-adjusted CMP is ₹${cmp}.
+- The live 52-week range is ₹${week52Low ?? "N/A"} to ₹${week52High ?? "N/A"}.
+- target_range is a realistic 6-12 month fair-value band, NOT a 2x/3x projection.
+- Keep targets close to CMP and consistent with the verdict.
+- If data is limited, stay conservative instead of making aggressive claims.
+- Base your reasoning on valuation, profitability, growth, balance sheet strength, and sector context.
+- Be specific, practical, and avoid hype.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -94,11 +118,99 @@ Remember: CMP is ₹${cmp}. Targets MUST be realistic (within 10-30% of CMP). Us
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: FUNDAMENTALS_MODEL,
+        temperature: 0.15,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Analyze fundamentals for ${symbol}:\n${context.join('\n')}` },
+          { role: "user", content: `Analyze fundamentals for ${symbol}:\n${context.join("\n")}` },
         ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "fundamental_report",
+            description: "Return a structured Indian stock fundamental analysis report with a realistic target range anchored to current price.",
+            parameters: {
+              type: "object",
+              properties: {
+                verdict: { type: "string", enum: ["STRONG BUY", "BUY", "HOLD", "SELL", "STRONG SELL"] },
+                confidence: { type: "number" },
+                summary: { type: "string" },
+                valuation: {
+                  type: "object",
+                  properties: {
+                    assessment: { type: "string", enum: ["Undervalued", "Fairly Valued", "Overvalued"] },
+                    reasoning: { type: "string" },
+                    score: { type: "number" },
+                  },
+                  required: ["assessment", "reasoning", "score"],
+                },
+                profitability: {
+                  type: "object",
+                  properties: {
+                    assessment: { type: "string", enum: ["Strong", "Moderate", "Weak"] },
+                    reasoning: { type: "string" },
+                    score: { type: "number" },
+                  },
+                  required: ["assessment", "reasoning", "score"],
+                },
+                growth: {
+                  type: "object",
+                  properties: {
+                    assessment: { type: "string", enum: ["High Growth", "Moderate Growth", "Low Growth", "Declining"] },
+                    reasoning: { type: "string" },
+                    score: { type: "number" },
+                  },
+                  required: ["assessment", "reasoning", "score"],
+                },
+                financial_health: {
+                  type: "object",
+                  properties: {
+                    assessment: { type: "string", enum: ["Excellent", "Good", "Moderate", "Concerning"] },
+                    reasoning: { type: "string" },
+                    score: { type: "number" },
+                  },
+                  required: ["assessment", "reasoning", "score"],
+                },
+                dividend: {
+                  type: "object",
+                  properties: {
+                    assessment: { type: "string", enum: ["Strong", "Moderate", "Low", "None"] },
+                    reasoning: { type: "string" },
+                    score: { type: "number" },
+                  },
+                  required: ["assessment", "reasoning", "score"],
+                },
+                risks: { type: "array", items: { type: "string" } },
+                catalysts: { type: "array", items: { type: "string" } },
+                target_range: {
+                  type: "object",
+                  properties: {
+                    low: { type: "number" },
+                    mid: { type: "number" },
+                    high: { type: "number" },
+                  },
+                  required: ["low", "mid", "high"],
+                },
+                sector_outlook: { type: "string" },
+              },
+              required: [
+                "verdict",
+                "confidence",
+                "summary",
+                "valuation",
+                "profitability",
+                "growth",
+                "financial_health",
+                "dividend",
+                "risks",
+                "catalysts",
+                "target_range",
+                "sector_outlook"
+              ],
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "fundamental_report" } },
       }),
     });
 
@@ -113,31 +225,28 @@ Remember: CMP is ₹${cmp}. Targets MUST be realistic (within 10-30% of CMP). Us
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI gateway error: ${response.status}`);
+      const text = await response.text();
+      throw new Error(`AI gateway error: ${response.status} ${text}`);
     }
 
     const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     const content = data.choices?.[0]?.message?.content || "";
-    
-    // Parse JSON from response (handle markdown code blocks)
-    let parsed;
-    try {
-      const jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      parsed = { error: "Failed to parse AI response", raw: content };
+
+    let parsed: any;
+    if (toolCall?.function?.arguments) {
+      parsed = JSON.parse(toolCall.function.arguments);
+    } else {
+      try {
+        const jsonStr = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        parsed = JSON.parse(jsonStr);
+      } catch {
+        parsed = { error: "Failed to parse AI response", raw: content };
+      }
     }
 
-    // Safety clamp: ensure targets are realistic relative to CMP
-    if (parsed.target_range && cmp > 0) {
-      const maxUp = cmp * 1.40; // max +40%
-      const maxDown = cmp * 0.70; // max -30%
-      parsed.target_range.low = Math.round(Math.max(maxDown, Math.min(maxUp, parsed.target_range.low)));
-      parsed.target_range.mid = Math.round(Math.max(maxDown, Math.min(maxUp, parsed.target_range.mid)));
-      parsed.target_range.high = Math.round(Math.max(maxDown, Math.min(maxUp, parsed.target_range.high)));
-      // Ensure ordering
-      if (parsed.target_range.low > parsed.target_range.mid) parsed.target_range.low = parsed.target_range.mid;
-      if (parsed.target_range.mid > parsed.target_range.high) parsed.target_range.mid = parsed.target_range.high;
+    if (!parsed?.error && cmp > 0) {
+      parsed.target_range = normalizeTargetRange(parsed.target_range, cmp, parsed.verdict, week52High, week52Low);
     }
 
     return new Response(JSON.stringify(parsed), {

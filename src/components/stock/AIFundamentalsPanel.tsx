@@ -27,7 +27,7 @@ export default function AIFundamentalsPanel({ symbol, quote, technicals, partial
   const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
   const { data: aiData, isLoading, error, refetch } = useQuery({
-    queryKey: ['ai-fundamentals', symbol],
+    queryKey: ['ai-fundamentals-v3', symbol],
     queryFn: async () => {
       const resp = await fetch(`${FUNCTIONS_URL}/ai-fundamentals`, {
         method: 'POST',

@@ -574,6 +574,12 @@ Keep under 200 words.`;
 // ── INVEST: Call 3 — Committee + Architect ──────────────────
 const INVEST_DECISION_SYSTEM = `You are a **Long-term Investment Decision Board**. Provide TWO sections:
 
+CRITICAL GROUNDING RULES:
+- Use the current live split-adjusted CMP from the provided data as the source of truth.
+- NEVER anchor fair value, buy zones, or actions to stale pre-split prices or old historical price memory.
+- Fair Value Estimate and Buy Zone must be realistic relative to the current CMP and the provided live range data.
+- If you project large upside, justify it with earnings power, margin expansion, or moat strength — never vague optimism.
+
 ## INVESTMENT COMMITTEE
 
 - **Investment Grade**: A+ / A / B / C / D
