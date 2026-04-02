@@ -15,6 +15,9 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   '◉': <Newspaper className="w-4 h-4" />,
   '💎': <Gem className="w-4 h-4" />,
   '🤖': <Bot className="w-4 h-4" />,
+  '💱': <DollarSign className="w-4 h-4" />,
+  '📅': <CalendarDays className="w-4 h-4" />,
+  '🚀': <Rocket className="w-4 h-4" />,
   '⚙️': <Settings className="w-4 h-4" />,
 };
 

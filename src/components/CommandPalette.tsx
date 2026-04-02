@@ -13,6 +13,10 @@ const ACTIONS = [
   { id: 'fii-dii', label: 'FII / DII Flows', icon: '⇄', path: '/fii-dii', category: 'Navigation' },
   { id: 'oi', label: 'OI Analysis', icon: '📈', path: '/oi-analysis', category: 'Navigation' },
   { id: 'news', label: 'Market News', icon: '◉', path: '/news', category: 'Navigation' },
+  { id: 'commodities', label: 'Commodities', icon: '💎', path: '/commodities', category: 'Navigation' },
+  { id: 'forex', label: 'Forex & Crypto', icon: '💱', path: '/forex', category: 'Navigation' },
+  { id: 'calendar', label: 'Economic Calendar', icon: '📅', path: '/calendar', category: 'Navigation' },
+  { id: 'ipo', label: 'IPO Tracker', icon: '🚀', path: '/ipo', category: 'Navigation' },
   { id: 'agent', label: 'AI Trading Agent', icon: '🤖', path: '/trading-agent', category: 'Navigation' },
 ];
 

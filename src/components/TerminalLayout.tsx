@@ -100,6 +100,8 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
         alertBell={<AlertBell />}
       />
 
+      <TickerTape />
+
       <MobileNav
         navItems={NAV_ITEMS}
         indices={indices}
