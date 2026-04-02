@@ -116,8 +116,8 @@ export function useOptionsChain(symbol: string) {
     queryKey: ["options-chain", symbol],
     queryFn: () => stockApi.getOptionsChain(symbol),
     enabled: !!symbol,
-    staleTime: 60_000, // 1 min
-    refetchInterval: 60_000, // Auto-refresh every 60s
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     retry: 2,
   });
 }
