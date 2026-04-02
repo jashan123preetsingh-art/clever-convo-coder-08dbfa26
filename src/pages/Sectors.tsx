@@ -38,18 +38,43 @@ MiniHeatmap.displayName = 'MiniHeatmap';
 
 function SectorDetail({ sectorName }: { sectorName: string }) {
   const { data: liveBreadth } = useMarketBreadth();
+
+  // Build sector map from mock data for fallback sector assignments
+  const mockSectorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    getAllStocks().forEach(s => { map[s.symbol] = s.sector; });
+    return map;
+  }, []);
+
+  // Get all live stocks with sector info
   const liveStocks = useMemo(() => {
     if (!Array.isArray(liveBreadth?.stocks) || liveBreadth.stocks.length === 0) return [];
     return (liveBreadth.stocks as Stock[]).filter((s) => s && typeof s.ltp === 'number' && s.ltp > 0);
   }, [liveBreadth]);
+
   const sectors = useMemo(() => {
     const source = liveStocks.length > 0 ? liveStocks : getAllStocks();
     return getSectorPerformance(source);
   }, [liveStocks]);
-  const rawStocks = getStocksBySector(sectorName);
+
   const sectorData = sectors.find(s => s.sector === sectorName);
 
-  const symbols = useMemo(() => rawStocks.map(s => s.symbol), [rawStocks]);
+  // Get stocks for this sector from live data first, then mock fallback
+  const sectorStocks = useMemo(() => {
+    // Try live breadth data first — filter by sector
+    if (liveStocks.length > 0) {
+      const liveFiltered = liveStocks.filter(s => {
+        const sector = s.sector || mockSectorMap[s.symbol] || 'Other';
+        return sector === sectorName;
+      });
+      if (liveFiltered.length > 0) return liveFiltered;
+    }
+    // Fallback to mock data
+    return getStocksBySector(sectorName);
+  }, [liveStocks, sectorName, mockSectorMap]);
+
+  // Fetch live quotes for the stocks in this sector
+  const symbols = useMemo(() => sectorStocks.map(s => s.symbol), [sectorStocks]);
   const { data: liveQuotes } = useBatchQuotes(symbols);
 
   const stocks = useMemo(() => {
@@ -59,7 +84,7 @@ function SectorDetail({ sectorName }: { sectorName: string }) {
         if (q?.data && q.symbol) quoteMap[q.symbol] = q.data;
       });
     }
-    return rawStocks.map(s => {
+    return sectorStocks.map(s => {
       const live = quoteMap[s.symbol];
       if (!live) return s;
       return {
@@ -68,9 +93,10 @@ function SectorDetail({ sectorName }: { sectorName: string }) {
         change: live.change ?? s.change,
         change_pct: live.change_pct ?? s.change_pct,
         volume: live.volume ?? s.volume,
+        market_cap: live.market_cap ?? s.market_cap,
       };
-    });
-  }, [rawStocks, liveQuotes]);
+    }).sort((a, b) => (b.change_pct ?? 0) - (a.change_pct ?? 0));
+  }, [sectorStocks, liveQuotes]);
 
   return (
     <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
