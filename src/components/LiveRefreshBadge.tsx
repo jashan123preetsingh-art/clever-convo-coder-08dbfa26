@@ -63,7 +63,6 @@ export default function LiveRefreshBadge({
             </span>
           </>
         )}
-        </span>
       </button>
 
       {/* Thin progress bar underneath */}
