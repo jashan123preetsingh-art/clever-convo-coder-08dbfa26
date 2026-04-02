@@ -37,7 +37,15 @@ const MiniHeatmap = React.forwardRef<HTMLDivElement, { stocks: { symbol: string;
 MiniHeatmap.displayName = 'MiniHeatmap';
 
 function SectorDetail({ sectorName }: { sectorName: string }) {
-  const sectors = getSectorPerformance();
+  const { data: liveBreadth } = useMarketBreadth();
+  const liveStocks = useMemo(() => {
+    if (!Array.isArray(liveBreadth?.stocks) || liveBreadth.stocks.length === 0) return [];
+    return (liveBreadth.stocks as Stock[]).filter((s) => s && typeof s.ltp === 'number' && s.ltp > 0);
+  }, [liveBreadth]);
+  const sectors = useMemo(() => {
+    const source = liveStocks.length > 0 ? liveStocks : getAllStocks();
+    return getSectorPerformance(source);
+  }, [liveStocks]);
   const rawStocks = getStocksBySector(sectorName);
   const sectorData = sectors.find(s => s.sector === sectorName);
 
