@@ -136,8 +136,8 @@ export function useMarketBreadth() {
   return useQuery({
     queryKey: ["market-breadth"],
     queryFn: () => fiiDiiApi.getBreadth(),
-    staleTime: 60_000,
-    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     retry: 2,
   });
 }

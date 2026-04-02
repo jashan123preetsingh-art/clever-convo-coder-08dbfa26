@@ -44,8 +44,8 @@ export default function IPO() {
   const { data: ipoData, isLoading } = useQuery({
     queryKey: ['ipo-data'],
     queryFn: fetchIPOData,
-    staleTime: 300_000,
-    refetchInterval: 300_000,
+    staleTime: 900_000,
+    refetchInterval: 900_000,
     retry: 1,
   });
 
