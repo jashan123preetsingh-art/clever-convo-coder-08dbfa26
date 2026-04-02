@@ -98,12 +98,12 @@ function CommodityCard({ data }: { data: any }) {
       </div>
 
       {/* India Import Landed */}
-      <div className="bg-secondary/40 rounded-lg p-3 border border-border/20 mb-3">
+      <div className="bg-primary/5 rounded-lg p-3 border border-primary/20 mb-3">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[8px] text-muted-foreground uppercase tracking-wider font-semibold">
+          <span className="text-[8px] text-primary uppercase tracking-wider font-semibold">
             ₹ {unitLabel.replace('/', '·').toUpperCase()} · INDIA IMPORT LANDED
           </span>
-          <span className="text-[7px] font-bold px-1.5 py-0.5 rounded bg-accent/10 text-accent">
+          <span className="text-[7px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
             {data.dutyLabel}
           </span>
         </div>
@@ -114,7 +114,7 @@ function CommodityCard({ data }: { data: any }) {
             {Object.entries(data.purity as Record<string, number>).map(([label, price]) => (
               <div key={label} className="flex justify-between items-center">
                 <span className="text-[9px] text-muted-foreground">{label} per gram</span>
-                <span className="text-[11px] font-black text-primary font-data">₹{formatNumber(price)}/g</span>
+                <span className="text-[13px] font-black text-primary font-data">₹{formatNumber(price)}/g</span>
               </div>
             ))}
           </div>
@@ -126,7 +126,7 @@ function CommodityCard({ data }: { data: any }) {
             {Object.entries(data.purity as Record<string, number>).map(([label, price]) => (
               <div key={label} className="flex justify-between items-center">
                 <span className="text-[9px] text-muted-foreground">{label} per gram</span>
-                <span className="text-[11px] font-black text-primary font-data">₹{formatNumber(price)}/g</span>
+                <span className="text-[13px] font-black text-primary font-data">₹{formatNumber(price)}/g</span>
               </div>
             ))}
           </div>
@@ -136,7 +136,7 @@ function CommodityCard({ data }: { data: any }) {
         {!data.purity && (
           <div className="flex justify-between items-center">
             <span className="text-[9px] text-muted-foreground">Per {data.indiaUnit}</span>
-            <span className="text-lg font-black text-primary font-data">₹{formatNumber(data.landedPerUnit)}/{data.indiaUnit}</span>
+            <span className="text-xl font-black text-primary font-data">₹{formatNumber(data.landedPerUnit)}/{data.indiaUnit}</span>
           </div>
         )}
       </div>
