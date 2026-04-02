@@ -221,6 +221,14 @@ export default function Commodities() {
     ? new Date(data.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Kolkata' })
     : '';
 
+  const { data: aiData, isLoading: aiLoading, refetch: aiRefetch } = useQuery({
+    queryKey: ['commodity-ai'],
+    queryFn: () => fetchCommodityAI(data?.commodities),
+    enabled: !!data?.commodities,
+    staleTime: 30 * 60 * 1000, // 30 min
+    retry: 1,
+  });
+
   return (
     <div className="p-4 max-w-[1800px] mx-auto space-y-4">
       {/* Header */}
