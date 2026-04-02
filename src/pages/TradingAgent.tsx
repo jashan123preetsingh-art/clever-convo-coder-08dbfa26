@@ -703,8 +703,11 @@ export default function TradingAgent() {
   const config = MODE_CONFIG[mode];
   const steps = config.steps;
 
+  const validSymbolSet = useMemo(() => new Set(getAllStocks().map(s => s.symbol)), []);
+
   const runAgent = async () => {
     if (!symbol.trim()) { toast.error('Enter a stock symbol'); return; }
+    if (!validSymbolSet.has(symbol.trim().toUpperCase())) { toast.error('Please select a valid stock from the dropdown list'); return; }
     setLoading(true);
     setResult(null);
     setCurrentStep(0);
