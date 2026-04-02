@@ -95,8 +95,8 @@ export function useMarketMetrics() {
   return useQuery({
     queryKey: ["market-metrics"],
     queryFn: () => stockApi.getMarketMetrics(),
-    staleTime: 60_000, // 1 min
-    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     retry: 2,
   });
 }
@@ -116,8 +116,8 @@ export function useOptionsChain(symbol: string) {
     queryKey: ["options-chain", symbol],
     queryFn: () => stockApi.getOptionsChain(symbol),
     enabled: !!symbol,
-    staleTime: 60_000, // 1 min
-    refetchInterval: 60_000, // Auto-refresh every 60s
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     retry: 2,
   });
 }
@@ -136,8 +136,8 @@ export function useMarketBreadth() {
   return useQuery({
     queryKey: ["market-breadth"],
     queryFn: () => fiiDiiApi.getBreadth(),
-    staleTime: 60_000,
-    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     retry: 2,
   });
 }

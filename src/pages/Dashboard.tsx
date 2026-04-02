@@ -48,7 +48,8 @@ export default function Dashboard() {
   const { data: liveNews } = useQuery({
     queryKey: ['dashboard-news'],
     queryFn: fetchLiveNews,
-    staleTime: 300_000,
+    staleTime: 120_000,
+    refetchInterval: 120_000,
     retry: 1,
   });
 
