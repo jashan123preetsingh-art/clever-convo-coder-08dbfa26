@@ -13,15 +13,24 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `You are a seasoned Indian stock market analyst writing a daily market brief. Write in a professional yet engaging tone. Be specific with numbers and levels. Keep it concise but insightful. Return ONLY valid JSON.`;
+    const systemPrompt = `You are a senior Indian stock market strategist writing the daily morning brief for institutional traders.
 
-    const userPrompt = `Generate a daily market brief based on this data:
+ACCURACY RULES:
+- Use ONLY the exact index levels, breadth, and sector data provided below. NEVER fabricate numbers.
+- Support/resistance levels must be derived from the actual index prices (round numbers near ±1-2% of CMP).
+- Mood score must honestly reflect the breadth data (advances vs declines ratio).
+- Trading idea must reference a stock from the gainers/losers data provided.
+- Sector analysis must use the exact performance numbers provided.
+- Be specific and actionable, not generic. Write like a Bloomberg terminal brief.`;
+
+    const userPrompt = `Generate a daily market brief from this LIVE data. Use ONLY these exact numbers:
 
 INDICES:
 ${JSON.stringify(marketData.indices, null, 1)}
 
 MARKET BREADTH:
 - Advances: ${marketData.advances}, Declines: ${marketData.declines}, Unchanged: ${marketData.unchanged}
+- A/D Ratio: ${marketData.advances && marketData.declines ? (marketData.advances / marketData.declines).toFixed(2) : 'N/A'}
 
 TOP GAINERS: ${marketData.gainers?.map((g: any) => `${g.symbol} (+${(g.change_pct ?? 0).toFixed(1)}%)`).join(', ') || 'N/A'}
 TOP LOSERS: ${marketData.losers?.map((l: any) => `${l.symbol} (${(l.change_pct ?? 0).toFixed(1)}%)`).join(', ') || 'N/A'}
@@ -29,32 +38,12 @@ TOP LOSERS: ${marketData.losers?.map((l: any) => `${l.symbol} (${(l.change_pct ?
 SECTOR PERFORMANCE:
 ${marketData.sectors?.map((s: any) => `${s.sector}: ${(s.avg_change ?? 0) >= 0 ? '+' : ''}${(s.avg_change ?? 0).toFixed(2)}%`).join('\n') || 'N/A'}
 
-Return this JSON structure:
-{
-  "headline": "<catchy 8-12 word headline>",
-  "market_mood": "<Bullish/Bearish/Cautious/Euphoric/Fearful/Neutral>",
-  "mood_score": <1-10, 1=extreme fear, 10=extreme greed>,
-  "summary": "<3-4 sentence market overview paragraph>",
-  "key_observations": ["<observation 1>", "<observation 2>", "<observation 3>", "<observation 4>"],
-  "sector_spotlight": {
-    "winner": "<sector name>",
-    "winner_reason": "<brief why>",
-    "laggard": "<sector name>",
-    "laggard_reason": "<brief why>"
-  },
-  "levels_to_watch": {
-    "nifty_support": <number>,
-    "nifty_resistance": <number>,
-    "banknifty_support": <number>,
-    "banknifty_resistance": <number>
-  },
-  "trading_idea": {
-    "stock": "<symbol>",
-    "direction": "<Long/Short>",
-    "rationale": "<1 sentence>"
-  },
-  "outlook": "<1-2 sentence forward-looking view>"
-}`;
+RULES FOR OUTPUT:
+- nifty_support = nearest round number 1-2% below current Nifty level
+- nifty_resistance = nearest round number 1-2% above current Nifty level
+- Same logic for banknifty_support/resistance
+- trading_idea.stock MUST be from the gainers or losers list above
+- mood_score: calculate from A/D ratio (>1.5 = 7+, <0.7 = 3-, balanced = 5)`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -63,7 +52,8 @@ Return this JSON structure:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
+        temperature: 0.15,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -72,15 +62,15 @@ Return this JSON structure:
           type: "function",
           function: {
             name: "market_brief",
-            description: "Return structured daily market brief",
+            description: "Return structured daily market brief grounded in provided data",
             parameters: {
               type: "object",
               properties: {
-                headline: { type: "string" },
-                market_mood: { type: "string" },
-                mood_score: { type: "number" },
-                summary: { type: "string" },
-                key_observations: { type: "array", items: { type: "string" } },
+                headline: { type: "string", description: "Catchy 8-12 word headline using actual index levels" },
+                market_mood: { type: "string", enum: ["Bullish", "Bearish", "Cautious", "Euphoric", "Fearful", "Neutral"] },
+                mood_score: { type: "number", description: "1-10 based on A/D ratio" },
+                summary: { type: "string", description: "3-4 sentences using exact numbers from data" },
+                key_observations: { type: "array", items: { type: "string" }, description: "4 observations citing exact data points" },
                 sector_spotlight: {
                   type: "object",
                   properties: {
@@ -104,13 +94,13 @@ Return this JSON structure:
                 trading_idea: {
                   type: "object",
                   properties: {
-                    stock: { type: "string" },
-                    direction: { type: "string" },
-                    rationale: { type: "string" },
+                    stock: { type: "string", description: "MUST be from gainers or losers list" },
+                    direction: { type: "string", enum: ["Long", "Short"] },
+                    rationale: { type: "string", description: "1 sentence with specific data" },
                   },
                   required: ["stock", "direction", "rationale"],
                 },
-                outlook: { type: "string" },
+                outlook: { type: "string", description: "1-2 sentence forward view based on breadth and sector data" },
               },
               required: ["headline", "market_mood", "mood_score", "summary", "key_observations", "sector_spotlight", "levels_to_watch", "trading_idea", "outlook"],
             },

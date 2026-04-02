@@ -4,6 +4,13 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 /*
  * TradingAgents — Consolidated Multi-Agent Framework
  * 
+ * CORE ACCURACY PRINCIPLES:
+ *   1. ONLY use live data provided — never hallucinate prices or levels
+ *   2. When data is missing, say "N/A" — never fabricate
+ *   3. All ₹ levels must come from calculations or the provided data
+ *   4. Targets/SL must be within realistic ATR-based ranges
+ *   5. Never claim certainty — always express as probability
+ *
  * TECHNICAL FRAMEWORK (all modes):
  *   1. Price Action + Supply/Demand zones
  *   2. Multi-TF Support & Resistance
@@ -63,42 +70,54 @@ async function setDBCache(cacheKey: string, symbol: string, mode: string, result
   } catch (e) { console.error("Cache write error:", e); }
 }
 
-// ── Model Selection (cost-optimized) ──────────────────────
+// ── Model Selection ──────────────────────────────────────
 const MODELS = {
   scalp:   { analysis: "google/gemini-3-flash-preview", decision: "google/gemini-3-flash-preview" },
-  swing:   { research: "google/gemini-3-flash-preview", debate: "google/gemini-3-flash-preview", decision: "google/gemini-3-flash-preview" },
+  swing:   { research: "google/gemini-2.5-pro", debate: "google/gemini-3-flash-preview", decision: "google/gemini-2.5-pro" },
   invest:  { fundamentals: "google/gemini-2.5-pro", context: "google/gemini-2.5-pro", decision: "google/gemini-2.5-pro" },
   options: { analysis: "google/gemini-3-flash-preview", decision: "google/gemini-3-flash-preview" },
 };
+
+// ── ACCURACY RULES (injected into every prompt) ──────────
+const ACCURACY_RULES = `
+## MANDATORY ACCURACY RULES (NEVER VIOLATE)
+1. **DATA GROUNDING**: You MUST use ONLY the exact numbers provided in the data below. If a data point is missing or shows "N/A", say "data unavailable" — NEVER fabricate a number.
+2. **PRICE ANCHORING**: The current CMP is provided in the data. All support, resistance, target, and stop-loss levels MUST be derived from the provided EMAs, pivots, swing points, S/D zones, or Bollinger bands. NEVER invent price levels.
+3. **NO HALLUCINATED LEVELS**: If you cannot calculate a level from the provided data, do NOT include it. Say "insufficient data" instead.
+4. **REALISTIC TARGETS**: For scalp/intraday: targets within 1-2x ATR. For swing: targets within 3-5x ATR. For invest: targets within ±15-30% of CMP based on fundamentals.
+5. **PROBABILITY NOT CERTAINTY**: Use "likely", "probable", "expected" — NEVER "will", "guaranteed", "certain".
+6. **SPLIT/BONUS AWARENESS**: The stock may have undergone splits or bonuses. The provided CMP is the current split-adjusted price. NEVER reference old pre-split prices from memory.
+7. **HONEST CONFIDENCE**: If data is limited, lower your confidence score. A 90%+ confidence requires strong multi-factor confirmation.
+8. **INDIAN MARKET CONTEXT**: NSE/BSE market hours 9:15 AM - 3:30 PM IST. Weekly expiry Thursday. Monthly expiry last Thursday. Use ₹ for all prices.`;
 
 // ── Shared Technical Framework ────────────────────────────
 const TECHNICAL_FRAMEWORK = `**TECHNICAL ANALYSIS FRAMEWORK** (analyze in this exact order of priority):
 
 1. **PRICE ACTION & SUPPLY/DEMAND** (highest weight)
    - Trend structure: HH/HL (bullish) or LH/LL (bearish), BOS (Break of Structure), CHoCH (Change of Character)
-   - Supply zones (institutional selling areas) with exact ₹ levels
-   - Demand zones (institutional buying areas) with exact ₹ levels
+   - Supply zones (institutional selling areas) with exact ₹ levels FROM THE DATA
+   - Demand zones (institutional buying areas) with exact ₹ levels FROM THE DATA
    - Order blocks, breaker blocks, Fair Value Gaps (FVGs)
    - Liquidity sweeps, stop hunts, springs/upthrusts (Wyckoff)
 
 2. **MULTI-TIMEFRAME SUPPORT & RESISTANCE**
-   - Daily pivot (S1/S2/S3, R1/R2/R3)
-   - Key horizontal S/R from price history
+   - Daily pivot (S1/S2/S3, R1/R2/R3) — USE THE EXACT VALUES PROVIDED
+   - Key horizontal S/R from swing points — USE THE EXACT VALUES PROVIDED
    - Round number psychology levels (e.g. ₹1000, ₹500)
-   - PDH/PDL/PDC (Previous Day High/Low/Close)
+   - PDH/PDL/PDC (Previous Day High/Low/Close) — USE THE EXACT VALUES PROVIDED
 
 3. **EMA ALIGNMENT**
-   - EMA 9/20/50/200 stack (bullish: 9>20>50>200, bearish: reverse)
-   - Price position vs key EMAs
+   - EMA 9/20/50/200 stack (bullish: 9>20>50>200, bearish: reverse) — USE THE EXACT VALUES PROVIDED
+   - Price position vs key EMAs — calculate from provided data
    - Golden Cross / Death Cross signals
    - Dynamic support/resistance from EMAs
 
 4. **VOLUME & VWAP**
-   - Volume-price confirmation or divergence
+   - Volume-price confirmation or divergence — USE THE EXACT VOLUME RATIO PROVIDED
    - VWAP position and deviation
    - Volume ratio vs 20-day average
    - Climactic volume, no-demand/no-supply bars
-   - Bollinger Band squeeze/expansion
+   - Bollinger Band squeeze/expansion — USE THE EXACT BOLLINGER VALUES PROVIDED
 
 5. **CANDLE PATTERNS** (only at key S/R or S/D zones — never in isolation)`;
 
@@ -112,7 +131,7 @@ async function callAIRaw(apiKey: string, system: string, user: string | Array<an
     const resp = await fetch(AI_URL, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, messages, stream: false }),
+      body: JSON.stringify({ model, messages, stream: false, temperature: 0.15 }),
     });
     if (resp.ok) {
       const data = await resp.json();
@@ -194,7 +213,6 @@ async function fetchStockData(symbol: string, range = "3mo") {
     const opens = result.indicators?.quote?.[0]?.open || [];
     const volumes = result.indicators?.quote?.[0]?.volume || [];
     
-    // Find last valid (non-null) close price — Yahoo sometimes returns nulls
     let lastClose = null;
     let prevClose = null;
     for (let i = closes.length - 1; i >= 0; i--) {
@@ -204,7 +222,6 @@ async function fetchStockData(symbol: string, range = "3mo") {
       }
     }
     
-    // If we still can't find valid prices, use meta regularMarketPrice
     if (lastClose === null) lastClose = meta.regularMarketPrice || meta.previousClose || 0;
     if (prevClose === null) prevClose = meta.previousClose || meta.chartPreviousClose || lastClose;
     
@@ -216,7 +233,6 @@ async function fetchStockData(symbol: string, range = "3mo") {
     const high52 = Math.max(...closes.filter((c: any) => c));
     const low52 = Math.min(...closes.filter((c: any) => c && c > 0));
 
-    // EMA calculations
     const calcEMA = (arr: number[], period: number) => {
       if (arr.length < period) return null;
       const k = 2 / (period + 1);
@@ -250,7 +266,18 @@ async function fetchStockData(symbol: string, range = "3mo") {
     const pdl = lows[lows.length - 2] || 0;
     const pdc = closes[closes.length - 2] || 0;
 
-    // Supply/Demand zone detection
+    // RSI calculation
+    let rsiGains = 0, rsiLosses = 0;
+    const rsiPeriod = Math.min(14, closes.length - 1);
+    for (let i = closes.length - rsiPeriod; i < closes.length; i++) {
+      const diff = (closes[i] || 0) - (closes[i - 1] || 0);
+      if (diff > 0) rsiGains += diff;
+      else rsiLosses += Math.abs(diff);
+    }
+    const avgGain = rsiGains / rsiPeriod;
+    const avgLoss = rsiLosses / rsiPeriod;
+    const rsi14 = avgLoss === 0 ? 100 : 100 - (100 / (1 + avgGain / avgLoss));
+
     const supplyDemandZones: string[] = [];
     for (let i = Math.max(2, closes.length - 20); i < closes.length - 1; i++) {
       const body = Math.abs((closes[i] || 0) - (opens[i] || 0));
@@ -266,7 +293,6 @@ async function fetchStockData(symbol: string, range = "3mo") {
       }
     }
 
-    // Swing points for S/R
     const swingPoints: string[] = [];
     for (let i = Math.max(2, closes.length - 18); i < closes.length - 2; i++) {
       if (highs[i] > highs[i-1] && highs[i] > highs[i-2] && highs[i] > highs[i+1] && highs[i] > highs[i+2]) {
@@ -277,12 +303,10 @@ async function fetchStockData(symbol: string, range = "3mo") {
       }
     }
 
-    // Pivot calculations
     const lastHigh = highs[highs.length - 1] || 0;
     const lastLow = lows[lows.length - 1] || 0;
     const pivot = (lastHigh + lastLow + lastClose) / 3;
 
-    // Bollinger Bands
     const bb20 = closes.slice(-20);
     const bbMid = bb20.reduce((a: number, b: number) => a + (b || 0), 0) / 20;
     const bbStd = Math.sqrt(bb20.reduce((sum: number, v: number) => sum + ((v || 0) - bbMid) ** 2, 0) / 20);
@@ -293,7 +317,7 @@ async function fetchStockData(symbol: string, range = "3mo") {
       volume: todayVol, avgVolume: avgVol,
       sma20, sma50, high52, low52,
       ema9, ema20, ema50, ema200,
-      atr14, volRatio, pdh, pdl, pdc,
+      atr14, rsi14, volRatio, pdh, pdl, pdc,
       pivot, s1: 2 * pivot - lastHigh, s2: pivot - (lastHigh - lastLow),
       r1: 2 * pivot - lastLow, r2: pivot + (lastHigh - lastLow),
       bollingerUpper: bbMid + 2 * bbStd, bollingerMid: bbMid, bollingerLower: bbMid - 2 * bbStd,
@@ -306,11 +330,13 @@ async function fetchStockData(symbol: string, range = "3mo") {
 }
 
 // ════════════════════════════════════════════════════════════
-// CONSOLIDATED PIPELINE PROMPTS — PA/SD/SR/EMA/Volume Framework
+// CONSOLIDATED PIPELINE PROMPTS
 // ════════════════════════════════════════════════════════════
 
-// ── SCALP: Call 1 — Price Action + Volume (NO fundamentals) ──
-const SCALP_ANALYSIS_SYSTEM = `You are a **World-Class Intraday Price Action Specialist**. Your analysis is PURELY technical — NO fundamentals.
+// ── SCALP: Call 1 ──
+const SCALP_ANALYSIS_SYSTEM = `You are a **World-Class Intraday Price Action Specialist** at a proprietary trading desk managing ₹500 Cr+ in daily volume. Your analysis is PURELY technical — NO fundamentals.
+
+${ACCURACY_RULES}
 
 ${TECHNICAL_FRAMEWORK}
 
@@ -318,23 +344,25 @@ Provide TWO sections:
 
 ## TECHNICAL ANALYSIS
 
-Analyze in priority order:
-- **Price Action & S/D Zones**: Trend structure (HH/HL or LH/LL), BOS/CHoCH, order blocks, FVGs, liquidity sweeps
-- **Key S/R Levels**: PDH/PDL/PDC, pivot levels, round numbers, swing highs/lows
-- **EMA Stack**: 9/20/50 alignment, price position vs EMAs, dynamic S/R
-- **Volume & VWAP**: Vol ratio, VWAP position, climactic vs dry volume, Bollinger squeeze
-- **Candle Patterns**: ONLY at key S/D or S/R zones
-- **Trade Setup**: Entry trigger, exact ₹ levels for entry/target/SL
+Analyze ONLY from the provided data, in priority order:
+- **Price Action & S/D Zones**: Use the exact S/D zones and swing points from data. Identify trend structure (HH/HL or LH/LL). Note BOS/CHoCH only if visible in recent candles.
+- **Key S/R Levels**: Use EXACT PDH/PDL/PDC, pivot, S1/S2, R1/R2 from the data. Don't invent levels.
+- **EMA Stack**: Compare the EXACT EMA 9/20/50 values. State which are above/below price.
+- **Volume & VWAP**: Use the EXACT volume ratio. Note if it's above/below 1.0x average.
+- **RSI**: Use the EXACT RSI value from data. State if overbought (>70), oversold (<30), or neutral.
+- **Bollinger**: Use EXACT upper/mid/lower values. Note if price is near bands.
+- **Trade Setup**: Entry, target, SL derived from the above levels. Target within 1-2x ATR.
 
 ## SENTIMENT
 
-- Market mood from price action behavior
-- Institutional vs retail positioning hints from volume patterns
-- Overall bias with confidence level
+- Bias based on EMA alignment + volume + price position
+- Confidence: High (multi-factor alignment) / Medium (partial) / Low (conflicting signals)
 
-Total under 500 words. Every claim must reference specific ₹ levels.`;
+Total under 500 words. EVERY price level must come from the provided data.`;
 
 const SCALP_ANALYSIS_CHART_SYSTEM = `You are a **World-Class Intraday Chart Reading Specialist**. PURELY technical — NO fundamentals.
+
+${ACCURACY_RULES}
 
 ${TECHNICAL_FRAMEWORK}
 
@@ -342,22 +370,24 @@ Analyze the uploaded chart AND numerical data. Provide TWO sections:
 
 ## TECHNICAL ANALYSIS
 
-Read the chart for (in priority order):
-1. Supply/Demand zones, order blocks, FVGs with ₹ levels
-2. Key S/R: swing highs/lows, pivot, PDH/PDL
-3. EMA alignment from chart
-4. Volume analysis: spikes, absorption, climactic action
+Read the chart AND cross-reference with the numerical data provided:
+1. S/D zones visible on chart — confirm with provided zone data
+2. Key S/R from chart — confirm with provided pivot/swing data
+3. EMA alignment from chart — confirm with exact EMA values
+4. Volume analysis from chart — confirm with provided vol ratio
 5. Candlestick patterns AT key levels only
-6. Trade setup with exact entry/target/SL ₹ levels
+6. Trade setup with entry/target/SL from confirmed levels
 
 ## SENTIMENT
 
-Quick sentiment from price action and volume behavior.
+Quick sentiment from price action and volume behavior. State confidence level.
 
-Total under 500 words. Every claim must reference specific ₹ levels.`;
+Total under 500 words.`;
 
-// ── SCALP: Call 2 — Trade Decision + Risk (NO fundamentals) ──
-const SCALP_DECISION_SYSTEM = `You are a combined **Elite Scalp Trader + Risk Manager**. PURELY technical decisions — NO fundamental analysis.
+// ── SCALP: Call 2 ──
+const SCALP_DECISION_SYSTEM = `You are a combined **Elite Scalp Trader + Risk Manager** at a top Indian proprietary desk.
+
+${ACCURACY_RULES}
 
 ## TRADE DECISION
 
@@ -367,281 +397,315 @@ const SCALP_DECISION_SYSTEM = `You are a combined **Elite Scalp Trader + Risk Ma
 **TRADE PLAN:**
 | Parameter | Value |
 |-----------|-------|
-| Entry ₹ | Exact trigger (at demand/supply zone or S/R) |
+| Entry ₹ | Exact trigger — MUST be at a level from the provided S/R or S/D data |
 | Entry Type | Market / Limit / Stop-Limit |
-| Target 1 ₹ | Next S/R level (book 50%) |
-| Target 2 ₹ | Extended target (trail remaining) |
-| Stop Loss ₹ | Below demand zone / above supply zone |
-| Risk:Reward | Minimum 1:1.5 |
+| Target 1 ₹ | Next S/R level from data (book 50%) — within 1x ATR |
+| Target 2 ₹ | Extended target from data (trail remaining) — within 2x ATR |
+| Stop Loss ₹ | Below demand / above supply from data |
+| Risk:Reward | Calculate from actual ₹ levels — minimum 1:1.5 |
 | Trade Duration | 10-30 min / 30-60 min / 1-3 hours |
 | Position Size | 2-5% of capital |
 | Trailing Stop | How to trail after T1 |
 
-**ENTRY CONFIRMATION**: What price action signal MUST appear? (e.g., bullish engulfing at demand zone)
+**ENTRY CONFIRMATION**: What price action signal MUST appear?
 **INVALIDATION**: What kills this setup?
 
 ## RISK CHECK
 
 **Trade Quality Score**: 1-10
 - S/D zone quality, EMA confluence, volume confirmation
-- Stop-loss at structural level (not arbitrary)
-- R:R assessment, ATR-based volatility
+- Is SL at a structural level? (not arbitrary ₹ amount)
+- R:R calculated from actual levels
+- ATR check: is target realistic given today's volatility?
 **VERDICT**: APPROVED / APPROVED WITH ADJUSTMENTS / REJECTED
 
 Be DECISIVE. Total under 400 words.`;
 
-// ── SWING: Call 1 — Research Team (includes fundamentals) ──
-const SWING_RESEARCH_SYSTEM = `You are a **Professional Trading Firm Research Team**. Provide FOUR sections:
+// ── SWING: Call 1 ──
+const SWING_RESEARCH_SYSTEM = `You are a **Professional Trading Firm Research Team** managing institutional money.
+
+${ACCURACY_RULES}
+
+Provide FOUR sections:
 
 ## TECHNICAL ANALYSIS
 
 ${TECHNICAL_FRAMEWORK}
 
-Apply this framework for swing/position analysis:
-- Price Action: trend structure, S/D zones with ₹ levels, order blocks
-- Multi-TF S/R: daily pivots, weekly levels, key horizontals
-- EMA 9/20/50/200 alignment, golden/death cross
-- Volume profile, VWAP, Bollinger position
+Apply framework for swing/position analysis using ONLY provided data:
+- Price Action: trend structure, S/D zones from data with exact ₹ levels
+- Multi-TF S/R: use exact pivots, swing points from data
+- EMA alignment: use exact EMA 9/20/50/200 values from data
+- Volume: use exact volume ratio from data
+- RSI: use exact RSI value from data
+- Bollinger: use exact band values from data
 Keep under 250 words.
 
 ## SENTIMENT
 
-- Retail & institutional sentiment, FII/DII activity
-- Options PCR indication, market mood
+- Institutional vs retail positioning based on volume patterns
+- Market mood from price action structure
 Keep under 150 words.
 
 ## NEWS
 
-- Recent news, sector trends, regulatory changes
-- Global macro, event risks
+- Use your knowledge of recent developments for this company/sector
+- But clearly label anything not from provided data as "based on general knowledge"
 Keep under 150 words.
 
 ## FUNDAMENTALS
 
-- PE, PB, ROE, ROCE, D/E ratio
-- Promoter holding, revenue/profit growth, FCF, dividend yield
-- Analyst targets and consensus
+- Use any fundamental data provided (PE, PB, ROE, etc.)
+- If not provided, use general knowledge but label as "estimated/general knowledge"
+- Compare with sector averages
 Keep under 200 words.
 
-Be specific with numbers and ₹ levels throughout.`;
+Be specific with numbers. Every ₹ level must trace to the data.`;
 
-const SWING_RESEARCH_CHART_SYSTEM = `You are a **Professional Trading Firm Research Team**. Analyze the uploaded chart AND numerical data. Provide FOUR sections:
+const SWING_RESEARCH_CHART_SYSTEM = `You are a **Professional Trading Firm Research Team**. Analyze the uploaded chart AND numerical data.
+
+${ACCURACY_RULES}
+
+Provide FOUR sections:
 
 ## TECHNICAL ANALYSIS
-Chart reading using PA/SD/SR/EMA/Volume framework: trend structure, S/D zones, EMA alignment, volume analysis. Use ₹ levels from chart.
+Chart reading using PA/SD/SR/EMA/Volume framework. Cross-reference chart patterns with exact numerical data provided.
 
 ## SENTIMENT
-Market mood, retail vs institutional positioning, PCR indication.
+Market mood, positioning from price action and volume.
 
 ## NEWS
-Recent catalysts, sector trends, macro factors.
+Recent catalysts — label as "general knowledge" if not in provided data.
 
 ## FUNDAMENTALS
-Key ratios: PE, PB, ROE, ROCE, D/E, promoter holding, growth.
+Key ratios from provided data; label estimates clearly.
 
 Total under 700 words.`;
 
-// ── SWING: Call 2 — Bull vs Bear Debate ──────────────────
-const SWING_DEBATE_SYSTEM = `You are a **Research Debate Panel** — Bull Researcher, Bear Researcher, and Research Manager. Based on the analysis:
+// ── SWING: Call 2 ──
+const SWING_DEBATE_SYSTEM = `You are a **Research Debate Panel** — Bull Researcher, Bear Researcher, and Research Manager.
+
+${ACCURACY_RULES}
+
+Based on the analysis provided:
 
 ## BULL CASE
 
-Build the STRONGEST bull case using:
-- Price Action: S/D zones, trend structure supporting upside
-- Key support levels holding, EMA alignment bullish
-- Volume confirming, fundamental catalysts
-- Upside targets with ₹ levels
+Build the STRONGEST bull case ONLY from evidence in the analysis:
+- Which S/D zones and S/R levels support upside?
+- Is EMA alignment bullish? What do exact values show?
+- Volume confirmation? Is RSI supportive?
+- Upside targets — use only levels from the provided data
 Keep under 200 words.
 
 ## BEAR CASE
 
-Build the STRONGEST bear case:
-- Supply zones overhead, trend structure weakening
-- Key resistance levels, EMA breakdown
-- Volume divergence, fundamental concerns
-- Downside targets with ₹ levels
+Build the STRONGEST bear case ONLY from evidence in the analysis:
+- Which supply zones and resistance levels threaten?
+- Is EMA alignment breaking down? What do exact values show?
+- Volume divergence? Is RSI warning?
+- Downside targets — use only levels from the provided data
 Keep under 200 words.
 
 ## RESEARCH VERDICT
 
 Evaluate both sides objectively:
-- Which has stronger price action evidence?
-- Clear bias, conviction level, key factors
+- Which side has stronger data-backed evidence?
+- Clear bias with confidence %, key deciding factors
+- What would change the thesis?
 Keep under 200 words.`;
 
-// ── SWING: Call 3 — Trader + Risk Panel + Portfolio Manager ─
-const SWING_DECISION_SYSTEM = `You are a **Trading Decision Committee**. Based on all analysis, provide FIVE sections:
+// ── SWING: Call 3 ──
+const SWING_DECISION_SYSTEM = `You are a **Trading Decision Committee** at a SEBI-registered PMS firm.
+
+${ACCURACY_RULES}
+
+Provide FIVE sections:
 
 ## TRADER DECISION
 
-As the Swing/Position Trader:
 - **Action**: Strong Buy / Buy / Hold / Sell / Strong Sell
-- **Entry Price**: at demand zone or key S/R ₹ level
-- **Target Price**: next supply zone or resistance ₹
-- **Stop Loss**: below demand zone or key support ₹
+- **Entry Price**: at demand zone or key S/R — from provided data
+- **Target Price**: next supply zone or resistance — from provided data
+- **Stop Loss**: below demand zone or key support — from provided data
+- **Risk:Reward**: calculated from actual ₹ levels
 - **Position Size**: 3-10% of portfolio
 - **Holding Duration**: specify (e.g., "2-4 weeks")
-- **Key Catalysts**: price action + fundamental triggers
-- **Exit Strategy**: trailing stop or conditions
+- **Key Catalysts**: data-backed triggers
+- **Exit Strategy**: trailing stop or specific conditions
 
 ## AGGRESSIVE RISK
-
-Argue FOR trade execution. S/D zone quality, EMA confluence, volume support. Under 120 words.
+Argue FOR trade execution. Reference specific data points. Under 120 words.
 
 ## CONSERVATIVE RISK
-
-Focus on downside protection, supply zones above, suggest hedges. Under 120 words.
+Focus on downside. Reference specific risk levels from data. Under 120 words.
 
 ## NEUTRAL RISK
-
 Balance both views with practical adjustments. Under 120 words.
 
 ## PORTFOLIO MANAGER
-
-Final decision-maker:
+Final decision:
 - **Decision**: APPROVE or REJECT
 - **Final Action**: Strong Buy / Buy / Hold / Sell / Strong Sell
-- **Holding Duration**: Confirm or adjust
 - **Position Size**: Final recommendation
-- **Risk Score**: 1-10
-- **Confidence**: percentage
-- **Trailing Stop Strategy**: based on S/D zones or EMA
-- **Summary**: 2-3 sentence rationale
+- **Risk Score**: 1-10 (honest — 7+ only with multi-factor confirmation)
+- **Confidence**: % (honest — 80%+ only with strong alignment)
+- **Trailing Stop Strategy**: based on specific levels from data
+- **Summary**: 2-3 sentence rationale referencing specific data
 
 Total under 700 words.`;
 
-// ── INVEST: Call 1 — Deep Fundamentals + Moat ──────────────
-const INVEST_FUNDAMENTALS_SYSTEM = `You are a **Warren Buffett-style Investment Research Team**. Provide TWO sections:
+// ── INVEST: Call 1 ──
+const INVEST_FUNDAMENTALS_SYSTEM = `You are a **Warren Buffett-style Investment Research Team** at a top Indian AMC.
+
+${ACCURACY_RULES}
+
+ADDITIONAL INVEST-MODE RULES:
+- The stock's CMP is the live split-adjusted price from the data. NEVER anchor to pre-split/old prices.
+- Intrinsic value estimates must be within ±30% of CMP unless you have clear DCF justification.
+- Use sector PE/PB comparisons from your knowledge but label them as benchmarks.
+
+Provide TWO sections:
 
 ## FUNDAMENTAL ANALYSIS
 
 Analyze as if buying the ENTIRE BUSINESS:
-1. **Economic Moat**: Brand, network effects, switching costs, cost advantages
-2. **Management Quality**: Capital allocation, insider buying, promoter holding
-3. **Financial Fortress**: D/E < 0.5, consistent FCF, ROE > 15%, ROCE > 15%
-4. **Earnings Power**: Consistent growth, predictable business
-5. **Intrinsic Value**: DCF, earnings yield, margin of safety
-6. **Circle of Competence**: Simple to understand?
+1. **Economic Moat**: Brand, network effects, switching costs, cost advantages — be honest, most Indian mid/small caps have NARROW or NO moat
+2. **Management Quality**: Capital allocation, promoter holding trends
+3. **Financial Fortress**: D/E ratio assessment, FCF consistency, ROE/ROCE benchmarking
+4. **Earnings Power**: Revenue/profit growth trend from available data
+5. **Valuation Assessment**: PE, PB vs sector averages — is current price reasonable?
+6. **Circle of Competence**: Business simplicity
 
-Key metrics: PE, PB, ROE, ROCE, D/E, Dividend Yield, FCF Yield, Revenue/Profit CAGR, Promoter Holding, Pledge %.
+Use PROVIDED fundamental data where available. Label general knowledge clearly.
 Keep under 350 words.
 
 ## MOAT ANALYSIS
 
-Rate each (None / Narrow / Wide):
-1. **Brand Power**: Pricing power, recognition
-2. **Network Effects**: Value increases with users?
-3. **Switching Costs**: How hard to switch?
-4. **Cost Advantages**: Scale, process advantages
+Rate each (None / Narrow / Wide) — be HONEST, most companies are Narrow at best:
+1. **Brand Power**: Real pricing power evidence
+2. **Network Effects**: Does value actually increase with users?
+3. **Switching Costs**: Quantifiable cost to switch
+4. **Cost Advantages**: Scale or process advantages
 5. **Efficient Scale**: Natural monopoly/oligopoly?
 
-**Overall Moat Rating**: None / Narrow / Wide
+**Overall Moat Rating**: None / Narrow / Wide — be conservative
 **Moat Trend**: Strengthening / Stable / Weakening
 Keep under 200 words.`;
 
-// ── INVEST: Call 2 — Technical + News + Bull/Bear ──────────
-const INVEST_CONTEXT_SYSTEM = `You are a **Long-term Investment Context Team**. Provide FOUR sections:
+// ── INVEST: Call 2 ──
+const INVEST_CONTEXT_SYSTEM = `You are a **Long-term Investment Context Team** at a SEBI-registered PMS.
+
+${ACCURACY_RULES}
+
+Provide FOUR sections:
 
 ## TECHNICAL ANALYSIS
 
 ${TECHNICAL_FRAMEWORK}
 
-Long-term perspective using this framework:
-- Weekly/monthly price action structure, major S/D zones
-- Multi-year S/R levels, major breakout/breakdown levels
-- EMA 50/200 weekly alignment
-- Long-term volume trends
+Long-term perspective using ONLY provided data:
+- Price position relative to EMA 50/200 from data
+- Distance from 52W high/low from data
+- Major S/R levels from provided swing points
+- Volume trend from provided data
 Keep under 200 words.
 
 ## NEWS
 
-Long-term macro outlook, regulatory environment, sector tailwinds/headwinds, upcoming catalysts.
+Long-term macro outlook, regulatory environment — label as "general knowledge" where applicable.
 Keep under 150 words.
 
 ## BULL CASE
 
 STRONGEST case for buying and HOLDING 3-10 years:
-- Business quality, growth runway, sector tailwinds
-- Cite specific numbers: revenue CAGR, margin expansion
+- Must cite specific data points where available
+- Be realistic — not every stock is a multibagger
 Keep under 200 words.
 
 ## BEAR CASE
 
 What could DESTROY this investment over 5-10 years?
-- Disruption risk, governance, cyclicality, regulatory threats
+- Honest assessment of disruption, governance, cyclicality risks
 Keep under 200 words.`;
 
-// ── INVEST: Call 3 — Committee + Architect ──────────────────
-const INVEST_DECISION_SYSTEM = `You are a **Long-term Investment Decision Board**. Provide TWO sections:
+// ── INVEST: Call 3 ──
+const INVEST_DECISION_SYSTEM = `You are a **Long-term Investment Decision Board** at a top Indian AMC managing ₹10,000 Cr+.
 
-CRITICAL GROUNDING RULES:
-- Use the current live split-adjusted CMP from the provided data as the source of truth.
-- NEVER anchor fair value, buy zones, or actions to stale pre-split prices or old historical price memory.
-- Fair Value Estimate and Buy Zone must be realistic relative to the current CMP and the provided live range data.
-- If you project large upside, justify it with earnings power, margin expansion, or moat strength — never vague optimism.
+${ACCURACY_RULES}
+
+CRITICAL GROUNDING RULES FOR INVEST MODE:
+- The CMP from the data is the current split-adjusted market price. Use it as your anchor.
+- Fair Value Estimate must be justified and within ±30% of CMP unless you have exceptional reasoning.
+- Buy Zone must be realistic — typically 5-15% below CMP for quality stocks.
+- Expected CAGR should be honest: 12-18% for quality large caps, 15-25% for quality mid caps. Don't promise 30%+ unless there's clear evidence.
+
+Provide TWO sections:
 
 ## INVESTMENT COMMITTEE
 
-- **Investment Grade**: A+ / A / B / C / D
-- **Moat Verdict**: Wide / Narrow / None
-- **Quality Score**: 1-10
-- **Fair Value Estimate**: ₹ per share
-- **Margin of Safety**: current % discount/premium
-- **Conviction**: High / Medium / Low
+- **Investment Grade**: A+ / A / B / C / D — be HONEST, most stocks are B or C
+- **Moat Verdict**: Wide / Narrow / None — most are Narrow
+- **Quality Score**: 1-10 — 8+ only for consistently excellent companies
+- **Fair Value Estimate**: ₹ per share — MUST be within ±30% of CMP
+- **Margin of Safety**: current % discount/premium vs your fair value
+- **Conviction**: High / Medium / Low — High only with multi-factor confirmation
 - **Recommended Action**: Buy / Accumulate on Dips / Hold / Avoid
 - **Investment Horizon**: specify years
 Keep under 200 words.
 
 ## PORTFOLIO ARCHITECT
 
-- **Decision**: INVEST / WATCHLIST / PASS
-- **Action**: Buy Now / Accumulate Below ₹X / Wait
-- **Target Allocation**: % of portfolio
+- **Decision**: INVEST / WATCHLIST / PASS — be selective
+- **Action**: Buy Now / Accumulate Below ₹X / Wait — X must be realistic
+- **Target Allocation**: % of portfolio — max 5% for single stock
 - **Investment Horizon**: X-Y years
-- **Expected CAGR**: %
+- **Expected CAGR**: % — be realistic (12-20% for most quality stocks)
 - **Risk Score**: 1-10
-- **Confidence**: %
-- **Buy Zone**: ₹X - ₹Y
-- **Exit Criteria**: thesis breakers
-- **Key Quote**: One Buffett principle
+- **Confidence**: % — be honest
+- **Buy Zone**: ₹X - ₹Y — must be near CMP, not arbitrary
+- **Exit Criteria**: specific thesis breakers
+- **Key Quote**: One relevant investing principle
 
 Keep under 250 words.`;
 
-// ── OPTIONS: Call 1 — Analysis (with technical framework) ──
-const OPTIONS_ANALYSIS_SYSTEM = `You are an **Elite Options Analyst** for Indian F&O markets.
+// ── OPTIONS: Call 1 ──
+const OPTIONS_ANALYSIS_SYSTEM = `You are an **Elite Options Analyst** at a top Indian F&O prop desk.
+
+${ACCURACY_RULES}
 
 ${TECHNICAL_FRAMEWORK}
 
 Cover ALL with clear section headers:
 
 ## OI Analysis
-1. OI Build-up Classification: Long/Short Build-up, Unwinding, Covering
-2. PCR Analysis & trend
-3. Max Pain strike & implications
-4. OI Concentration: highest Call OI (resistance) and Put OI (support)
-5. OI Change: which strikes saw max addition/reduction
-6. Writers vs Buyers dominance
-7. Straddle premium & expected move range
+1. OI Build-up Classification based on price + volume from data
+2. PCR assessment from price action context
+3. Max Pain estimation from provided data
+4. OI Concentration: estimate from S/R levels — label as "estimated"
+5. Writers vs Buyers assessment from volume patterns
+6. Expected move range from ATR — use EXACT ATR value from data
 
 ## Greeks & IV
-1. Current IV vs historical, IV Rank, IV Percentile
-2. IV Skew (Call vs Put)
-3. Greeks at key strikes
-4. Volatility regime
-5. Event risk assessment
+1. IV assessment from Bollinger width and recent volatility
+2. Volatility regime: high/low/normal based on ATR vs price
+3. Event risk assessment based on market context
+Note: Exact Greeks require live options data. Label estimates clearly.
 
 ## Technical Analysis
-Apply the PA/SD/SR/EMA/Volume framework:
-- S/D zones for strike selection with ₹ levels
-- Key S/R for directional bias
-- EMA alignment for trend
-- VWAP position for intraday options
-- Expected range based on ATR
-- Volume confirmation
+Apply PA/SD/SR/EMA/Volume framework from provided data:
+- S/D zones for strike selection — use EXACT levels from data
+- Key S/R for directional bias — use EXACT levels from data
+- EMA alignment for trend — use EXACT values from data
+- Expected range based on ATR — use EXACT ATR from data
 
 Keep total under 600 words.`;
 
-const OPTIONS_DECISION_SYSTEM = `You are an **Elite Options Strategist & Trader** for Indian F&O markets. Based on the analysis:
+const OPTIONS_DECISION_SYSTEM = `You are an **Elite Options Strategist & Trader** at a top Indian F&O desk.
+
+${ACCURACY_RULES}
+
+Based on the analysis:
 
 ## Recommended Strategies
 2-3 strategies with different risk profiles:
@@ -649,20 +713,20 @@ const OPTIONS_DECISION_SYSTEM = `You are an **Elite Options Strategist & Trader*
 - **Moderate** (spreads, balanced)
 - **Conservative** (premium selling, income)
 
-For EACH: Strategy name, exact legs (strikes, CE/PE, Buy/Sell, lots), net premium, max profit/loss, breakevens, R:R, probability of profit, holding duration, SL, target, adjustments.
+For EACH: Strategy name, exact legs (strikes must be near CMP from data), net premium estimate, max profit/loss, R:R, holding duration, SL, target.
+Strikes must be realistic round numbers near the CMP from data.
 
 ## Risk Assessment
-- Risk score 1-10 for each strategy
-- Margin requirements, max drawdown
-- Greeks risk, liquidity risk, event risk
-- Position sizing, exit rules
+- Risk score 1-10 for each strategy — be honest
+- Max drawdown, exit rules
+- Position sizing (max 2-3% of capital per trade)
 
 ## Final Trade Decision
 **PRIMARY TRADE:**
-- Strategy, direction, complete leg details
-- Net cost/credit, R:R, max profit/loss, breakeven
-- Entry, SL, Target 1 (book 50%), Target 2 (trail)
-- Confidence %, Risk Score, Capital Required
+- Strategy, direction, complete leg details with realistic strikes
+- R:R calculated from actual levels
+- Entry, SL, Target — all from confirmed data levels
+- Confidence % (honest), Risk Score
 
 **ALTERNATIVE** (lower-risk option)
 
@@ -688,19 +752,21 @@ function buildDataContext(stockData: any, mode: string): string {
   const price = stockData.price;
   if (price == null || price <= 0) return "Price data unavailable — analysis may be limited.";
 
-  const base = `Price: ₹${fmt(price)}, Change: ${fmt(stockData.changePct)}%
+  const base = `CMP (Current Market Price): ₹${fmt(price)}, Change: ${fmt(stockData.changePct)}%
+RSI(14): ${fmt(stockData.rsi14)}
 EMA 9: ₹${fmt(stockData.ema9)}, EMA 20: ₹${fmt(stockData.ema20)}, EMA 50: ₹${fmt(stockData.ema50)}, EMA 200: ₹${fmt(stockData.ema200)}
 SMA 20: ₹${fmt(stockData.sma20)}, SMA 50: ₹${fmt(stockData.sma50)}
 Pivot: ₹${fmt(stockData.pivot)}, S1: ₹${fmt(stockData.s1)}, S2: ₹${fmt(stockData.s2)}, R1: ₹${fmt(stockData.r1)}, R2: ₹${fmt(stockData.r2)}
-Bollinger: ₹${fmt(stockData.bollingerLower)} / ₹${fmt(stockData.bollingerMid)} / ₹${fmt(stockData.bollingerUpper)}
-Volume: ${fmtInt(stockData.volume)}, Avg Vol: ${fmtInt(stockData.avgVolume)}, Vol Ratio: ${stockData.volRatio ?? 'N/A'}x
-ATR(14): ₹${fmt(stockData.atr14)}, 52W: ₹${fmt(stockData.low52)} - ₹${fmt(stockData.high52)}
-S/D Zones: ${stockData.supplyDemandZones?.join(", ") || "None detected"}
-Swing S/R: ${stockData.swingPoints?.join(", ") || "None"}`;
+Bollinger: Lower ₹${fmt(stockData.bollingerLower)} / Mid ₹${fmt(stockData.bollingerMid)} / Upper ₹${fmt(stockData.bollingerUpper)}
+Volume: ${fmtInt(stockData.volume)}, Avg Vol(10D): ${fmtInt(stockData.avgVolume)}, Vol Ratio: ${stockData.volRatio ?? 'N/A'}x
+ATR(14): ₹${fmt(stockData.atr14)} (daily volatility measure)
+52-Week Range: ₹${fmt(stockData.low52)} – ₹${fmt(stockData.high52)}
+S/D Zones (computed): ${stockData.supplyDemandZones?.join(", ") || "None detected"}
+Swing S/R (computed): ${stockData.swingPoints?.join(", ") || "None detected"}`;
 
   if (mode === "scalp") {
     return `${base}
-PDH: ₹${fmt(stockData.pdh)}, PDL: ₹${fmt(stockData.pdl)}, PDC: ₹${fmt(stockData.pdc)}
+PDH (Previous Day High): ₹${fmt(stockData.pdh)}, PDL: ₹${fmt(stockData.pdl)}, PDC: ₹${fmt(stockData.pdc)}
 Last 5 Candles:
 ${stockData.recentCandles?.slice(-5)?.map((c: any, i: number) => `  [${i+1}] O:₹${fmt(c.o)} H:₹${fmt(c.h)} L:₹${fmt(c.l)} C:₹${fmt(c.c)} V:${fmtInt(c.v || 0)}`).join("\n") || "N/A"}`;
   }
@@ -772,7 +838,7 @@ async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string
   const M = MODELS.invest;
 
   const fundResult = await callAI(apiKey, INVEST_FUNDAMENTALS_SYSTEM,
-    `Deep fundamental analysis of ${symbol} for long-term investment. ${dataCtx}`, M.fundamentals);
+    `Deep fundamental analysis of ${symbol} for long-term investment.\n${dataCtx}`, M.fundamentals);
 
   const agents1 = ensureKeys(
     parseSections(fundResult, { "FUNDAMENTAL": "fundamentals", "MOAT": "moat" }),
@@ -792,7 +858,7 @@ async function runInvestPipeline(apiKey: string, symbol: string, dataCtx: string
   await sleep(400);
 
   const decisionResult = await callAI(apiKey, INVEST_DECISION_SYSTEM,
-    `Final investment decision for ${symbol}.\nFUNDAMENTALS & MOAT:\n${fundResult}\nCONTEXT:\n${contextResult}`, M.decision);
+    `Final investment decision for ${symbol}.\nCMP: ₹${stockData?.price?.toFixed(2) || 'N/A'}\n52W: ₹${stockData?.low52?.toFixed(2) || 'N/A'} – ₹${stockData?.high52?.toFixed(2) || 'N/A'}\nFUNDAMENTALS & MOAT:\n${fundResult}\nCONTEXT:\n${contextResult}`, M.decision);
 
   const agents3 = ensureKeys(
     parseSections(decisionResult, { "INVESTMENT COMMITTEE": "investmentManager", "PORTFOLIO ARCHITECT": "portfolioArchitect" }),
@@ -879,7 +945,6 @@ serve(async (req) => {
 
     const dataRange = mode === "invest" ? "1y" : "3mo";
     let stockData = await fetchStockData(symbol, dataRange);
-    // Retry with 1y range if 3mo fails
     if (!stockData && dataRange === "3mo") {
       stockData = await fetchStockData(symbol, "1y");
     }
@@ -887,7 +952,7 @@ serve(async (req) => {
       console.warn(`Invalid price for ${symbol}, stockData.price = ${stockData.price}`);
       stockData = null;
     }
-    const dataCtx = stockData ? `Stock: ${symbol}\n${buildDataContext(stockData, mode)}` : `Stock: ${symbol} (limited data — use your knowledge of ${symbol} on NSE India)`;
+    const dataCtx = stockData ? `Stock: ${symbol}\n${buildDataContext(stockData, mode)}` : `Stock: ${symbol} (limited data — use your knowledge of ${symbol} on NSE India but label all levels as 'estimated')`;
 
     let result;
     if (mode === "scalp") {
