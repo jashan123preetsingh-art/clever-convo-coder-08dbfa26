@@ -148,6 +148,10 @@ export default function Sectors() {
     return getSectorPerformance(source);
   }, [liveStocks]);
 
+  const sortedSectors = [...sectors].sort((a, b) => b.avg_change - a.avg_change);
+  const gainers = sortedSectors.filter(s => s.avg_change >= 0);
+  const losers = sortedSectors.filter(s => s.avg_change < 0);
+
   if (paramSector) {
     return <SectorDetail sectorName={decodeURIComponent(paramSector)} />;
   }
