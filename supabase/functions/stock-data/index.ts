@@ -934,7 +934,31 @@ async function getIndices() {
 
 async function getGlobalIndices() {
   const symbols = ["^DJI", "^GSPC", "^IXIC", "^FTSE", "^N225", "^HSI", "USDINR=X", "BTC-USD", "GC=F"];
-  const names = ["DOW", "S&P 500", "NASDAQ", "FTSE", "NIKKEI", "HANG SENG", "USD/INR", "BTC", "GOLD"];
+  const names = ["DOW", "S&P 500", "NASDAQ COMP", "FTSE", "NIKKEI", "HANG SENG", "USD/INR", "BTC", "GOLD"];
+
+  // Use v6 quote API for accurate real-time change data
+  const allSymbols = symbols.map(s => encodeURIComponent(s)).join(",");
+  const quoteResp = await fetchSafe(`${YF_BASE}/v6/finance/quote?symbols=${allSymbols}`, 1);
+
+  if (quoteResp) {
+    try {
+      const data = await quoteResp.json();
+      const quotes = data?.quoteResponse?.result;
+      if (quotes && quotes.length > 0) {
+        return symbols.map((s, i) => {
+          const q = quotes.find((qt: any) => qt.symbol === s);
+          if (!q) return { symbol: names[i], name: names[i], price: 0, change_pct: 0 };
+          return {
+            symbol: names[i], name: names[i],
+            price: round(q.regularMarketPrice || 0),
+            change_pct: round(q.regularMarketChangePercent || 0),
+          };
+        });
+      }
+    } catch {}
+  }
+
+  // Fallback to chart API
   const results = await Promise.allSettled(
     symbols.map(s => fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(s)}?interval=1d&range=2d`).then(r => r?.json()))
   );
@@ -943,7 +967,7 @@ async function getGlobalIndices() {
     const res = r.value?.chart?.result?.[0];
     if (!res?.meta) return { symbol: names[i], name: names[i], price: 0, change_pct: 0 };
     const meta = res.meta;
-    const prev = meta.chartPreviousClose || meta.previousClose || 0;
+    const prev = meta.previousClose || meta.chartPreviousClose || 0;
     const price = meta.regularMarketPrice || 0;
     return {
       symbol: names[i], name: names[i], price: round(price),
