@@ -214,6 +214,8 @@ export default function Dashboard() {
         <SectorsList sectors={sectors} />
         <NewsWidget newsItems={newsItems} isLive={!!liveNews} />
       </div>
+
+      <EventsFeed />
     </div>
   );
 }
