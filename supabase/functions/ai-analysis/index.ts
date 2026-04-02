@@ -5,6 +5,83 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Post-processing: clamp key_levels to realistic ATR-based ranges
+function clampKeyLevels(analysis: any, quote: any, technicals: any) {
+  if (!analysis?.key_levels) return analysis;
+  
+  const cmp = quote?.ltp;
+  const atr = technicals?.atr_14;
+  if (!cmp || cmp <= 0) return analysis;
+
+  // Use ATR or fallback to 3% of CMP
+  const volatility = (atr && atr > 0) ? atr : cmp * 0.03;
+  const maxTargetDist = volatility * 4; // max 4x ATR for targets
+  const maxSLDist = volatility * 2.5; // max 2.5x ATR for SL
+
+  const kl = analysis.key_levels;
+
+  // Clamp targets within realistic range
+  if (kl.target_1 != null) {
+    const dist = Math.abs(kl.target_1 - cmp);
+    if (dist > maxTargetDist) {
+      kl.target_1 = kl.target_1 > cmp 
+        ? Math.round(cmp + maxTargetDist) 
+        : Math.round(cmp - maxTargetDist);
+    }
+  }
+  if (kl.target_2 != null) {
+    const dist = Math.abs(kl.target_2 - cmp);
+    if (dist > maxTargetDist * 1.5) {
+      kl.target_2 = kl.target_2 > cmp 
+        ? Math.round(cmp + maxTargetDist * 1.5) 
+        : Math.round(cmp - maxTargetDist * 1.5);
+    }
+  }
+
+  // Clamp SL
+  if (kl.stop_loss != null) {
+    const dist = Math.abs(kl.stop_loss - cmp);
+    if (dist > maxSLDist) {
+      kl.stop_loss = kl.stop_loss < cmp 
+        ? Math.round(cmp - maxSLDist) 
+        : Math.round(cmp + maxSLDist);
+    }
+  }
+
+  // Clamp support/resistance within 52W range if available
+  const high52 = quote?.week_52_high;
+  const low52 = quote?.week_52_low;
+  if (high52 && kl.immediate_resistance > high52 * 1.05) {
+    kl.immediate_resistance = Math.round(high52);
+  }
+  if (low52 && kl.immediate_support < low52 * 0.95) {
+    kl.immediate_support = Math.round(low52);
+  }
+
+  // Clamp S/D zones
+  if (kl.demand_zone_low != null && kl.demand_zone_low < cmp * 0.7) {
+    kl.demand_zone_low = Math.round(cmp * 0.85);
+  }
+  if (kl.supply_zone_high != null && kl.supply_zone_high > cmp * 1.3) {
+    kl.supply_zone_high = Math.round(cmp * 1.15);
+  }
+
+  // Validate score isn't inflated without evidence
+  if (analysis.overall_score > 85) {
+    // Check if multiple factors actually confirm
+    const scores = analysis.scores;
+    if (scores) {
+      const highScores = Object.values(scores).filter((s: any) => s?.score >= 15).length;
+      if (highScores < 3) {
+        analysis.overall_score = Math.min(analysis.overall_score, 75);
+      }
+    }
+  }
+
+  analysis.key_levels = kl;
+  return analysis;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -15,27 +92,33 @@ serve(async (req) => {
 
     const { quote, fundamentals, technicals } = stockData;
 
+    const cmp = quote?.ltp || 0;
+    const atrVal = technicals?.atr_14;
+    const atrPct = (cmp > 0 && atrVal) ? ((atrVal / cmp) * 100).toFixed(2) : 'N/A';
+
     const systemPrompt = `You are an expert Indian stock market analyst specializing in Price Action, Supply/Demand, and Institutional-grade technical analysis.
 
 ACCURACY RULES (NEVER VIOLATE):
 1. Use ONLY the exact data provided below. NEVER fabricate prices, levels, or indicators.
 2. All support, resistance, target, and stop-loss levels MUST come from the provided data (EMAs, pivots, S/R levels, Bollinger bands).
 3. If a data point shows "N/A", say "data unavailable" — don't make up values.
-4. Targets must be within realistic ATR-based range of CMP.
+4. Targets must be within realistic ATR-based range of CMP (1-3x ATR for targets, 1-2x ATR for SL).
 5. Express views as probability ("likely", "probable") — NEVER "will" or "guaranteed".
 6. Score honestly: 70+ only with multi-factor confirmation across PA, S/R, EMA, and volume.
+7. The CMP is ₹${cmp}. ATR(14) is ₹${atrVal || 'N/A'} (${atrPct}% of CMP). Targets CANNOT exceed ±4x ATR from CMP.
+8. SPLIT AWARENESS: CMP is current split-adjusted. NEVER reference old pre-split prices.
 
-Your framework (in order of priority):
-1. **PRICE ACTION & SUPPLY/DEMAND** (highest priority) — trend structure, S/D zones, order blocks, FVGs
-2. **MULTI-TIMEFRAME S/R** — pivots, swing highs/lows, round numbers, PDH/PDL/PDC
-3. **EMA ALIGNMENT** — 9/20/50/200 stack, golden/death cross
-4. **VOLUME & VWAP** — vol ratio, Bollinger position, squeeze/expansion
-5. **CANDLE PATTERNS** (only at key S/R or S/D zones)
+Your framework (priority order):
+1. **PRICE ACTION & SUPPLY/DEMAND** (40%) — trend structure, S/D zones, order blocks, FVGs
+2. **MULTI-TIMEFRAME S/R** (25%) — pivots, swing highs/lows, round numbers, PDH/PDL/PDC
+3. **EMA ALIGNMENT** (15%) — 9/20/50/200 stack, golden/death cross
+4. **VOLUME & VWAP** (15%) — vol ratio, Bollinger position, squeeze/expansion
+5. **CANDLE PATTERNS** (5%) — only at key S/R or S/D zones
 
 Return ONLY valid JSON. Do NOT include fundamentals in the scoring.`;
 
     const safe = (v: any, d = 'N/A') => (v != null && v !== undefined && !isNaN(v)) ? v : d;
-    const userPrompt = `Analyze this stock using Price Action + S/D + S/R + EMA + Volume framework:
+    const userPrompt = `Analyze this stock:
 
 STOCK: ${quote?.symbol || 'Unknown'} (${quote?.name || 'Unknown'})
 PRICE: ₹${safe(quote?.ltp)} | Change: ${safe(quote?.change_pct) !== 'N/A' ? Number(quote.change_pct).toFixed(2) + '%' : 'N/A'}
@@ -52,45 +135,47 @@ TECHNICALS:
 - Bollinger: ${safe(technicals?.bollinger_lower)} / ${safe(technicals?.bollinger_middle)} / ${safe(technicals?.bollinger_upper)}
 - Volume Ratio: ${safe(technicals?.volume_ratio)}x avg | Avg Vol 20D: ${safe(technicals?.avg_volume_20)}
 - Candle Patterns: ${technicals?.candle_patterns?.join(", ") || "None"}
-- ATR(14): ${safe(technicals?.atr_14)}
+- ATR(14): ${safe(technicals?.atr_14)} (${atrPct}% of CMP — defines max target range)
+
+IMPORTANT: target_1 should be within 2x ATR (₹${atrVal ? (cmp + atrVal * 2).toFixed(0) : 'N/A'} max upside). target_2 within 3x ATR (₹${atrVal ? (cmp + atrVal * 3).toFixed(0) : 'N/A'} max). stop_loss within 2x ATR below.
 
 Return this exact JSON structure:
 {
-  "overall_score": <number 0-100>,
+  "overall_score": <0-100, honest — 70+ needs 3+ confirming factors>,
   "grade": "<A+/A/B+/B/C+/C/D/F>",
   "verdict": "<Strong Buy/Buy/Hold/Sell/Strong Sell>",
-  "summary": "<2-3 sentence analysis focusing on price action, S/D zones, and key levels>",
+  "summary": "<2-3 sentences with SPECIFIC ₹ levels from data, not generic>",
   "key_levels": {
-    "immediate_support": <number>,
-    "immediate_resistance": <number>,
-    "stop_loss": <number>,
-    "target_1": <number>,
-    "target_2": <number>,
+    "immediate_support": <from S1/S2/EMA/swing>,
+    "immediate_resistance": <from R1/R2/EMA/swing>,
+    "stop_loss": <within 2x ATR below CMP>,
+    "target_1": <within 2x ATR above CMP>,
+    "target_2": <within 3x ATR above CMP>,
     "demand_zone_low": <number>,
     "demand_zone_high": <number>,
     "supply_zone_low": <number>,
     "supply_zone_high": <number>
   },
   "scores": {
-    "price_action": { "score": <0-20>, "comment": "<trend structure, BOS/CHoCH, S/D zones>" },
-    "support_resistance": { "score": <0-20>, "comment": "<multi-TF S/R, pivot levels, key horizontals>" },
-    "ema_alignment": { "score": <0-20>, "comment": "<EMA stack, golden/death cross, dynamic S/R>" },
-    "volume_vwap": { "score": <0-20>, "comment": "<volume confirmation, VWAP, Bollinger>" },
-    "candle_pattern": { "score": <0-20>, "comment": "<patterns AT key levels only>" }
+    "price_action": { "score": <0-20>, "comment": "<specific observations>" },
+    "support_resistance": { "score": <0-20>, "comment": "<cite exact levels>" },
+    "ema_alignment": { "score": <0-20>, "comment": "<cite exact EMA values>" },
+    "volume_vwap": { "score": <0-20>, "comment": "<cite exact vol ratio>" },
+    "candle_pattern": { "score": <0-20>, "comment": "<only if at key S/R>" }
   },
   "risk_assessment": {
     "risk_level": "<Low/Medium/High/Very High>",
-    "risk_factors": ["<factor1>", "<factor2>"],
-    "invalidation": "<price level that kills setup>"
+    "risk_factors": ["<specific factor>", "<specific factor>"],
+    "invalidation": "<specific ₹ level from data>"
   },
   "supply_demand": {
-    "nearest_demand": "<₹X - ₹Y zone description>",
-    "nearest_supply": "<₹X - ₹Y zone description>",
-    "bias": "<Bullish/Bearish/Neutral based on S/D>"
+    "nearest_demand": "<₹X - ₹Y from data>",
+    "nearest_supply": "<₹X - ₹Y from data>",
+    "bias": "<Bullish/Bearish/Neutral>"
   },
   "ema_analysis": {
     "alignment": "<Bullish Stack/Bearish Stack/Mixed>",
-    "description": "<EMA 9>20>50>200 etc>"
+    "description": "<exact values: EMA9=₹X > EMA20=₹Y etc>"
   },
   "sector_context": "<brief>",
   "freshness": "<Fresh/Aging/Stale>"
@@ -104,6 +189,7 @@ Return this exact JSON structure:
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
+        temperature: 0.12,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -112,7 +198,7 @@ Return this exact JSON structure:
           type: "function",
           function: {
             name: "stock_analysis",
-            description: "Return structured stock analysis using PA/SD/SR/EMA/Volume framework",
+            description: "Return structured stock analysis with ATR-clamped targets",
             parameters: {
               type: "object",
               properties: {
@@ -201,7 +287,9 @@ Return this exact JSON structure:
     const aiData = await response.json();
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
-      const analysis = JSON.parse(toolCall.function.arguments);
+      let analysis = JSON.parse(toolCall.function.arguments);
+      // Post-processing safety clamp
+      analysis = clampKeyLevels(analysis, quote, technicals);
       return new Response(JSON.stringify(analysis), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
