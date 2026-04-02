@@ -242,23 +242,8 @@ async function fetchStockData(symbol: string, range = "3mo") {
     const ema50 = calcEMA(closes, 50);
     const ema200 = calcEMA(closes, 200);
 
-    // MACD calculation (12,26,9)
-    const ema12 = calcEMA(closes, 12);
-    const ema26 = calcEMA(closes, 26);
-    const macdLine = (ema12 && ema26) ? ema12 - ema26 : null;
-    // Simple MACD signal approximation
-    let macdSignal: string | null = null;
-    if (macdLine !== null) {
-      const prevEma12 = calcEMA(closes.slice(0, -1), 12);
-      const prevEma26 = calcEMA(closes.slice(0, -1), 26);
-      const prevMacd = (prevEma12 && prevEma26) ? prevEma12 - prevEma26 : null;
-      if (prevMacd !== null) {
-        if (macdLine > 0 && prevMacd <= 0) macdSignal = "BULLISH CROSSOVER";
-        else if (macdLine < 0 && prevMacd >= 0) macdSignal = "BEARISH CROSSOVER";
-        else if (macdLine > 0) macdSignal = "BULLISH";
-        else macdSignal = "BEARISH";
-      }
-    }
+
+
 
     const recentCandles = [];
     for (let i = Math.max(0, closes.length - 10); i < closes.length; i++) {
