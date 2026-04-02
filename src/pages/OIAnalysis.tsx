@@ -308,8 +308,8 @@ export default function OIAnalysis() {
         {/* Call vs Put OI Trend */}
         <div
           className="t-card p-4">
-          <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put OI Trend</p>
-          <p className="text-[8px] text-muted-foreground mb-3">Total Call & Put OI over sessions</p>
+          <p className="text-[11px] font-bold text-foreground mb-1">Call vs Put OI Trend <span className="text-[8px] text-accent font-semibold ml-1">EST.</span></p>
+          <p className="text-[8px] text-muted-foreground mb-3">Estimated total Call & Put OI based on current session</p>
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={pcrTrend} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border)/0.3)" />
