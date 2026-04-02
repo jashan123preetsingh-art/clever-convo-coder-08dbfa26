@@ -165,7 +165,7 @@ export default function OIAnalysis() {
               )}
             </div>
             <p className="text-[9px] text-muted-foreground">
-              {isLive ? `${activeSymbol} OI Data • Auto-refreshes every 60s • ${liveOI?.timestamp || ''}` : 'Open Interest trends, OI Change Heatmap & PCR Charts for Index F&O'}
+              {isLive ? `${activeSymbol} OI Data • Auto-refreshes every 15s • ${liveOI?.timestamp || ''}` : `${activeSymbol} OI Data • Auto-refreshes every 15s`}
             </p>
           </div>
           <div className="flex items-center gap-1.5">
