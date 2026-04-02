@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Briefcase, LayoutGrid, ScanSearch, Target, Layers, ArrowLeftRight, TrendingUp, Newspaper, Bot, Settings, ChevronLeft, ChevronRight, Gem, DollarSign, CalendarDays, Rocket } from 'lucide-react';
+import { Home, Briefcase, LayoutGrid, ScanSearch, Target, Layers, ArrowLeftRight, TrendingUp, Newspaper, Bot, Settings, ChevronLeft, ChevronRight, Gem, CalendarDays, Rocket, IndianRupee } from 'lucide-react';
 import useStore from '@/store/useStore';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -15,7 +15,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   '◉': <Newspaper className="w-4 h-4" />,
   '💎': <Gem className="w-4 h-4" />,
   '🤖': <Bot className="w-4 h-4" />,
-  '💱': <DollarSign className="w-4 h-4" />,
+  '₹': <IndianRupee className="w-4 h-4" />,
   '📅': <CalendarDays className="w-4 h-4" />,
   '🚀': <Rocket className="w-4 h-4" />,
   '⚙️': <Settings className="w-4 h-4" />,

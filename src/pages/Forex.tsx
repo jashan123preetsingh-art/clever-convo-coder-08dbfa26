@@ -21,8 +21,6 @@ const FOREX_PAIRS = [
   { yahoo: 'AUDINR=X', display: 'AUD/INR', name: 'Australian Dollar / Indian Rupee' },
   { yahoo: 'CADINR=X', display: 'CAD/INR', name: 'Canadian Dollar / Indian Rupee' },
   { yahoo: 'CHFINR=X', display: 'CHF/INR', name: 'Swiss Franc / Indian Rupee' },
-  { yahoo: 'CNHINR=X', display: 'CNY/INR', name: 'Chinese Yuan / Indian Rupee' },
-  { yahoo: 'SARINR=X', display: 'SAR/INR', name: 'Saudi Riyal / Indian Rupee' },
   { yahoo: 'HKDINR=X', display: 'HKD/INR', name: 'Hong Kong Dollar / Indian Rupee' },
 ];
 
