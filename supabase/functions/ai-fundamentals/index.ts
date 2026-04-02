@@ -34,7 +34,20 @@ serve(async (req) => {
       if (pf.profit_margins) context.push(`Profit Margin: ${pf.profit_margins}%`);
     }
 
+    const cmp = quote?.ltp || 0;
     const systemPrompt = `You are an expert Indian stock market fundamental analyst. Given the available data for a stock, provide a comprehensive fundamental analysis report. You MUST respond with valid JSON only, no markdown.
+
+CRITICAL RULES FOR TARGET PRICES:
+- The current market price (CMP) is ₹${cmp}. 
+- Your target_range MUST be realistic and anchored to CMP.
+- For HOLD/SELL verdicts: targets should be within -10% to +15% of CMP.
+- For BUY verdicts: targets can be +5% to +25% of CMP maximum.
+- For STRONG BUY: targets can be +10% to +35% of CMP maximum.
+- NEVER give targets that are 2x or 3x the CMP — that is unrealistic for a 12-month horizon.
+- "low" target should be near or slightly below CMP (downside risk).
+- "mid" target is the most likely fair value in 6-12 months.
+- "high" target is the optimistic scenario (bull case).
+- All targets must be reasonable round numbers close to CMP.
 
 Respond with this exact JSON structure:
 {
@@ -72,7 +85,7 @@ Respond with this exact JSON structure:
   "sector_outlook": "1 sentence about sector"
 }
 
-Use the available data to make informed assessments. If data is limited, use your knowledge of the company (${symbol} on NSE India) to fill in. Be specific and actionable.`;
+Remember: CMP is ₹${cmp}. Targets MUST be realistic (within 10-30% of CMP). Use the available data to make informed assessments. If data is limited, use your knowledge of the company (${symbol} on NSE India). Be specific and actionable.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
