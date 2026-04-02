@@ -608,9 +608,9 @@ export function getStocksBySector(sector: string): Stock[] {
 }
 
 // Generate candlestick data
-export function generateCandleData(symbol: string, days: number = 250): { time: string; open: number; high: number; low: number; close: number; volume: number }[] {
+export function generateCandleData(symbol: string, days: number = 250, currentPrice?: number): { time: string; open: number; high: number; low: number; close: number; volume: number }[] {
   const stock = getStock(symbol);
-  const basePrice = stock?.ltp || 1000;
+  const basePrice = currentPrice || stock?.ltp || 1000;
   const candles: { time: string; open: number; high: number; low: number; close: number; volume: number }[] = [];
   let price = basePrice * 0.7;
 

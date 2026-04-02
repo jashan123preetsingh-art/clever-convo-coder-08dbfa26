@@ -31,7 +31,8 @@ export default function Charts() {
   // Fallback
   const mockStock = getStock(symbol);
   const info = quoteData || mockStock || { ltp: 0, change_pct: 0, name: symbol };
-  const chartData = realChartData?.length > 0 ? realChartData : generateCandleData(symbol, interval === '1wk' ? 250 : interval === '1mo' ? 60 : 500);
+  const currentPrice = (info as any).ltp || undefined;
+  const chartData = realChartData?.length > 0 ? realChartData : generateCandleData(symbol, interval === '1wk' ? 250 : interval === '1mo' ? 60 : 500, currentPrice);
 
   useEffect(() => {
     if (chartRef.current && chartData.length > 0) renderChart();
