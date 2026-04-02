@@ -43,8 +43,8 @@ export default function Forex() {
     <div className="p-3 md:p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-black text-foreground tracking-tight">INR Currency Pairs</h1>
-          <p className="text-[10px] text-muted-foreground mt-0.5">All major currencies against Indian Rupee — auto-refresh every 30s</p>
+          <h1 className="text-lg font-black text-foreground tracking-tight">Currency Rates</h1>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Live exchange rates against Indian Rupee — auto-refresh every 30s</p>
         </div>
         <button onClick={() => refetch()} disabled={isFetching}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary/30 border border-border/20 text-[10px] font-semibold text-muted-foreground hover:text-foreground transition-colors">
@@ -101,7 +101,7 @@ export default function Forex() {
       </div>
 
       {isLoading && (
-        <div className="text-center py-8 text-[10px] text-muted-foreground">Loading forex data...</div>
+        <div className="text-center py-8 text-[10px] text-muted-foreground">Loading currency data...</div>
       )}
     </div>
   );
