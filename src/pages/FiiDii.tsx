@@ -5,6 +5,7 @@ import { useFiiDiiData } from '@/hooks/useStockData';
 import { formatCurrency } from '@/utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend, AreaChart, Area } from 'recharts';
 import { Download, ChevronDown, ChevronRight, Filter } from 'lucide-react';
+import LiveRefreshBadge from '@/components/LiveRefreshBadge';
 
 function parseLiveData(liveData: any) {
   if (!liveData || !Array.isArray(liveData)) return null;
