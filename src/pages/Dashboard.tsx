@@ -37,10 +37,10 @@ async function fetchLiveNews() {
 
 
 export default function Dashboard() {
-  const { indices, hasLiveData, isUsingMockData, isError } = useIndicesWithFallback();
-  const { data: liveFiiDii } = useFiiDiiData();
-  const { data: liveBreadth } = useMarketBreadth();
-  const { data: marketMetrics, isLoading: metricsLoading } = useMarketMetrics();
+  const { indices, hasLiveData, isUsingMockData, isError, refetch: refetchIndices } = useIndicesWithFallback();
+  const { data: liveFiiDii, refetch: refetchFiiDii } = useFiiDiiData();
+  const { data: liveBreadth, refetch: refetchBreadth } = useMarketBreadth();
+  const { data: marketMetrics, isLoading: metricsLoading, refetch: refetchMetrics } = useMarketMetrics();
   const marketOpen = isMarketHours();
 
   const { data: liveNews } = useQuery({
