@@ -391,7 +391,7 @@ serve(async (req) => {
 
     const hasImageMessage = messages.some((m: any) => Array.isArray(m.content) && m.content.some((p: any) => p.type === 'image_url'));
     // Use cheapest model for sidebar chat; vision model only if images present (from other callers)
-    const model = hasImageMessage ? "google/gemini-2.5-flash" : "google/gemini-2.5-flash-lite";
+    const model = hasImageMessage ? "google/gemini-3-flash-preview" : "google/gemini-3-flash-preview";
 
     const response = await fetch(AI_URL, {
       method: "POST",
