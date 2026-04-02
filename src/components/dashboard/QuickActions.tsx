@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BarChart3, Search, PenTool, LayoutGrid, ArrowLeftRight, Layers, TrendingUp } from 'lucide-react';
+import { BarChart3, Search, PenTool, LayoutGrid, ArrowLeftRight, Layers, TrendingUp, Gem } from 'lucide-react';
 
 interface QuickActionProps {
   icon: React.ReactNode;
