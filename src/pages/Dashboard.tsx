@@ -164,25 +164,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Index Ticker Strip */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none">
-        {indices.map((idx, i) => {
-          const isUp = (idx.change_pct || 0) >= 0;
-          return (
-            <div key={i}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-card/30 border border-border/10 whitespace-nowrap min-w-fit hover:border-border/20 transition-all">
-              <span className="text-[8px] sm:text-[9px] text-muted-foreground/70 font-bold">{idx.symbol}</span>
-              <span className="text-[10px] sm:text-[11px] text-foreground font-black font-data">
-                {Number(idx.ltp).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-              </span>
-              <span className={`text-[8px] sm:text-[9px] font-bold font-data ${isUp ? 'text-primary' : 'text-destructive'}`}>
-                {isUp ? '▲' : '▼'} {formatPercent(idx.change_pct)}
-              </span>
-            </div>
-          );
-        })}
-        <span className="text-[8px] text-muted-foreground/25 font-data whitespace-nowrap px-1.5">{istTime} IST</span>
-      </div>
 
       <WorldIndices />
       <MarketBrief />
