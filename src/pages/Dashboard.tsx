@@ -127,6 +127,12 @@ export default function Dashboard() {
   const greeting = new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening';
   const istTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
 
+  // Track last data update time
+  const lastUpdated = useMemo(() => {
+    if (!hasLiveData && !liveBreadth && !liveFiiDii) return null;
+    return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Kolkata' });
+  }, [indices, liveBreadth, liveFiiDii, marketMetrics, liveQuotes]);
+
   return (
     <div className="p-3 sm:p-5 max-w-[1800px] mx-auto space-y-3 sm:space-y-4">
       <DataStatusBanner isUsingMockData={isUsingMockData} isError={isError} />
