@@ -14,5 +14,5 @@ export function useIndicesWithFallback() {
   const hasLiveData = liveIndices?.length > 0 && !liveIndices[0]?.error;
   const isUsingMockData = !hasLiveData && !isLoading;
 
-  return { indices, hasLiveData, isLoading, isError, error, isUsingMockData };
+  return { indices, hasLiveData, isLoading, isError, error, isUsingMockData, refetch };
 }
