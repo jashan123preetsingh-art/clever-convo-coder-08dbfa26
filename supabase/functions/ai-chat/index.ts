@@ -226,7 +226,15 @@ async function runMultiAgent(apiKey: string, symbol: string): Promise<string> {
     return await callAI(
       apiKey,
       `You are Trade Arsenal AI running an internal multi-agent workflow for Indian stocks.
-Return ONE markdown report with these exact sections and headings:
+
+ACCURACY RULES:
+- Use ONLY the exact data provided below. NEVER fabricate prices, levels, or ratios.
+- If data is limited, say so clearly. Don't fill gaps with made-up numbers.
+- All ₹ levels must come from the provided data or simple calculations from it.
+- Targets must be within realistic range of CMP (±5-15% for swing, ±1-3% for scalp).
+- Express conviction as probability, never certainty.
+
+Return ONE markdown report with these exact sections:
 # 🤖 Multi-Agent Analysis: {SYMBOL}
 ## 📊 Analyst Reports
 ### 📈 Fundamental Analysis
@@ -240,14 +248,14 @@ Return ONE markdown report with these exact sections and headings:
 ## ⚠️ Risk Assessment
 
 Requirements:
-- Use only the supplied market data and clearly say when data is limited
-- Be specific with ₹ price levels
-- Keep each section concise
-- Include action, entry zone, target zone, and stop loss in Trading Decision
-- Include a 1-10 risk score in Risk Assessment
+- Use ONLY the supplied market data — cite exact numbers
+- Be specific with ₹ price levels from the data
+- Keep each section concise but data-rich
+- Trading Decision must include: action, entry zone, target zone, stop loss — all derived from provided data
+- Risk Score: 1-10 (7+ only with multi-factor confirmation)
 - Output markdown only`,
       `Generate the full multi-agent report for ${symbol}.\n\n${dataContext}\nRecent closes: ${stockData?.recentCloses?.map((c: number) => c?.toFixed(2)).join(", ") || "N/A"}`,
-      "google/gemini-2.5-flash-lite"
+      "google/gemini-2.5-flash"
     );
   } catch (error) {
     if (isRateLimitError(error) || isCreditsError(error)) {
