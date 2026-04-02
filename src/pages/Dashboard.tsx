@@ -85,7 +85,7 @@ export default function Dashboard() {
       baseGainers: sortedByGains.slice(0, 10),
       baseLosers: sortedByLosses.slice(0, 10),
       baseActive: sortedByVolume.slice(0, 10),
-      sectors: getSectorPerformance(),
+      sectors: getSectorPerformance(sourceStocks),
       advances: breadthParsed?.advances ?? sourceStocks.filter((st) => st.change_pct > 0).length,
       declines: breadthParsed?.declines ?? sourceStocks.filter((st) => st.change_pct < 0).length,
       unchanged: breadthParsed?.unchanged ?? sourceStocks.filter((st) => st.change_pct === 0).length,
