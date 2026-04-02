@@ -195,7 +195,7 @@ export default function News() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <h3 className="text-[11px] font-semibold text-foreground">{event.title}</h3>
-                      {isToday && <span className="text-[7px] px-1 py-0.5 rounded bg-terminal-amber/20 text-terminal-amber animate-pulse">TODAY</span>}
+                      {isToday && <span className="text-[8px] px-1 py-0.5 rounded bg-terminal-amber/20 text-terminal-amber animate-pulse">TODAY</span>}
                     </div>
                     <p className="text-[9px] text-muted-foreground">{event.description}</p>
                   </div>
