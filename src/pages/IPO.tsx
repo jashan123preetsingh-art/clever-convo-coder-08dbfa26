@@ -39,7 +39,7 @@ async function fetchIPOData() {
 }
 
 export default function IPO() {
-  const [tab, setTab] = useState<'upcoming' | 'ongoing' | 'listed'>('ongoing');
+  const [tab, setTab] = useState<'upcoming' | 'ongoing' | 'listed'>('listed');
 
   const { data: ipoData, isLoading } = useQuery({
     queryKey: ['ipo-data'],
