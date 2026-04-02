@@ -26,7 +26,7 @@ export default function QuickActionsGrid() {
   return (
     <div>
       <p className="text-[8px] sm:text-[9px] text-muted-foreground/70 font-bold mb-2 uppercase tracking-[0.15em]">Quick Actions</p>
-      <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5 sm:gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5 sm:gap-2">
         <QuickAction icon={<BarChart3 className="w-5 h-5" />} title="Option Chain" desc="NIFTY / BNF" to="/options" />
         <QuickAction icon={<Search className="w-5 h-5" />} title="Scanner" desc="Find setups" to="/scanner" />
         <QuickAction icon={<PenTool className="w-5 h-5" />} title="Strategies" desc="Build & test" to="/options" />
@@ -34,6 +34,7 @@ export default function QuickActionsGrid() {
         <QuickAction icon={<ArrowLeftRight className="w-5 h-5" />} title="FII / DII" desc="Fund flows" to="/fii-dii" />
         <QuickAction icon={<Layers className="w-5 h-5" />} title="Sectors" desc="Rotation" to="/sectors" />
         <QuickAction icon={<TrendingUp className="w-5 h-5" />} title="OI Analysis" desc="OI trends" to="/oi-analysis" />
+        <QuickAction icon={<Gem className="w-5 h-5" />} title="Commodities" desc="Gold / Oil" to="/commodities" />
       </div>
     </div>
   );
