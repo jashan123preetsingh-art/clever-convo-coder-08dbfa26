@@ -163,7 +163,7 @@ export default function FiiDii() {
             {combined < 0 ? 'NET SELLING' : 'NET BUYING'}
           </span>
         </div>
-        </span>
+      </div>
       </div>
 
       {/* Tab Navigation - Bottom style like reference */}
