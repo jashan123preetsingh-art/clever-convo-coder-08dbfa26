@@ -58,8 +58,8 @@ function MultiTFLevel({ label, value, ltp, type, tf }: { label: string; value: n
       <div className="flex items-center gap-2">
         <span className={`w-1.5 h-1.5 rounded-full ${type === 'support' ? 'bg-destructive' : 'bg-primary'}`} />
         <span className="text-[10px] font-semibold text-muted-foreground">{label}</span>
-        <span className="text-[7px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-bold">{tf}</span>
-        {isNear && <span className="text-[7px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-bold animate-pulse">NEAR</span>}
+        <span className="text-[8px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-bold">{tf}</span>
+        {isNear && <span className="text-[8px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-bold animate-pulse">NEAR</span>}
       </div>
       <div className="flex items-center gap-3">
         <span className="text-[11px] text-foreground font-medium font-data">{formatCurrency(value)}</span>
