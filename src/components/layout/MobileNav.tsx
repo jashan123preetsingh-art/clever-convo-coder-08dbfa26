@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Briefcase, LayoutGrid, ScanSearch, Target, Layers, ArrowLeftRight, TrendingUp, Newspaper, Bot, Settings, Gem, DollarSign, CalendarDays, Rocket } from 'lucide-react';
+import { Home, Briefcase, LayoutGrid, ScanSearch, Target, Layers, ArrowLeftRight, TrendingUp, Newspaper, Bot, Settings, Gem, IndianRupee, CalendarDays, Rocket } from 'lucide-react';
 import type { IndexData } from '@/types/stock';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
