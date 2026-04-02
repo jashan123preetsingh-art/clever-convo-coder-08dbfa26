@@ -54,16 +54,15 @@ export default function LiveRefreshBadge({
           <span className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary)/0.6)] animate-pulse" />
           <span className="text-primary">{label}</span>
         </span>
-        <span className="text-muted-foreground">·</span>
-        <span className="text-foreground font-mono">
-          {isFetching ? (
-            <span className="flex items-center gap-1">
+        {isFetching && (
+          <>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-foreground font-mono flex items-center gap-1">
               <RefreshCw size={10} className="animate-spin text-primary" />
               SYNCING…
             </span>
-          ) : (
-            `REFRESH IN ${formatTime(secondsLeft)}`
-          )}
+          </>
+        )}
         </span>
       </button>
 
