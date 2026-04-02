@@ -179,6 +179,11 @@ export default function FiiDii() {
 
         {/* Right Column - Streaks & Velocity */}
         <div className="space-y-3">
+          {!liveParsed && (
+            <div className="text-[8px] text-accent/80 bg-accent/5 border border-accent/15 rounded-md px-2.5 py-1.5 font-medium">
+              ⚠ Streak & velocity data below is based on sample history
+            </div>
+          )}
           <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
             className="t-card p-4">
             <div className="flex items-center justify-between mb-1">
