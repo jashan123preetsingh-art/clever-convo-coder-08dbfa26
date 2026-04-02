@@ -150,6 +150,7 @@ export default function Dashboard() {
               {marketOpen
                 ? `Market open · ${istTime} IST · Tracking NIFTY, BANKNIFTY & 2000+ stocks`
                 : `Market closed · Last close data · Opens Mon–Fri 9:15 AM IST`}
+              {lastUpdated && <span className="ml-2 text-primary/70">· Updated {lastUpdated} IST</span>}
             </p>
           </div>
           <Link to="/scanner" className="hidden sm:flex px-4 py-2 rounded-lg text-[10px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-lg shadow-primary/10 items-center gap-1.5 flex-shrink-0">
