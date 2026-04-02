@@ -128,6 +128,18 @@ Remember: CMP is ₹${cmp}. Targets MUST be realistic (within 10-30% of CMP). Us
       parsed = { error: "Failed to parse AI response", raw: content };
     }
 
+    // Safety clamp: ensure targets are realistic relative to CMP
+    if (parsed.target_range && cmp > 0) {
+      const maxUp = cmp * 1.40; // max +40%
+      const maxDown = cmp * 0.70; // max -30%
+      parsed.target_range.low = Math.round(Math.max(maxDown, Math.min(maxUp, parsed.target_range.low)));
+      parsed.target_range.mid = Math.round(Math.max(maxDown, Math.min(maxUp, parsed.target_range.mid)));
+      parsed.target_range.high = Math.round(Math.max(maxDown, Math.min(maxUp, parsed.target_range.high)));
+      // Ensure ordering
+      if (parsed.target_range.low > parsed.target_range.mid) parsed.target_range.low = parsed.target_range.mid;
+      if (parsed.target_range.mid > parsed.target_range.high) parsed.target_range.mid = parsed.target_range.high;
+    }
+
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
