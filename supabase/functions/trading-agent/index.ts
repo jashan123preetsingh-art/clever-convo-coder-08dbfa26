@@ -485,7 +485,6 @@ Apply framework for swing analysis using ONLY provided data:
 - **EMA alignment**: EXACT EMA 9/20/50/200 values with % distance from price
 - **Volume**: EXACT volume ratio, climactic/dry-up assessment
 - **RSI**: EXACT value + divergence status from data
-- **MACD**: Signal from data
 - **Bollinger**: Width for volatility regime
 Keep under 250 words.
 
