@@ -183,19 +183,23 @@ export default function Heatmap() {
     return m;
   }, [liveQuotes]);
 
-  // Merge live + mock data
+  // Use ONLY live data — skip stocks without live quotes
   const allStocks: TreeNode[] = useMemo(() => {
-    return mockStocks.map(s => {
-      const live = liveMap.get(s.symbol);
-      return {
-        symbol: s.symbol,
-        name: live?.name || s.name,
-        change_pct: live?.change_pct ?? s.change_pct,
-        market_cap: live?.market_cap || s.market_cap || 100000,
-        ltp: live?.ltp ?? s.ltp,
-        sector: s.sector,
-      };
-    }).sort((a, b) => b.market_cap - a.market_cap);
+    return mockStocks
+      .map(s => {
+        const live = liveMap.get(s.symbol);
+        if (!live || !live.ltp || live.ltp <= 0) return null; // Skip if no live data
+        return {
+          symbol: s.symbol,
+          name: live.name || s.name,
+          change_pct: live.change_pct ?? 0,
+          market_cap: live.market_cap || s.market_cap || 100000,
+          ltp: live.ltp,
+          sector: s.sector,
+        };
+      })
+      .filter((s): s is TreeNode => s !== null)
+      .sort((a, b) => b.market_cap - a.market_cap);
   }, [mockStocks, liveMap]);
 
   // Group by sector, keep only top N stocks per sector by market cap
@@ -245,7 +249,7 @@ export default function Heatmap() {
         <div>
           <h1 className="text-sm font-bold text-foreground tracking-wide">MARKET HEATMAP</h1>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            {displayedCount} stocks · {liveMap.size > 0 ? `${liveMap.size} live` : 'Loading...'} · Top {maxPerSector}/sector
+            {displayedCount} stocks · {liveMap.size > 0 ? `${liveMap.size} LIVE` : 'Fetching live data...'} · Top {maxPerSector}/sector · Auto-refresh 15s
           </p>
         </div>
         <div className="flex items-center gap-3">
