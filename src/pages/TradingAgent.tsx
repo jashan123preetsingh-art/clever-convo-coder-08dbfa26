@@ -953,13 +953,13 @@ export default function TradingAgent() {
 
       {/* Quick symbols */}
       {!loading && !result && (
-        <div className="flex flex-wrap gap-1 sm:gap-1.5 mb-4">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-5">
           {(mode === 'invest'
             ? ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ASIANPAINT', 'NESTLEIND']
             : ['RELIANCE', 'TCS', 'INFY', 'HDFCBANK', 'ICICIBANK', 'SBIN', 'TATAMOTORS']
           ).map(s => (
             <button key={s} onClick={() => setSymbol(s)}
-              className="px-2 py-1 text-[8px] sm:text-[9px] bg-secondary/40 border border-border/20 rounded-lg text-muted-foreground hover:text-foreground hover:border-primary/20 transition-all">
+              className="px-3 py-1.5 text-[9px] font-bold bg-secondary/20 border border-border/15 rounded-xl text-muted-foreground hover:text-foreground hover:border-primary/20 hover:bg-primary/5 transition-all hover:shadow-sm">
               {s}
             </button>
           ))}
