@@ -18,6 +18,19 @@ async function fetchCommodityPrices() {
   return resp.json();
 }
 
+async function fetchCommodityAI(commodityData: any) {
+  const resp = await fetch(`${FUNCTIONS_URL}/commodity-ai`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
+    body: JSON.stringify({ commodityData }),
+  });
+  if (!resp.ok) throw new Error('AI analysis failed');
+  return resp.json();
+}
+
 type Category = 'all' | 'precious' | 'industrial' | 'energy';
 
 const CATEGORY_LABELS: { key: Category; label: string; icon: string }[] = [
