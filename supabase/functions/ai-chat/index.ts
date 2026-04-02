@@ -368,7 +368,7 @@ serve(async (req) => {
       if (sd.technicals) {
         const t = sd.technicals;
         liveDataBlock += `\n📊 TECHNICALS:\n`;
-        liveDataBlock += `• RSI(14): ${t.rsi_14 ?? 'N/A'} | MACD: ${t.macd ?? 'N/A'} | ATR: ${t.atr_14 ?? 'N/A'}\n`;
+        liveDataBlock += `• RSI(14): ${t.rsi_14 ?? 'N/A'} | ATR: ${t.atr_14 ?? 'N/A'}\n`;
         liveDataBlock += `• SMA20: ${t.sma_20 ?? 'N/A'} | SMA50: ${t.sma_50 ?? 'N/A'} | SMA200: ${t.sma_200 ?? 'N/A'}\n`;
         liveDataBlock += `• EMA20: ${t.ema_20 ?? 'N/A'} | EMA50: ${t.ema_50 ?? 'N/A'}\n`;
         liveDataBlock += `• Trend: ${t.trend ?? 'N/A'} | Strength: ${t.trend_strength ?? 'N/A'} | Volume Ratio: ${t.volume_ratio ?? 'N/A'}x\n`;

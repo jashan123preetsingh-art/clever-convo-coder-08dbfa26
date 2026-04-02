@@ -544,7 +544,7 @@ Build the STRONGEST possible bull case using ONLY evidence from the analysis:
 - Which S/D zones (with exact ₹) support upside? How many times were they tested?
 - Is EMA alignment bullish? State exact values and % distance.
 - Volume confirmation? Is smart money accumulating?
-- RSI and MACD supportive?  
+- RSI supportive?  
 - Upside targets — ONLY from provided S/R levels and within ATR range
 - **Counter the bear's strongest argument**: Why is the biggest risk manageable?
 Keep under 200 words.
