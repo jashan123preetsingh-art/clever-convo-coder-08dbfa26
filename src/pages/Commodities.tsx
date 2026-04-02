@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Brain, TrendingUp, TrendingDown, Minus, AlertTriangle, Sparkles } from 'lucide-react';
 import LiveRefreshBadge from '@/components/LiveRefreshBadge';
 import { formatNumber } from '@/utils/format';
 
