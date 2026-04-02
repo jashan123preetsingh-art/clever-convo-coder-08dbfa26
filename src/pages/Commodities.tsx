@@ -303,7 +303,107 @@ export default function Commodities() {
         </div>
       )}
 
-      {/* Methodology */}
+      {/* AI Market Analysis */}
+      {!isLoading && !isError && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="t-card p-4"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Brain size={14} className="text-accent" />
+              <h3 className="text-[11px] font-black text-foreground uppercase tracking-wider">AI Market Analysis</h3>
+              {aiData?.cached && (
+                <span className="text-[7px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">CACHED</span>
+              )}
+            </div>
+            <button
+              onClick={() => aiRefetch()}
+              disabled={aiLoading}
+              className="text-[8px] font-bold text-primary hover:underline flex items-center gap-1"
+            >
+              <Sparkles size={10} />
+              {aiLoading ? 'Analyzing…' : 'Refresh Analysis'}
+            </button>
+          </div>
+
+          {aiLoading && (
+            <div className="space-y-2 animate-pulse">
+              <div className="h-5 bg-secondary/50 rounded w-48" />
+              <div className="h-4 bg-secondary/40 rounded w-full" />
+              <div className="h-4 bg-secondary/40 rounded w-3/4" />
+            </div>
+          )}
+
+          {aiData?.analysis && !aiLoading && (() => {
+            const a = aiData.analysis;
+            const sentimentIcon = a.sentiment === 'bullish' ? <TrendingUp size={14} className="text-primary" /> :
+                                  a.sentiment === 'bearish' ? <TrendingDown size={14} className="text-destructive" /> :
+                                  <Minus size={14} className="text-muted-foreground" />;
+            const sentimentColor = a.sentiment === 'bullish' ? 'text-primary' :
+                                   a.sentiment === 'bearish' ? 'text-destructive' : 'text-muted-foreground';
+            const riskColor = a.riskLevel === 'high' ? 'text-destructive' :
+                              a.riskLevel === 'moderate' ? 'text-accent' : 'text-primary';
+
+            return (
+              <div className="space-y-3">
+                {/* Headline + Sentiment */}
+                <div className="flex items-center gap-2">
+                  {sentimentIcon}
+                  <span className={`text-[13px] font-black ${sentimentColor}`}>{a.headline}</span>
+                  <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                    a.sentiment === 'bullish' ? 'bg-primary/10 text-primary' :
+                    a.sentiment === 'bearish' ? 'bg-destructive/10 text-destructive' :
+                    'bg-secondary text-muted-foreground'
+                  }`}>{a.sentiment}</span>
+                  <span className={`text-[8px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${riskColor}`}>
+                    <AlertTriangle size={8} /> Risk: {a.riskLevel}
+                  </span>
+                </div>
+
+                {/* Summary */}
+                <p className="text-[10px] text-muted-foreground leading-relaxed">{a.summary}</p>
+
+                {/* Insights Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {a.keyInsights?.map((insight: string, i: number) => (
+                    <div key={i} className="bg-secondary/30 rounded-lg p-2.5 border border-border/10">
+                      <span className="text-[9px] text-foreground">{insight}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Outlooks */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="bg-accent/5 rounded-lg p-2.5 border border-accent/10">
+                    <span className="text-[8px] font-bold text-accent uppercase">🥇 Gold Outlook</span>
+                    <p className="text-[9px] text-foreground mt-1">{a.goldOutlook}</p>
+                  </div>
+                  <div className="bg-accent/5 rounded-lg p-2.5 border border-accent/10">
+                    <span className="text-[8px] font-bold text-accent uppercase">⚡ Energy Outlook</span>
+                    <p className="text-[9px] text-foreground mt-1">{a.energyOutlook}</p>
+                  </div>
+                </div>
+
+                {/* Recommendation */}
+                {a.recommendation && (
+                  <div className="bg-primary/5 rounded-lg p-3 border border-primary/15">
+                    <span className="text-[8px] font-bold text-primary uppercase">💡 Recommendation</span>
+                    <p className="text-[10px] text-foreground mt-1 font-medium">{a.recommendation}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {!aiData && !aiLoading && (
+            <p className="text-[9px] text-muted-foreground">AI analysis will load automatically with live data.</p>
+          )}
+        </motion.div>
+      )}
+
+
       <div className="t-card p-4">
         <h3 className="text-[10px] font-bold text-foreground uppercase tracking-wider mb-2">📐 Methodology</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[9px] text-muted-foreground">
