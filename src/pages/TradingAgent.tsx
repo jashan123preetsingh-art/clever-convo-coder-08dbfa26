@@ -260,64 +260,71 @@ function VerdictCard({ agents, stockData, symbol, hasChartAnalysis, mode }: { ag
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-      className={`rounded-xl sm:rounded-2xl bg-card/50 p-3 sm:p-5 ${ac.border} border ${ac.glow} relative overflow-hidden`}>
-      <div className="absolute inset-0 opacity-5 pointer-events-none"
-        style={{ background: `radial-gradient(ellipse at top right, ${action === 'BUY' || action === 'INVEST' ? 'hsl(var(--primary))' : action === 'SELL' || action === 'PASS' ? 'hsl(var(--destructive))' : 'hsl(var(--terminal-amber))'}, transparent 70%)` }} />
+      className={`rounded-2xl bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-sm p-4 sm:p-6 ${ac.border} border-2 ${ac.glow} relative overflow-hidden`}>
+      {/* Ambient glow */}
+      <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full opacity-[0.07] pointer-events-none blur-3xl"
+        style={{ background: action === 'BUY' || action === 'INVEST' ? 'hsl(var(--primary))' : action === 'SELL' || action === 'PASS' ? 'hsl(var(--destructive))' : 'hsl(var(--terminal-amber))' }} />
+      <div className="absolute -bottom-16 -left-16 w-40 h-40 rounded-full opacity-[0.05] pointer-events-none blur-3xl"
+        style={{ background: 'hsl(var(--terminal-cyan))' }} />
+      
       <div className="relative">
-        {/* Top row: symbol + action + mode */}
-        <div className="flex items-center gap-2 mb-2 flex-wrap">
-          <h2 className="text-lg sm:text-xl font-black text-foreground font-data tracking-tight">{symbol}</h2>
-          <span className={`px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-black ${ac.bg} ${ac.text} border ${ac.border}`}>
-            {action}
-          </span>
-          <span className={`text-[8px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
-            {modeLabels[mode]}
-          </span>
-          {hasChartAnalysis && (
-            <span className="text-[8px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-bold border border-[hsl(var(--terminal-cyan))]/20">
-              📸 Chart
+        {/* Top: Symbol + badges */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <h2 className="text-xl sm:text-2xl font-black text-foreground font-data tracking-tight">{symbol}</h2>
+            <motion.span 
+              initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+              className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-xl text-sm sm:text-base font-black ${ac.bg} ${ac.text} border ${ac.border} shadow-sm`}>
+              {action}
+            </motion.span>
+            <span className={`text-[8px] px-2 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
+              {modeLabels[mode]}
             </span>
-          )}
-        </div>
-
-        {/* Price + metrics row */}
-        <div className="flex items-center gap-3 sm:gap-6 mb-2 flex-wrap">
-          {stockData && stockData.price != null && stockData.price > 0 && (
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-bold text-foreground font-data">₹{Number(stockData.price).toFixed(2)}</span>
-              <span className={`text-xs sm:text-sm font-semibold font-data ${(stockData.changePct ?? 0) >= 0 ? 't-value-up' : 't-value-down'}`}>
-                {(stockData.changePct ?? 0) >= 0 ? '+' : ''}{Number(stockData.changePct ?? 0).toFixed(2)}%
+            {hasChartAnalysis && (
+              <span className="text-[8px] px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-bold border border-[hsl(var(--terminal-cyan))]/20">
+                📸 Chart
               </span>
-            </div>
-          )}
-          {duration && (
-            <span className="text-[9px] sm:text-[10px] font-semibold text-[hsl(var(--terminal-cyan))]">⏱️ {duration}</span>
-          )}
+            )}
+          </div>
+          <div className="flex gap-1.5">
+            <button onClick={copyVerdict} className="p-2 rounded-xl bg-secondary/40 border border-border/20 hover:bg-secondary/60 transition-colors group" title="Copy verdict">
+              {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />}
+            </button>
+            <button onClick={downloadReport} className="p-2 rounded-xl bg-secondary/40 border border-border/20 hover:bg-secondary/60 transition-colors group" title="Download report">
+              <Download className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
+            </button>
+          </div>
         </div>
 
-        {/* Stats row: risk gauge + confidence + actions */}
-        <div className="flex items-center gap-3 sm:gap-4 mt-3">
-          <RiskGauge score={riskScore} />
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between text-[9px] text-muted-foreground mb-1">
-              <span>Confidence</span>
-              <span className="font-data font-bold text-foreground">{confidence}%</span>
-            </div>
-            <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${confidence}%` }}
-                transition={{ duration: 1, delay: 0.3 }}
-                className="h-full rounded-full bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))]" />
-            </div>
-            <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-relaxed mt-2 line-clamp-2">{summary}</p>
+        {/* Price row */}
+        {stockData && stockData.price != null && stockData.price > 0 && (
+          <div className="flex items-baseline gap-3 mb-5">
+            <span className="text-2xl sm:text-3xl font-black text-foreground font-data">₹{Number(stockData.price).toFixed(2)}</span>
+            <span className={`text-sm sm:text-base font-bold font-data ${(stockData.changePct ?? 0) >= 0 ? 't-value-up' : 't-value-down'}`}>
+              {(stockData.changePct ?? 0) >= 0 ? '+' : ''}{Number(stockData.changePct ?? 0).toFixed(2)}%
+            </span>
+            {duration && (
+              <span className="text-[10px] font-semibold text-[hsl(var(--terminal-cyan))] ml-auto">⏱️ {duration}</span>
+            )}
           </div>
-          <div className="flex flex-col gap-1.5">
-            <button onClick={copyVerdict} className="t-btn flex items-center gap-1 text-[8px] sm:text-[9px]">
-              {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-              {copied ? '✓' : 'Copy'}
-            </button>
-            <button onClick={downloadReport} className="t-btn flex items-center gap-1 text-[8px] sm:text-[9px]">
-              <Download className="w-3 h-3" /> Report
-            </button>
+        )}
+
+        {/* Metrics: Risk gauge + Confidence bar */}
+        <div className="flex items-center gap-5 sm:gap-6 bg-secondary/20 rounded-xl p-3 sm:p-4 border border-border/10">
+          <RiskGauge score={riskScore} />
+          <div className="flex-1 min-w-0 space-y-3">
+            <div>
+              <div className="flex justify-between text-[10px] mb-1.5">
+                <span className="text-muted-foreground font-medium">Confidence</span>
+                <span className="font-data font-black text-foreground">{confidence}%</span>
+              </div>
+              <div className="w-full h-2.5 bg-secondary/60 rounded-full overflow-hidden">
+                <motion.div initial={{ width: 0 }} animate={{ width: `${confidence}%` }}
+                  transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="h-full rounded-full bg-gradient-to-r from-primary via-[hsl(var(--terminal-cyan))] to-[hsl(var(--terminal-blue))]" />
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2">{summary}</p>
           </div>
         </div>
       </div>
