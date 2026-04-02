@@ -150,13 +150,13 @@ export default function OIAnalysis() {
             <div className="flex items-center gap-2">
               <h1 className="text-sm font-bold text-foreground tracking-wide">OI ANALYSIS</h1>
               {isLive && (
-                <span className={`text-[7px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-full ${dataSource === 'yahoo' ? 'text-primary bg-primary/10' : 'text-accent bg-accent/10'}`}>
+                <span className={`text-[8px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-full ${dataSource === 'yahoo' ? 'text-primary bg-primary/10' : 'text-accent bg-accent/10'}`}>
                   <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary)/0.5)] animate-pulse" /> 
                   {dataSource === 'yahoo' ? 'LIVE · Yahoo' : dataSource === 'vix-estimate' ? 'VIX EST.' : 'LIVE'}
                 </span>
               )}
               {oiLoading && (
-                <span className="text-[7px] text-muted-foreground font-bold px-2 py-0.5 rounded-full bg-secondary">Loading...</span>
+                <span className="text-[8px] text-muted-foreground font-bold px-2 py-0.5 rounded-full bg-secondary">Loading...</span>
               )}
             </div>
             <p className="text-[9px] text-muted-foreground">
@@ -478,9 +478,9 @@ export default function OIAnalysis() {
                       background: `rgba(168, 85, 247, ${0.1 + intensity * 0.6})`,
                       border: isATM ? '2px solid hsl(var(--accent))' : '1px solid hsl(var(--border)/0.2)',
                     }}>
-                    <span className="text-[7px] font-bold text-foreground font-data">{avgIV.toFixed(0)}%</span>
+                    <span className="text-[8px] font-bold text-foreground font-data">{avgIV.toFixed(0)}%</span>
                   </div>
-                  <span className={`text-[7px] font-data ${isATM ? 'text-accent font-bold' : 'text-muted-foreground'}`}>
+                  <span className={`text-[8px] font-data ${isATM ? 'text-accent font-bold' : 'text-muted-foreground'}`}>
                     {row.strike}
                   </span>
                 </div>
@@ -490,13 +490,13 @@ export default function OIAnalysis() {
           <div className="flex items-center gap-2 mt-2">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-sm" style={{ background: 'rgba(168, 85, 247, 0.1)' }} />
-              <span className="text-[7px] text-muted-foreground">Low IV</span>
+              <span className="text-[8px] text-muted-foreground">Low IV</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 rounded-sm" style={{ background: 'rgba(168, 85, 247, 0.7)' }} />
-              <span className="text-[7px] text-muted-foreground">High IV</span>
+              <span className="text-[8px] text-muted-foreground">High IV</span>
             </div>
-            <span className="text-[7px] text-accent ml-2">■ = ATM Strike</span>
+            <span className="text-[8px] text-accent ml-2">■ = ATM Strike</span>
           </div>
         </div>
       </div>

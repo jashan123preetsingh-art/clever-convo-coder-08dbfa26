@@ -480,7 +480,7 @@ export default function OptionsChain() {
                 cls: analytics.pcr > 1.2 ? 'text-primary' : analytics.pcr > 0.8 ? 'text-[hsl(var(--terminal-amber))]' : 'text-destructive' },
             ].map((item, i) => (
               <div key={i} className="bg-card p-2 text-center">
-                <p className="text-[7px] text-muted-foreground uppercase tracking-wider">{item.label}</p>
+                <p className="text-[8px] text-muted-foreground uppercase tracking-wider">{item.label}</p>
                 <p className={`text-[11px] font-bold ${item.cls}`}>{item.value}</p>
               </div>
             ))}
@@ -824,7 +824,7 @@ function StrategyDisplay({ legs, netPremium, maxProfit, maxLoss, breakevens, pay
           { label: 'Breakeven', value: breakevens.length > 0 ? breakevens.map(b => formatNumber(b)).join(', ') : '—', cls: 'text-[hsl(var(--terminal-amber))]' },
         ].map((card, i) => (
           <div key={i} className="t-card text-center py-3">
-            <p className="text-[7px] text-muted-foreground uppercase tracking-wider">{card.label}</p>
+            <p className="text-[8px] text-muted-foreground uppercase tracking-wider">{card.label}</p>
             <p className={`text-[13px] font-bold ${card.cls}`}>{card.value}</p>
           </div>
         ))}

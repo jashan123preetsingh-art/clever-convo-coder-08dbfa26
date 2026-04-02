@@ -53,7 +53,7 @@ export default function WatchlistWidget() {
         <div className="flex items-center gap-2">
           <span className="text-sm">⭐</span>
           <span className="text-[11px] font-bold text-foreground tracking-wide">My Watchlist</span>
-          <span className="text-[7px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">{watchlist.length}</span>
+          <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">{watchlist.length}</span>
         </div>
       </div>
       <AnimatePresence>

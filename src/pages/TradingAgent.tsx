@@ -202,7 +202,7 @@ function RiskGauge({ score }: { score: number }) {
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span className="text-lg font-black font-data" style={{ color }}>{score}</span>
-        <span className="text-[7px] text-muted-foreground uppercase tracking-wider">Risk</span>
+        <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Risk</span>
       </div>
     </div>
   );
@@ -269,11 +269,11 @@ function VerdictCard({ agents, stockData, symbol, hasChartAnalysis, mode }: { ag
           <span className={`px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-lg text-xs sm:text-sm font-black ${ac.bg} ${ac.text} border ${ac.border}`}>
             {action}
           </span>
-          <span className={`text-[7px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
+          <span className={`text-[8px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
             {modeLabels[mode]}
           </span>
           {hasChartAnalysis && (
-            <span className="text-[7px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-bold border border-[hsl(var(--terminal-cyan))]/20">
+            <span className="text-[8px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-bold border border-[hsl(var(--terminal-cyan))]/20">
               📸 Chart
             </span>
           )}
@@ -479,7 +479,7 @@ function ModeSelector({ mode, setMode, disabled }: { mode: TradeMode; setMode: (
               </div>
               <h3 className={`text-[9px] sm:text-[11px] font-bold leading-tight ${active ? 'text-foreground' : 'text-muted-foreground'} transition-colors`}>{cfg.label}</h3>
             </div>
-            <p className="text-[7px] sm:text-[8px] text-muted-foreground leading-relaxed hidden sm:block">{cfg.subtitle}</p>
+            <p className="text-[8px] sm:text-[8px] text-muted-foreground leading-relaxed hidden sm:block">{cfg.subtitle}</p>
           </button>
         );
       })}
@@ -827,7 +827,7 @@ export default function TradingAgent() {
           <div className="flex items-center gap-2 mb-2 sm:mb-3">
             <span className="text-sm sm:text-base">📸</span>
             <h3 className="text-[10px] sm:text-[11px] font-bold text-foreground uppercase tracking-wider">Chart Analysis</h3>
-            <span className="text-[7px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-semibold border border-[hsl(var(--terminal-cyan))]/20">Optional</span>
+            <span className="text-[8px] sm:text-[8px] px-1.5 sm:px-2 py-0.5 rounded-lg bg-[hsl(var(--terminal-cyan))]/10 text-[hsl(var(--terminal-cyan))] font-semibold border border-[hsl(var(--terminal-cyan))]/20">Optional</span>
           </div>
 
           {chartImage ? (

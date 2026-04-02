@@ -602,6 +602,28 @@ export default function Portfolio() {
     <div className="p-3 sm:p-5 max-w-[1400px] mx-auto space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-sm sm:text-base font-black text-foreground tracking-tight">Portfolio & P&L</h1>
+        {openPositions.length > 0 && (
+          <button
+            onClick={() => {
+              const rows = [['Symbol', 'Type', 'Qty', 'Entry Price', 'Current Price', 'P&L', 'P&L %'].join(',')];
+              openPositions.forEach(p => {
+                const sym = liveSymbolByPositionId[p.id] ?? normalizeSymbol(p.symbol);
+                const cur = getCurrentPrice(p);
+                const dir = p.trade_type === 'sell' ? -1 : 1;
+                const pnl = (cur - p.entry_price) * p.quantity * dir;
+                const pnlPct = ((cur - p.entry_price) / p.entry_price) * 100 * dir;
+                rows.push([sym, p.trade_type, p.quantity, p.entry_price, cur, pnl.toFixed(2), pnlPct.toFixed(2)].join(','));
+              });
+              const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = `portfolio_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="px-3 py-1.5 rounded-lg text-[9px] font-bold bg-secondary/40 text-muted-foreground hover:text-foreground hover:bg-secondary/60 border border-border/20 transition-all"
+          >
+            📥 Export CSV
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
