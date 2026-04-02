@@ -466,29 +466,35 @@ function AgentReportCard({ agentKey, content, delay, forceExpand }: { agentKey: 
 function ModeSelector({ mode, setMode, disabled }: { mode: TradeMode; setMode: (m: TradeMode) => void; disabled: boolean }) {
   const modes: TradeMode[] = ['scalp', 'swing', 'invest'];
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-4">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 mb-5">
       {modes.map(m => {
         const cfg = MODE_CONFIG[m];
         const active = mode === m;
         return (
-          <button
+          <motion.button
             key={m}
             onClick={() => !disabled && setMode(m)}
             disabled={disabled}
-            className={`relative rounded-xl sm:rounded-2xl border-2 p-2.5 sm:p-3 text-left transition-all duration-300 ${
+            whileHover={{ scale: disabled ? 1 : 1.01 }}
+            whileTap={{ scale: disabled ? 1 : 0.98 }}
+            className={`relative rounded-2xl border-2 p-3 sm:p-4 text-left transition-all duration-300 overflow-hidden ${
               active
-                ? `${cfg.borderColor} ${cfg.bgColor} shadow-lg`
-                : 'border-border/20 bg-card/30 hover:bg-card/50 hover:border-border/40'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
+                ? `${cfg.borderColor} ${cfg.bgColor} shadow-lg shadow-primary/5`
+                : 'border-border/15 bg-card/30 hover:bg-card/60 hover:border-border/30'
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
           >
-            <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-              <div className={`p-1 sm:p-1.5 rounded-lg ${active ? cfg.bgColor : 'bg-secondary/40'} ${active ? cfg.color : 'text-muted-foreground'} transition-colors`}>
+            {active && (
+              <div className="absolute inset-0 opacity-[0.04] pointer-events-none"
+                style={{ background: `radial-gradient(circle at 70% 30%, currentColor, transparent 70%)` }} />
+            )}
+            <div className="relative flex items-center gap-2.5 mb-1.5">
+              <div className={`p-1.5 sm:p-2 rounded-xl ${active ? cfg.bgColor : 'bg-secondary/40'} ${active ? cfg.color : 'text-muted-foreground'} transition-colors`}>
                 {cfg.icon}
               </div>
-              <h3 className={`text-[9px] sm:text-[11px] font-bold leading-tight ${active ? 'text-foreground' : 'text-muted-foreground'} transition-colors`}>{cfg.label}</h3>
+              <h3 className={`text-[11px] sm:text-[13px] font-black leading-tight ${active ? 'text-foreground' : 'text-muted-foreground'} transition-colors`}>{cfg.label}</h3>
             </div>
-            <p className="text-[8px] sm:text-[8px] text-muted-foreground leading-relaxed hidden sm:block">{cfg.subtitle}</p>
-          </button>
+            <p className={`text-[9px] sm:text-[10px] leading-relaxed relative ${active ? 'text-muted-foreground' : 'text-muted-foreground/60'}`}>{cfg.subtitle}</p>
+          </motion.button>
         );
       })}
     </div>
