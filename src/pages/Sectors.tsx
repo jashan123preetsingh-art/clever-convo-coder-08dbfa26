@@ -136,11 +136,17 @@ function SectorDetail({ sectorName }: { sectorName: string }) {
 
 export default function Sectors() {
   const { sector: paramSector } = useParams();
-  const sectors = getSectorPerformance();
+  const { data: liveBreadth } = useMarketBreadth();
 
-  const sortedSectors = [...sectors].sort((a, b) => b.avg_change - a.avg_change);
-  const gainers = sortedSectors.filter(s => s.avg_change >= 0);
-  const losers = sortedSectors.filter(s => s.avg_change < 0);
+  const liveStocks = useMemo(() => {
+    if (!Array.isArray(liveBreadth?.stocks) || liveBreadth.stocks.length === 0) return [];
+    return (liveBreadth.stocks as Stock[]).filter((s) => s && typeof s.ltp === 'number' && s.ltp > 0);
+  }, [liveBreadth]);
+
+  const sectors = useMemo(() => {
+    const source = liveStocks.length > 0 ? liveStocks : getAllStocks();
+    return getSectorPerformance(source);
+  }, [liveStocks]);
 
   if (paramSector) {
     return <SectorDetail sectorName={decodeURIComponent(paramSector)} />;
