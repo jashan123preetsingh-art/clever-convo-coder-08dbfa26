@@ -6,7 +6,7 @@ import { AlertBell } from '@/components/PriceAlerts';
 import { useTheme } from '@/hooks/useTheme';
 import CommandPalette from '@/components/CommandPalette';
 import Header from '@/components/layout/Header';
-import TickerTape from '@/components/layout/TickerTape';
+import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileNav from '@/components/layout/MobileNav';
 import StatusBar from '@/components/layout/StatusBar';
