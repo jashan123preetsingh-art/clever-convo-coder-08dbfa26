@@ -126,7 +126,8 @@ export function useFiiDiiData() {
   return useQuery({
     queryKey: ["fii-dii"],
     queryFn: () => fiiDiiApi.getData(),
-    staleTime: 300_000,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     retry: 2,
   });
 }

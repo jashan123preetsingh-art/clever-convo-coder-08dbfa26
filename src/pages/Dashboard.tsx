@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
@@ -18,6 +18,7 @@ import TopMovers from '@/components/dashboard/TopMovers';
 import SectorsList from '@/components/dashboard/SectorsList';
 import NewsWidget from '@/components/dashboard/NewsWidget';
 import type { Stock, FiiDiiEntry } from '@/types/stock';
+import LiveRefreshBadge from '@/components/LiveRefreshBadge';
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
@@ -36,10 +37,10 @@ async function fetchLiveNews() {
 
 
 export default function Dashboard() {
-  const { indices, hasLiveData, isUsingMockData, isError } = useIndicesWithFallback();
-  const { data: liveFiiDii } = useFiiDiiData();
-  const { data: liveBreadth } = useMarketBreadth();
-  const { data: marketMetrics, isLoading: metricsLoading } = useMarketMetrics();
+  const { indices, hasLiveData, isUsingMockData, isError, refetch: refetchIndices } = useIndicesWithFallback();
+  const { data: liveFiiDii, refetch: refetchFiiDii } = useFiiDiiData();
+  const { data: liveBreadth, refetch: refetchBreadth } = useMarketBreadth();
+  const { data: marketMetrics, isLoading: metricsLoading, refetch: refetchMetrics } = useMarketMetrics();
   const marketOpen = isMarketHours();
 
   const { data: liveNews } = useQuery({
@@ -150,12 +151,14 @@ export default function Dashboard() {
               {marketOpen
                 ? `Market open · ${istTime} IST · Tracking NIFTY, BANKNIFTY & 2000+ stocks`
                 : `Market closed · Last close data · Opens Mon–Fri 9:15 AM IST`}
-              {lastUpdated && <span className="ml-2 text-primary/70">· Updated {lastUpdated} IST</span>}
             </p>
           </div>
-          <Link to="/scanner" className="hidden sm:flex px-4 py-2 rounded-lg text-[10px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-lg shadow-primary/10 items-center gap-1.5 flex-shrink-0">
-            Scanner <span className="opacity-60">→</span>
-          </Link>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <LiveRefreshBadge intervalSeconds={30} onRefresh={() => { refetchIndices(); refetchFiiDii(); refetchBreadth(); refetchMetrics(); }} />
+            <Link to="/scanner" className="hidden sm:flex px-4 py-2 rounded-lg text-[10px] font-bold bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-lg shadow-primary/10 items-center gap-1.5">
+              Scanner <span className="opacity-60">→</span>
+            </Link>
+          </div>
         </div>
       </div>
 

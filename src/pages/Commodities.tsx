@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
+import LiveRefreshBadge from '@/components/LiveRefreshBadge';
 import { formatNumber } from '@/utils/format';
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
@@ -229,14 +230,9 @@ export default function Commodities() {
             {timestamp && <span className="ml-2 text-muted-foreground/50">· {timestamp} IST</span>}
           </p>
         </div>
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold bg-secondary text-foreground hover:bg-secondary/80 transition-all border border-border/20"
-        >
-          <RefreshCw className={`w-3 h-3 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <LiveRefreshBadge intervalSeconds={30} onRefresh={() => refetch()} isFetching={isFetching} />
+        </div>
       </div>
 
       {/* Category Filter */}

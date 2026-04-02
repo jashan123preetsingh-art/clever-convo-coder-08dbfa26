@@ -5,6 +5,7 @@ import { useFiiDiiData } from '@/hooks/useStockData';
 import { formatCurrency } from '@/utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Legend, AreaChart, Area } from 'recharts';
 import { Download, ChevronDown, ChevronRight, Filter } from 'lucide-react';
+import LiveRefreshBadge from '@/components/LiveRefreshBadge';
 
 function parseLiveData(liveData: any) {
   if (!liveData || !Array.isArray(liveData)) return null;
@@ -32,7 +33,7 @@ function formatCr(value: number, showSign = true) {
 type MainTab = 'fii-dii' | 'fno' | 'flow' | 'sectors';
 
 export default function FiiDii() {
-  const { data: liveData, isLoading } = useFiiDiiData();
+  const { data: liveData, isLoading, isFetching, refetch } = useFiiDiiData();
   const [mainTab, setMainTab] = useState<MainTab>('fii-dii');
   const [flowSubTab, setFlowSubTab] = useState<'daily' | 'weekly' | 'monthly' | 'annual'>('daily');
   const [flowFilter, setFlowFilter] = useState<'all' | 'bloodbath' | 'absorption' | 'divergence'>('all');
@@ -144,7 +145,7 @@ export default function FiiDii() {
   return (
     <div className="p-4 max-w-[1600px] mx-auto space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-black text-foreground tracking-tight">FII & DII Data</h1>
           <p className="text-[10px] text-muted-foreground">
@@ -154,11 +155,14 @@ export default function FiiDii() {
             {isLoading && <span className="text-accent animate-pulse ml-2">Loading…</span>}
           </p>
         </div>
-        <span className={`px-3 py-1.5 rounded-md text-[10px] font-bold border ${
-          combined < 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-primary/10 text-primary border-primary/20'
-        }`}>
-          {combined < 0 ? 'NET SELLING' : 'NET BUYING'}
-        </span>
+        <div className="flex items-center gap-3">
+          <LiveRefreshBadge intervalSeconds={30} onRefresh={() => refetch()} isFetching={isFetching} />
+          <span className={`px-3 py-1.5 rounded-md text-[10px] font-bold border ${
+            combined < 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-primary/10 text-primary border-primary/20'
+          }`}>
+            {combined < 0 ? 'NET SELLING' : 'NET BUYING'}
+          </span>
+        </div>
       </div>
 
       {/* Tab Navigation - Bottom style like reference */}
