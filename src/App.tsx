@@ -27,6 +27,9 @@ const Commodities = lazy(() => import("./pages/Commodities"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const Disclaimer = lazy(() => import("./pages/Disclaimer"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const IPOPage = lazy(() => import("./pages/IPO"));
+const Forex = lazy(() => import("./pages/Forex"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
