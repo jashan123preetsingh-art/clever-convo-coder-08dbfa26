@@ -588,18 +588,30 @@ export function getMostActive(): Stock[] {
   return [...STOCKS].sort((a, b) => b.volume - a.volume).slice(0, 10);
 }
 
-export function getSectorPerformance() {
+export function getSectorPerformance(liveStocks?: Stock[]) {
+  // Build a sector map from mock data for sector assignments
+  const sectorMap: Record<string, string> = {};
+  STOCKS.forEach(s => { sectorMap[s.symbol] = s.sector; });
+
+  // Use live stocks if available, otherwise fall back to mock
+  const sourceStocks = liveStocks && liveStocks.length > 0
+    ? liveStocks.map(ls => ({
+        ...ls,
+        sector: ls.sector || sectorMap[ls.symbol] || 'Other',
+      }))
+    : STOCKS;
+
   const sectors: Record<string, { stocks: Stock[]; total_change: number }> = {};
-  STOCKS.forEach(s => {
+  sourceStocks.forEach(s => {
     if (!sectors[s.sector]) sectors[s.sector] = { stocks: [], total_change: 0 };
     sectors[s.sector].stocks.push(s);
-    sectors[s.sector].total_change += s.change_pct;
+    sectors[s.sector].total_change += (s.change_pct ?? 0);
   });
   return Object.entries(sectors).map(([sector, data]) => ({
     sector,
     count: data.stocks.length,
     avg_change: data.total_change / data.stocks.length,
-    stocks: data.stocks.sort((a, b) => b.change_pct - a.change_pct),
+    stocks: data.stocks.sort((a, b) => (b.change_pct ?? 0) - (a.change_pct ?? 0)),
   })).sort((a, b) => b.avg_change - a.avg_change);
 }
 
