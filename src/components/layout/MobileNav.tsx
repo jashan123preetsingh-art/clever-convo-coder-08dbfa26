@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Briefcase, LayoutGrid, ScanSearch, Target, Layers, ArrowLeftRight, TrendingUp, Newspaper, Bot, Settings } from 'lucide-react';
+import { Home, Briefcase, LayoutGrid, ScanSearch, Target, Layers, ArrowLeftRight, TrendingUp, Newspaper, Bot, Settings, Gem } from 'lucide-react';
 import type { IndexData } from '@/types/stock';
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -13,6 +13,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   '⇄': <ArrowLeftRight className="w-[18px] h-[18px]" />,
   '📈': <TrendingUp className="w-[18px] h-[18px]" />,
   '◉': <Newspaper className="w-[18px] h-[18px]" />,
+  '💎': <Gem className="w-[18px] h-[18px]" />,
   '🤖': <Bot className="w-[18px] h-[18px]" />,
   '⚙️': <Settings className="w-[18px] h-[18px]" />,
 };

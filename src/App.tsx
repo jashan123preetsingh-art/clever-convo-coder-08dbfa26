@@ -23,6 +23,7 @@ const StockDetail = lazy(() => import("./pages/StockDetail"));
 const Admin = lazy(() => import("./pages/Admin"));
 const TradingAgent = lazy(() => import("./pages/TradingAgent"));
 const Portfolio = lazy(() => import("./pages/Portfolio"));
+const Commodities = lazy(() => import("./pages/Commodities"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const Disclaimer = lazy(() => import("./pages/Disclaimer"));
@@ -78,6 +79,7 @@ const AppRoutes = () => (
     <Route path="/admin" element={<ProtectedRoute><TerminalLayout><Admin /></TerminalLayout></ProtectedRoute>} />
     <Route path="/trading-agent" element={<ProtectedRoute><TerminalLayout><TradingAgent /></TerminalLayout></ProtectedRoute>} />
     <Route path="/portfolio" element={<ProtectedRoute><TerminalLayout><Portfolio /></TerminalLayout></ProtectedRoute>} />
+    <Route path="/commodities" element={<ProtectedRoute><TerminalLayout><Commodities /></TerminalLayout></ProtectedRoute>} />
     <Route path="/charts" element={<Navigate to="/" replace />} />
     <Route path="/charts/:symbol" element={<ProtectedRoute><TerminalLayout><StockDetail /></TerminalLayout></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
