@@ -773,25 +773,31 @@ export default function TradingAgent() {
       </AnimatePresence>
 
       {/* Header */}
-      <div className="mb-5">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xl">🤖</span>
-          <h1 className="text-base md:text-lg font-black text-foreground tracking-wide">TRADING AGENTS</h1>
-          <span className={`text-[8px] px-2 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
-            {config.label}
-          </span>
+      <div className="mb-6">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/15 to-[hsl(var(--terminal-cyan))]/10 border border-primary/20">
+            <Target className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-lg md:text-xl font-black text-foreground tracking-tight">Trading Agents</h1>
+              <span className={`text-[8px] px-2.5 py-0.5 rounded-lg ${config.bgColor} ${config.color} font-bold border ${config.borderColor}`}>
+                {config.label}
+              </span>
+            </div>
+            <p className="text-[10px] md:text-[11px] text-muted-foreground mt-0.5">
+              Choose your trading style, enter a symbol, and let the AI agents do the rest.
+            </p>
+          </div>
         </div>
-        <p className="text-[10px] md:text-xs text-muted-foreground">
-          Choose your trading style, enter a symbol, and let the AI agents do the rest.
-        </p>
       </div>
 
       {/* Mode Selector */}
       <ModeSelector mode={mode} setMode={setMode} disabled={loading} />
 
-      {/* Input */}
-      <div className="rounded-xl sm:rounded-2xl bg-card/50 border border-border/15 p-3 sm:p-4 mb-4">
-        <div className="flex flex-col gap-2 sm:gap-3">
+      {/* Input Card */}
+      <div className="rounded-2xl bg-gradient-to-br from-card/60 to-card/30 backdrop-blur-sm border border-border/15 p-4 sm:p-5 mb-5 shadow-sm">
+        <div className="flex flex-col gap-3">
           <SymbolInput
             symbol={symbol}
             setSymbol={setSymbol}
@@ -799,7 +805,7 @@ export default function TradingAgent() {
             disabled={loading}
             placeholder={mode === 'invest' ? 'e.g. RELIANCE, TCS' : 'e.g. NIFTY 50'}
           />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {mode !== 'invest' && (
               <>
                 <input type="file" ref={fileInputRef} accept="image/*" className="hidden"
@@ -807,29 +813,29 @@ export default function TradingAgent() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={loading}
-                  className={`px-3 py-2 sm:py-2.5 rounded-xl border text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-3.5 py-2.5 sm:py-3 rounded-xl border-2 text-sm font-semibold transition-all flex items-center gap-2 ${
                     chartImage
                       ? 'bg-[hsl(var(--terminal-cyan))]/10 border-[hsl(var(--terminal-cyan))]/30 text-[hsl(var(--terminal-cyan))]'
-                      : 'bg-secondary/30 border-border/30 text-muted-foreground hover:text-foreground hover:border-border/50'
-                  } disabled:opacity-50`}
+                      : 'bg-secondary/20 border-border/20 text-muted-foreground hover:text-foreground hover:border-border/40'
+                  } disabled:opacity-40`}
                 >
                   <ImageIcon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{chartImage ? 'Chart ✓' : 'Chart'}</span>
+                  <span className="hidden sm:inline text-[12px]">{chartImage ? 'Chart ✓' : 'Chart'}</span>
                 </button>
               </>
             )}
             <button
               onClick={runAgent}
               disabled={loading || !symbol.trim()}
-              className="flex-1 px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-primary to-[hsl(var(--terminal-cyan))] text-primary-foreground rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 whitespace-nowrap"
+              className="flex-1 px-5 sm:px-8 py-2.5 sm:py-3 bg-gradient-to-r from-primary via-[hsl(var(--terminal-cyan))] to-[hsl(var(--terminal-blue))] text-primary-foreground rounded-xl text-sm font-black hover:opacity-90 transition-all disabled:opacity-40 whitespace-nowrap shadow-lg shadow-primary/20"
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  <span className="hidden sm:inline">Running...</span>
-                  <span className="sm:hidden">...</span>
+                  <span className="hidden sm:inline">Agents Working...</span>
+                  <span className="sm:hidden">Running...</span>
                 </span>
-              ) : '🚀 Run'}
+              ) : '🚀 Run Analysis'}
             </button>
           </div>
         </div>
