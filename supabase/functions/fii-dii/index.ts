@@ -37,20 +37,18 @@ async function getFiiDiiData() {
     const data = await fetchNSEData("fiidiiTradeReact");
     return data;
   } catch (e) {
-    console.error("NSE FII/DII fetch failed, using alternative:", e);
-    // Fallback: try to get from moneycontrol or generate from recent patterns
-    try {
-      // Try NSDL data as alternative
-      const resp = await fetch(
-        "https://www.fpi.nsdl.co.in/web/Reports/Latest.aspx",
-        { headers: { "User-Agent": "Mozilla/5.0" } }
-      );
-      if (resp.ok) {
-        const text = await resp.text();
-        // Parse basic data from response
-        return { source: "NSDL", raw: text.substring(0, 500) };
-      }
-    } catch {}
+    console.error("NSE FII/DII fetch failed:", e);
+    return null;
+  }
+}
+
+// Get F&O Participant-wise OI data
+async function getFnOParticipantData() {
+  try {
+    const data = await fetchNSEData("participant-wise-open-interest");
+    return data;
+  } catch (e) {
+    console.error("NSE F&O Participant fetch failed:", e);
     return null;
   }
 }
@@ -127,6 +125,9 @@ serve(async (req) => {
     switch (action) {
       case "fii-dii":
         result = await getFiiDiiData();
+        break;
+      case "fno-participants":
+        result = await getFnOParticipantData();
         break;
       case "breadth":
         result = await getMarketBreadth();

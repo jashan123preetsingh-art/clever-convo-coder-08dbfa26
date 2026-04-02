@@ -706,30 +706,122 @@ export const NEWS: NewsArticle[] = [
 ];
 
 export const FII_DII_HISTORY: FiiDiiData[] = [
-  { date: '2026-03-28', fii_buy: 48000, fii_sell: 58724, fii_net: -10724, dii_buy: 22000, dii_sell: 12023, dii_net: 9977 },
-  { date: '2026-03-27', fii_buy: 52000, fii_sell: 54100, fii_net: -2100, dii_buy: 19500, dii_sell: 17800, dii_net: 1700 },
-  { date: '2026-03-26', fii_buy: 45000, fii_sell: 42000, fii_net: 3000, dii_buy: 18000, dii_sell: 19500, dii_net: -1500 },
-  { date: '2026-03-25', fii_buy: 55000, fii_sell: 60200, fii_net: -5200, dii_buy: 24000, dii_sell: 18800, dii_net: 5200 },
-  { date: '2026-03-24', fii_buy: 47000, fii_sell: 51500, fii_net: -4500, dii_buy: 21000, dii_sell: 16500, dii_net: 4500 },
-  { date: '2026-03-21', fii_buy: 51000, fii_sell: 48500, fii_net: 2500, dii_buy: 17500, dii_sell: 18200, dii_net: -700 },
-  { date: '2026-03-20', fii_buy: 49000, fii_sell: 53800, fii_net: -4800, dii_buy: 23000, dii_sell: 17500, dii_net: 5500 },
-  { date: '2026-03-19', fii_buy: 46000, fii_sell: 50200, fii_net: -4200, dii_buy: 20500, dii_sell: 16800, dii_net: 3700 },
-  { date: '2026-03-18', fii_buy: 53000, fii_sell: 49500, fii_net: 3500, dii_buy: 18000, dii_sell: 19500, dii_net: -1500 },
-  { date: '2026-03-17', fii_buy: 44000, fii_sell: 52000, fii_net: -8000, dii_buy: 25000, dii_sell: 17500, dii_net: 7500 },
+  { date: '02-Apr-2026', fii_buy: 10626.52, fii_sell: 20557.65, fii_net: -9931.13, dii_buy: 18421.27, dii_sell: 11212.86, dii_net: 7208.41 },
+  { date: '01-Apr-2026', fii_buy: 17958.07, fii_sell: 26289.22, fii_net: -8331.15, dii_buy: 18536.73, dii_sell: 11364.93, dii_net: 7171.8 },
+  { date: '30-Mar-2026', fii_buy: 21952.95, fii_sell: 33116.01, fii_net: -11163.06, dii_buy: 26358.5, dii_sell: 11463.78, dii_net: 14894.72 },
+  { date: '27-Mar-2026', fii_buy: 15219, fii_sell: 18969, fii_net: -3750, dii_buy: 26231, dii_sell: 22585, dii_net: 3646 },
+  { date: '26-Mar-2026', fii_buy: 24919, fii_sell: 21202, fii_net: 3717, dii_buy: 7221, dii_sell: 5920, dii_net: 1301 },
+  { date: '25-Mar-2026', fii_buy: 6497, fii_sell: 8105, fii_net: -1608, dii_buy: 17831, dii_sell: 14208, dii_net: 3623 },
+  { date: '24-Mar-2026', fii_buy: 19237, fii_sell: 22318, fii_net: -3081, dii_buy: 22095, dii_sell: 15656, dii_net: 6439 },
+  { date: '23-Mar-2026', fii_buy: 27331, fii_sell: 33312, fii_net: -5981, dii_buy: 52431, dii_sell: 44183, dii_net: 8248 },
+  { date: '20-Mar-2026', fii_buy: 15249, fii_sell: 19438, fii_net: -4189, dii_buy: 27927, dii_sell: 22176, dii_net: 5751 },
+  { date: '19-Mar-2026', fii_buy: 19412, fii_sell: 23411, fii_net: -3999, dii_buy: 11654, dii_sell: 9012, dii_net: 2642 },
+  { date: '18-Mar-2026', fii_buy: 21178, fii_sell: 26057, fii_net: -4879, dii_buy: 15138, dii_sell: 12006, dii_net: 3132 },
+  { date: '17-Mar-2026', fii_buy: 18174, fii_sell: 15376, fii_net: 2798, dii_buy: 42181, dii_sell: 36283, dii_net: 5898 },
+  { date: '16-Mar-2026', fii_buy: 16444, fii_sell: 18873, fii_net: -2429, dii_buy: 12560, dii_sell: 15010, dii_net: -2450 },
+  { date: '13-Mar-2026', fii_buy: 20297, fii_sell: 26167, fii_net: -5870, dii_buy: 21455, dii_sell: 25286, dii_net: -3831 },
+  { date: '12-Mar-2026', fii_buy: 31328, fii_sell: 40927, fii_net: -9599, dii_buy: 31306, dii_sell: 36376, dii_net: -5070 },
+  { date: '11-Mar-2026', fii_buy: 26291, fii_sell: 31171, fii_net: -4880, dii_buy: 25854, dii_sell: 21422, dii_net: 4432 },
+  { date: '10-Mar-2026', fii_buy: 44824, fii_sell: 52279, fii_net: -7455, dii_buy: 51502, dii_sell: 43606, dii_net: 7896 },
+  { date: '09-Mar-2026', fii_buy: 23239, fii_sell: 18375, fii_net: 4864, dii_buy: 7844, dii_sell: 5928, dii_net: 1916 },
+  { date: '06-Mar-2026', fii_buy: 17769, fii_sell: 22645, fii_net: -4876, dii_buy: 10328, dii_sell: 8177, dii_net: 2151 },
+  { date: '05-Mar-2026', fii_buy: 29624, fii_sell: 35792, fii_net: -6168, dii_buy: 12904, dii_sell: 10590, dii_net: 2314 },
+  { date: '03-Mar-2026', fii_buy: 18490, fii_sell: 21700, fii_net: -3210, dii_buy: 22807, dii_sell: 17174, dii_net: 5633 },
+  { date: '27-Feb-2026', fii_buy: 6527, fii_sell: 8055, fii_net: -1528, dii_buy: 20407, dii_sell: 13833, dii_net: 6574 },
+  { date: '18-Feb-2026', fii_buy: 3052, fii_sell: 3734, fii_net: -682, dii_buy: 26943, dii_sell: 19000, dii_net: 7943 },
+  { date: '16-Feb-2026', fii_buy: 13903, fii_sell: 15897, fii_net: -1994, dii_buy: 76885, dii_sell: 65489, dii_net: 11476 },
+  { date: '04-Feb-2026', fii_buy: 11838, fii_sell: 14077, fii_net: -2239, dii_buy: 48134, dii_sell: 38767, dii_net: 9367 },
+  { date: '30-Jan-2026', fii_buy: 17430, fii_sell: 19642, fii_net: -2212, dii_buy: 46774, dii_sell: 36959, dii_net: 9815 },
+  { date: '29-Jan-2026', fii_buy: 49683, fii_sell: 57471, fii_net: -7788, dii_buy: 24366, dii_sell: 17787, dii_net: 6559 },
+  { date: '28-Jan-2026', fii_buy: 64912, fii_sell: 74532, fii_net: -9620, dii_buy: 34575, dii_sell: 28600, dii_net: 5975 },
+  { date: '22-Jan-2026', fii_buy: 19023, fii_sell: 22681, fii_net: -3658, dii_buy: 48017, dii_sell: 38279, dii_net: 9738 },
+  { date: '19-Jan-2026', fii_buy: 24128, fii_sell: 28298, fii_net: -4170, dii_buy: 24685, dii_sell: 16760, dii_net: 7925 },
+  { date: '16-Jan-2026', fii_buy: 71683, fii_sell: 84066, fii_net: -12383, dii_buy: 85286, dii_sell: 72784, dii_net: 12502 },
+  { date: '14-Jan-2026', fii_buy: 35392, fii_sell: 41832, fii_net: -6440, dii_buy: 29795, dii_sell: 22462, dii_net: 7353 },
 ];
 
+// Weekly aggregated data
+export const FII_DII_WEEKLY = [
+  { week: 'Wk Mar 18*', fii_net: -16821, dii_net: 21071, combined: 4250, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Mar 13', fii_net: -22905, dii_net: 26097, combined: 3192, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Mar 06', fii_net: -20399, dii_net: 22099, combined: 1700, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Feb 27', fii_net: -18602, dii_net: 22519, combined: 3917, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Feb 20', fii_net: -11204, dii_net: 16402, combined: 5198, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Feb 13', fii_net: 4201, dii_net: -1202, combined: 2999, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Feb 06', fii_net: -14201, dii_net: 15003, combined: 802, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Jan 30', fii_net: -28401, dii_net: 32104, combined: 3703, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Jan 23', fii_net: -31002, dii_net: 35201, combined: 4199, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Jan 16', fii_net: -15201, dii_net: 19402, combined: 4201, signal: 'BULLISH ACCUMULATION' },
+  { week: 'Wk Jan 09', fii_net: -12770, dii_net: 18602, combined: 5832, signal: 'BULLISH ACCUMULATION' },
+];
+
+// Monthly aggregated data
+export const FII_DII_MONTHLY = [
+  { month: 'Mar 2026*', fii_net: -46646, dii_net: 36462, combined: -10184, nifty_chg: -2.8 },
+  { month: 'Feb 2026', fii_net: -12240, dii_net: 57471, combined: 45231, nifty_chg: 1.2 },
+  { month: 'Jan 2026', fii_net: -87374, dii_net: 105309, combined: 17935, nifty_chg: -3.4 },
+  { month: 'Dec 2025', fii_net: -21402, dii_net: 38401, combined: 16999, nifty_chg: 4.1 },
+  { month: 'Nov 2025', fii_net: -42101, dii_net: 51201, combined: 9100, nifty_chg: -1.2 },
+  { month: 'Oct 2025', fii_net: -114402, dii_net: 121002, combined: 6600, nifty_chg: -6.2 },
+  { month: 'Sep 2025', fii_net: 15401, dii_net: 35201, combined: 50602, nifty_chg: 3.2 },
+  { month: 'Aug 2025', fii_net: -18402, dii_net: 48201, combined: 29799, nifty_chg: 1.4 },
+  { month: 'Jul 2025', fii_net: -12401, dii_net: 52101, combined: 39700, nifty_chg: 4.5 },
+  { month: 'Jun 2025', fii_net: 26501, dii_net: 20102, combined: 46603, nifty_chg: 6.6 },
+  { month: 'May 2025', fii_net: -42101, dii_net: 68402, combined: 26301, nifty_chg: -0.3 },
+  { month: 'Apr 2025', fii_net: -34201, dii_net: 45201, combined: 11000, nifty_chg: 1.2 },
+];
+
+// Annual aggregated data
+export const FII_DII_ANNUAL = [
+  { year: '2026*', fii_net: -112414, dii_net: 186649, combined: 74235, multiplier: 1.66 },
+  { year: '2025', fii_net: -306419, dii_net: 788184, combined: 481765, multiplier: 2.57 },
+  { year: '2024', fii_net: -304217, dii_net: 527438, combined: 223221, multiplier: 1.73 },
+  { year: '2023', fii_net: -16325, dii_net: 181482, combined: 165157, multiplier: 11.12 },
+  { year: '2022', fii_net: -278429, dii_net: 275726, combined: -2703, multiplier: 0.99 },
+  { year: '2021', fii_net: -91626, dii_net: 94846, combined: 3220, multiplier: 1.04 },
+  { year: '2020', fii_net: 170262, dii_net: -47000, combined: 123262, multiplier: null },
+  { year: '2019', fii_net: 101122, dii_net: -18358, combined: 82764, multiplier: null },
+  { year: '2018', fii_net: -33014, dii_net: 109590, combined: 76576, multiplier: 3.32 },
+];
+
+// F&O Participant-wise OI data
+export const FNO_PARTICIPANT_DATA = {
+  date: 'Thursday, 2 April 2026',
+  sentiment: 'HIGHLY BEARISH',
+  fii: {
+    index_futures: { long: 68058, short: 336078 },
+    stock_futures: { long: 4172653, short: 3117438 },
+    index_calls: { long: 411595, short: 784638 },
+    index_puts: { long: 661152, short: 460252 },
+  },
+  dii: {
+    index_futures: { long: 95737, short: 18946 },
+    stock_futures: { long: 313344, short: 4182522 },
+  },
+};
+
 export const SECTOR_FII_ALLOCATION = [
-  { name: 'Financial Services', fii_pct: 34.5 },
-  { name: 'Information Technology', fii_pct: 18.9 },
-  { name: 'Oil & Gas', fii_pct: 12.7 },
-  { name: 'Consumer Goods', fii_pct: 8.3 },
-  { name: 'Pharma', fii_pct: 6.2 },
-  { name: 'Automobile', fii_pct: 5.8 },
-  { name: 'Metals', fii_pct: 4.1 },
-  { name: 'Power', fii_pct: 3.5 },
-  { name: 'Telecom', fii_pct: 2.8 },
-  { name: 'Infrastructure', fii_pct: 2.2 },
-  { name: 'Defence', fii_pct: 1.0 },
+  { name: 'Financial Services', aum_pct: 29.4, fii_own: 12.8, fortnight_flow: 3420, flow_1y: -28500, momentum: -2.4 },
+  { name: 'Information Technology', aum_pct: 17.2, fii_own: 24.1, fortnight_flow: 1280, flow_1y: -12400, momentum: -5.8 },
+  { name: 'Oil & Gas', aum_pct: 6.3, fii_own: 16.5, fortnight_flow: -940, flow_1y: -7200, momentum: -1.2 },
+  { name: 'Consumer Goods', aum_pct: 7.6, fii_own: 21.2, fortnight_flow: -530, flow_1y: -4100, momentum: -1.5 },
+  { name: 'Healthcare', aum_pct: 6.0, fii_own: 18.7, fortnight_flow: -870, flow_1y: 9800, momentum: 4.2 },
+  { name: 'Others', aum_pct: 6.0, fii_own: 8.9, fortnight_flow: -650, flow_1y: -5100, momentum: -0.8 },
+  { name: 'Automobile', aum_pct: 5.6, fii_own: 14.3, fortnight_flow: -620, flow_1y: -3900, momentum: -0.8 },
+  { name: 'Capital Goods', aum_pct: 4.7, fii_own: 12.9, fortnight_flow: -1300, flow_1y: -6400, momentum: -3.5 },
+  { name: 'Metals & Mining', aum_pct: 3.2, fii_own: 15.6, fortnight_flow: 1490, flow_1y: 2900, momentum: 2.1 },
+  { name: 'Power', aum_pct: 3.1, fii_own: 11.2, fortnight_flow: -380, flow_1y: -5200, momentum: -1.9 },
+  { name: 'Telecom', aum_pct: 2.9, fii_own: 20.4, fortnight_flow: -280, flow_1y: 3400, momentum: 1.8 },
+  { name: 'Infrastructure', aum_pct: 2.7, fii_own: 9.2, fortnight_flow: -490, flow_1y: -4100, momentum: -2.1 },
+  { name: 'Cement & Construction', aum_pct: 2.1, fii_own: 13.5, fortnight_flow: -290, flow_1y: -3200, momentum: -1.4 },
+  { name: 'Chemicals', aum_pct: 1.8, fii_own: 10.2, fortnight_flow: -180, flow_1y: 1900, momentum: 0.9 },
+  { name: 'Real Estate', aum_pct: 1.5, fii_own: 17.5, fortnight_flow: -210, flow_1y: -2700, momentum: -1.7 },
+  { name: 'Textiles', aum_pct: 0.9, fii_own: 8.4, fortnight_flow: -80, flow_1y: -450, momentum: -0.3 },
+  { name: 'Media & Entertainment', aum_pct: 0.7, fii_own: 14.1, fortnight_flow: -90, flow_1y: -630, momentum: -0.8 },
+  { name: 'FMCG', aum_pct: 0.6, fii_own: 22.3, fortnight_flow: -120, flow_1y: 870, momentum: 0.5 },
+  { name: 'Agri & Fertilisers', aum_pct: 0.5, fii_own: 7.2, fortnight_flow: -40, flow_1y: -280, momentum: -0.4 },
+  { name: 'Services', aum_pct: 0.4, fii_own: 12.8, fortnight_flow: -110, flow_1y: -640, momentum: -0.7 },
+  { name: 'Defence', aum_pct: 0.2, fii_own: 5.4, fortnight_flow: -20, flow_1y: -920, momentum: -0.1 },
 ];
 
 export function generateOptionsChain(symbol: string): { chain: OptionRow[]; underlyingValue: number; expiryDates: string[]; analytics: Record<string, number> } {
