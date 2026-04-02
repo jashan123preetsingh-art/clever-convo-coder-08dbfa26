@@ -101,7 +101,7 @@ export default function Forex() {
       </div>
 
       {isLoading && (
-        <div className="text-center py-8 text-[10px] text-muted-foreground">Loading forex data...</div>
+        <div className="text-center py-8 text-[10px] text-muted-foreground">Loading currency data...</div>
       )}
     </div>
   );
