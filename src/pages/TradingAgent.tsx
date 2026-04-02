@@ -509,11 +509,15 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
 }) {
   const [focused, setFocused] = useState(false);
   const [query, setQuery] = useState('');
+  const [highlightIndex, setHighlightIndex] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Get local stock list for instant matching
   const localStocks = useMemo(() => getAllStocks(), []);
+
+  // Valid symbol set for validation
+  const validSymbols = useMemo(() => new Set(localStocks.map(s => s.symbol)), [localStocks]);
 
   // Local filter (instant, no API call)
   const localResults = useMemo(() => {
@@ -526,6 +530,9 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
   }, [query, localStocks]);
 
   const showDropdown = focused && query.length >= 1 && localResults.length > 0;
+
+  // Reset highlight when results change
+  useEffect(() => { setHighlightIndex(0); }, [localResults]);
 
   const selectSymbol = (sym: string) => {
     setSymbol(sym);
@@ -545,6 +552,9 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Check if current symbol is valid
+  const isValidSymbol = validSymbols.has(symbol);
+
   return (
     <div className="relative" ref={dropdownRef}>
       <label className="block text-[9px] sm:text-[10px] text-muted-foreground font-semibold mb-1 sm:mb-1.5 uppercase tracking-wider">Symbol</label>
@@ -561,8 +571,26 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
           }}
           onFocus={() => { setFocused(true); setQuery(symbol); }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') { setFocused(false); onSubmit(); }
-            if (e.key === 'Escape') setFocused(false);
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              setHighlightIndex(prev => Math.min(prev + 1, localResults.length - 1));
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              setHighlightIndex(prev => Math.max(prev - 1, 0));
+            } else if (e.key === 'Enter') {
+              e.preventDefault();
+              if (showDropdown && localResults.length > 0) {
+                // Select the highlighted item from dropdown
+                selectSymbol(localResults[highlightIndex].symbol);
+              } else if (isValidSymbol) {
+                // Symbol is already valid, submit
+                setFocused(false);
+                onSubmit();
+              }
+              // If symbol is invalid and no dropdown, do nothing
+            } else if (e.key === 'Escape') {
+              setFocused(false);
+            }
           }}
           placeholder={placeholder}
           className="w-full bg-secondary/40 border border-border/30 rounded-xl pl-9 pr-3 py-2 sm:py-2.5 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/30 font-data transition-colors"
@@ -570,6 +598,9 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
           autoComplete="off"
         />
       </div>
+      {symbol && !isValidSymbol && !focused && (
+        <p className="text-[9px] text-destructive mt-1">Please select a valid stock from the list</p>
+      )}
       <AnimatePresence>
         {showDropdown && (
           <motion.div
@@ -583,7 +614,9 @@ function SymbolInput({ symbol, setSymbol, onSubmit, disabled, placeholder }: {
               <button
                 key={item.symbol}
                 onClick={() => selectSymbol(item.symbol)}
-                className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-primary/5 transition-colors text-left border-b border-border/10 last:border-0"
+                className={`w-full flex items-center justify-between px-3 py-2.5 transition-colors text-left border-b border-border/10 last:border-0 ${
+                  i === highlightIndex ? 'bg-primary/10' : 'hover:bg-primary/5'
+                }`}
               >
                 <div className="flex items-center gap-2.5">
                   <span className="text-[11px] font-bold text-foreground font-data">{item.symbol}</span>
@@ -670,8 +703,11 @@ export default function TradingAgent() {
   const config = MODE_CONFIG[mode];
   const steps = config.steps;
 
+  const validSymbolSet = useMemo(() => new Set(getAllStocks().map(s => s.symbol)), []);
+
   const runAgent = async () => {
     if (!symbol.trim()) { toast.error('Enter a stock symbol'); return; }
+    if (!validSymbolSet.has(symbol.trim().toUpperCase())) { toast.error('Please select a valid stock from the dropdown list'); return; }
     setLoading(true);
     setResult(null);
     setCurrentStep(0);
