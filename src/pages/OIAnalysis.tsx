@@ -122,15 +122,20 @@ export default function OIAnalysis() {
     netOI: row.pe.oi - row.ce.oi,
   }));
 
-  // Simulated PCR trend (last 10 sessions)
+  // Deterministic PCR trend based on current PCR (seeded, not random)
   const pcrTrend = useMemo(() => {
     const base = analytics.pcr;
-    return Array.from({ length: 10 }, (_, i) => ({
-      session: `D-${9 - i}`,
-      pcr: +(base + (Math.random() - 0.5) * 0.4).toFixed(2),
-      callOI: Math.round(analytics.totalCallOI * (0.85 + Math.random() * 0.3)),
-      putOI: Math.round(analytics.totalPutOI * (0.85 + Math.random() * 0.3)),
-    }));
+    const seed = Math.round(base * 100); // deterministic seed from live PCR
+    return Array.from({ length: 10 }, (_, i) => {
+      // Simple deterministic variation using sine wave + seed
+      const variation = Math.sin(seed + i * 1.7) * 0.15 + Math.cos(seed + i * 2.3) * 0.1;
+      return {
+        session: `D-${9 - i}`,
+        pcr: +Math.max(0.3, base + variation).toFixed(2),
+        callOI: Math.round(analytics.totalCallOI * (0.9 + Math.sin(seed + i) * 0.1)),
+        putOI: Math.round(analytics.totalPutOI * (0.9 + Math.cos(seed + i) * 0.1)),
+      };
+    });
   }, [analytics]);
 
   // OI buildup/unwinding interpretation
