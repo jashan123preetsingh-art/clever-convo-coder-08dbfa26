@@ -67,7 +67,7 @@ async function setDBCache(cacheKey: string, symbol: string, mode: string, result
 const MODELS = {
   scalp:   { analysis: "google/gemini-3-flash-preview", decision: "google/gemini-3-flash-preview" },
   swing:   { research: "google/gemini-3-flash-preview", debate: "google/gemini-3-flash-preview", decision: "google/gemini-3-flash-preview" },
-  invest:  { fundamentals: "google/gemini-2.5-flash", context: "google/gemini-2.5-flash", decision: "google/gemini-2.5-flash" },
+  invest:  { fundamentals: "google/gemini-2.5-pro", context: "google/gemini-2.5-pro", decision: "google/gemini-2.5-pro" },
   options: { analysis: "google/gemini-3-flash-preview", decision: "google/gemini-3-flash-preview" },
 };
 
