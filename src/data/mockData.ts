@@ -801,17 +801,27 @@ export const FNO_PARTICIPANT_DATA = {
 };
 
 export const SECTOR_FII_ALLOCATION = [
-  { name: 'Financial Services', fii_pct: 34.5 },
-  { name: 'Information Technology', fii_pct: 18.9 },
-  { name: 'Oil & Gas', fii_pct: 12.7 },
-  { name: 'Consumer Goods', fii_pct: 8.3 },
-  { name: 'Pharma', fii_pct: 6.2 },
-  { name: 'Automobile', fii_pct: 5.8 },
-  { name: 'Metals', fii_pct: 4.1 },
-  { name: 'Power', fii_pct: 3.5 },
-  { name: 'Telecom', fii_pct: 2.8 },
-  { name: 'Infrastructure', fii_pct: 2.2 },
-  { name: 'Defence', fii_pct: 1.0 },
+  { name: 'Financial Services', aum_pct: 29.4, fii_own: 12.8, fortnight_flow: 3420, flow_1y: -28500, momentum: -2.4 },
+  { name: 'Information Technology', aum_pct: 17.2, fii_own: 24.1, fortnight_flow: 1280, flow_1y: -12400, momentum: -5.8 },
+  { name: 'Oil & Gas', aum_pct: 6.3, fii_own: 16.5, fortnight_flow: -940, flow_1y: -7200, momentum: -1.2 },
+  { name: 'Consumer Goods', aum_pct: 7.6, fii_own: 21.2, fortnight_flow: -530, flow_1y: -4100, momentum: -1.5 },
+  { name: 'Healthcare', aum_pct: 6.0, fii_own: 18.7, fortnight_flow: -870, flow_1y: 9800, momentum: 4.2 },
+  { name: 'Others', aum_pct: 6.0, fii_own: 8.9, fortnight_flow: -650, flow_1y: -5100, momentum: -0.8 },
+  { name: 'Automobile', aum_pct: 5.6, fii_own: 14.3, fortnight_flow: -620, flow_1y: -3900, momentum: -0.8 },
+  { name: 'Capital Goods', aum_pct: 4.7, fii_own: 12.9, fortnight_flow: -1300, flow_1y: -6400, momentum: -3.5 },
+  { name: 'Metals & Mining', aum_pct: 3.2, fii_own: 15.6, fortnight_flow: 1490, flow_1y: 2900, momentum: 2.1 },
+  { name: 'Power', aum_pct: 3.1, fii_own: 11.2, fortnight_flow: -380, flow_1y: -5200, momentum: -1.9 },
+  { name: 'Telecom', aum_pct: 2.9, fii_own: 20.4, fortnight_flow: -280, flow_1y: 3400, momentum: 1.8 },
+  { name: 'Infrastructure', aum_pct: 2.7, fii_own: 9.2, fortnight_flow: -490, flow_1y: -4100, momentum: -2.1 },
+  { name: 'Cement & Construction', aum_pct: 2.1, fii_own: 13.5, fortnight_flow: -290, flow_1y: -3200, momentum: -1.4 },
+  { name: 'Chemicals', aum_pct: 1.8, fii_own: 10.2, fortnight_flow: -180, flow_1y: 1900, momentum: 0.9 },
+  { name: 'Real Estate', aum_pct: 1.5, fii_own: 17.5, fortnight_flow: -210, flow_1y: -2700, momentum: -1.7 },
+  { name: 'Textiles', aum_pct: 0.9, fii_own: 8.4, fortnight_flow: -80, flow_1y: -450, momentum: -0.3 },
+  { name: 'Media & Entertainment', aum_pct: 0.7, fii_own: 14.1, fortnight_flow: -90, flow_1y: -630, momentum: -0.8 },
+  { name: 'FMCG', aum_pct: 0.6, fii_own: 22.3, fortnight_flow: -120, flow_1y: 870, momentum: 0.5 },
+  { name: 'Agri & Fertilisers', aum_pct: 0.5, fii_own: 7.2, fortnight_flow: -40, flow_1y: -280, momentum: -0.4 },
+  { name: 'Services', aum_pct: 0.4, fii_own: 12.8, fortnight_flow: -110, flow_1y: -640, momentum: -0.7 },
+  { name: 'Defence', aum_pct: 0.2, fii_own: 5.4, fortnight_flow: -20, flow_1y: -920, momentum: -0.1 },
 ];
 
 export function generateOptionsChain(symbol: string): { chain: OptionRow[]; underlyingValue: number; expiryDates: string[]; analytics: Record<string, number> } {
