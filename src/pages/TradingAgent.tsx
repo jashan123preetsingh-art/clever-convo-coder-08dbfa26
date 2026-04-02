@@ -179,30 +179,31 @@ function detectSentiment(content: string): 'bullish' | 'bearish' | 'neutral' {
 
 function ThinkingDots() {
   return (
-    <span className="inline-flex gap-1 ml-2">
+    <span className="inline-flex gap-0.5 ml-1.5">
       {[0, 1, 2].map(i => (
-        <span key={i} className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--terminal-amber))] thinking-dot" />
+        <span key={i} className="w-1 h-1 rounded-full bg-[hsl(var(--terminal-amber))] thinking-dot" />
       ))}
     </span>
   );
 }
 
 function RiskGauge({ score }: { score: number }) {
-  const radius = 28;
+  const radius = 32;
   const circumference = 2 * Math.PI * radius;
   const progress = (score / 10) * circumference;
   const color = score <= 3 ? 'hsl(var(--primary))' : score <= 6 ? 'hsl(var(--terminal-amber))' : 'hsl(var(--destructive))';
+  const label = score <= 3 ? 'LOW' : score <= 6 ? 'MED' : 'HIGH';
   return (
-    <div className="relative w-20 h-20">
-      <svg className="w-full h-full -rotate-90" viewBox="0 0 64 64">
-        <circle cx="32" cy="32" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="4" />
-        <circle cx="32" cy="32" r={radius} fill="none" stroke={color} strokeWidth="4"
+    <div className="relative w-[88px] h-[88px]">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 72 72">
+        <circle cx="36" cy="36" r={radius} fill="none" stroke="hsl(var(--border)/0.15)" strokeWidth="5" />
+        <circle cx="36" cy="36" r={radius} fill="none" stroke={color} strokeWidth="5"
           strokeDasharray={circumference} strokeDashoffset={circumference - progress}
-          strokeLinecap="round" className="gauge-ring" />
+          strokeLinecap="round" className="gauge-ring" style={{ filter: `drop-shadow(0 0 6px ${color})` }} />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-lg font-black font-data" style={{ color }}>{score}</span>
-        <span className="text-[8px] text-muted-foreground uppercase tracking-wider">Risk</span>
+        <span className="text-xl font-black font-data" style={{ color }}>{score}</span>
+        <span className="text-[7px] font-bold uppercase tracking-[0.15em]" style={{ color }}>{label}</span>
       </div>
     </div>
   );
