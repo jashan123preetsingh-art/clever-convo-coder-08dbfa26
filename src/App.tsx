@@ -27,6 +27,9 @@ const Commodities = lazy(() => import("./pages/Commodities"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const Disclaimer = lazy(() => import("./pages/Disclaimer"));
+const Calendar = lazy(() => import("./pages/Calendar"));
+const IPOPage = lazy(() => import("./pages/IPO"));
+const Forex = lazy(() => import("./pages/Forex"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -80,6 +83,9 @@ const AppRoutes = () => (
     <Route path="/trading-agent" element={<ProtectedRoute><TerminalLayout><TradingAgent /></TerminalLayout></ProtectedRoute>} />
     <Route path="/portfolio" element={<ProtectedRoute><TerminalLayout><Portfolio /></TerminalLayout></ProtectedRoute>} />
     <Route path="/commodities" element={<ProtectedRoute><TerminalLayout><Commodities /></TerminalLayout></ProtectedRoute>} />
+    <Route path="/forex" element={<ProtectedRoute><TerminalLayout><Forex /></TerminalLayout></ProtectedRoute>} />
+    <Route path="/calendar" element={<ProtectedRoute><TerminalLayout><Calendar /></TerminalLayout></ProtectedRoute>} />
+    <Route path="/ipo" element={<ProtectedRoute><TerminalLayout><IPOPage /></TerminalLayout></ProtectedRoute>} />
     <Route path="/charts" element={<Navigate to="/" replace />} />
     <Route path="/charts/:symbol" element={<ProtectedRoute><TerminalLayout><StockDetail /></TerminalLayout></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />

@@ -6,6 +6,7 @@ import { AlertBell } from '@/components/PriceAlerts';
 import { useTheme } from '@/hooks/useTheme';
 import CommandPalette from '@/components/CommandPalette';
 import Header from '@/components/layout/Header';
+import TickerTape from '@/components/layout/TickerTape';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileNav from '@/components/layout/MobileNav';
 import StatusBar from '@/components/layout/StatusBar';
@@ -24,6 +25,9 @@ const NAV_ITEMS = [
   { path: '/oi-analysis', label: 'OI Analysis', shortcut: 'F8', icon: '📈' },
   { path: '/news', label: 'News', shortcut: 'F9', icon: '◉' },
   { path: '/commodities', label: 'Commodities', shortcut: 'F10', icon: '💎' },
+  { path: '/forex', label: 'Forex', shortcut: '', icon: '💱' },
+  { path: '/calendar', label: 'Calendar', shortcut: '', icon: '📅' },
+  { path: '/ipo', label: 'IPO', shortcut: '', icon: '🚀' },
   { path: '/trading-agent', label: 'AI Agent', shortcut: 'F11', icon: '🤖' },
 ];
 
@@ -95,6 +99,8 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
         signOut={signOut}
         alertBell={<AlertBell />}
       />
+
+      <TickerTape />
 
       <MobileNav
         navItems={NAV_ITEMS}

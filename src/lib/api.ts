@@ -59,6 +59,12 @@ export const stockApi = {
 
   getOptionsChain: (symbol: string) =>
     callFunction("stock-data", { action: "options-chain", symbol }),
+
+  getGlobalIndices: () =>
+    callFunction("stock-data", { action: "global-indices" }),
+
+  getForexPairs: () =>
+    callFunction("stock-data", { action: "forex" }),
 };
 
 // FII/DII API
