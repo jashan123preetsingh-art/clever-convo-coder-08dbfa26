@@ -1,61 +1,76 @@
+# Bloomberg-Level Indian Finance Terminal — Feature Roadmap
 
+Here's what your app already has vs. what top Bloomberg-style terminals offer, with the highest-impact additions prioritized.
 
-# What More We Can Do — Trade Arsenal
+## What You Already Have (Strong Foundation)
 
-## Already Done (from previous plan)
-- forwardRef warnings fixed
-- SEO & OG meta tags added
-- Skip-to-content link added
-- QueryClient global defaults set
-- Forgot password flow working
-- Data safety hardening (no more undefined errors)
-- Admin RLS policy for plan switching
-
-## Still Pending (Quick Wins)
-
-### 1. Font Size Accessibility Audit
-Bump all `text-[7px]` instances (78 occurrences across 6 files) to `text-[8px]` minimum. Small but important for professional polish and WCAG compliance.
-
-### 2. Aria-Labels on Icon Buttons
-Add `aria-label` attributes to theme toggle, hamburger menu, alert bell, and search buttons in the Header component. Important for accessibility compliance.
-
-### 3. Polished Empty States
-Add illustrated empty states for Scanner (no results), Watchlist (empty list), and News (no articles) instead of blank areas.
-
-## New Feature Ideas (High Impact)
-
-### 4. Export & Reports
-Allow users to export their Portfolio, Scanner results, or AI analysis as PDF/CSV. Very useful for a company demo — shows data can be acted on.
-
-### 5. Notification System
-In-app toast notifications for price alerts, portfolio changes, and market events. Makes the app feel alive and professional.
-
-### 6. User Onboarding Tour
-A first-time guided tour (tooltip walkthrough) highlighting key features — Dashboard, Scanner, AI Agent, Portfolio. Great for impressing new users and company reviewers.
-
-### 7. Dark/Light Theme Polish
-The heatmap colors are still hardcoded HSL. Making them theme-aware ensures the app looks polished in both modes.
-
-### 8. PWA Support (Install as App)
-Add a manifest.json and service worker so the app can be installed on mobile/desktop as a native-like app. Very impressive for demos.
-
-### 9. Landing Page Social Proof
-Add testimonials section, a demo video placeholder, and trust badges to the landing page for a more compelling first impression.
-
-### 10. Performance Dashboard for Admin
-Add charts showing user signups over time, active users, and popular features in the Admin panel. Shows the app has real analytics.
+- Live indices, market breadth, heatmap, sectors
+- Options chain with PCR/Max Pain
+- FII/DII analytics (4-tab pro layout)
+- Commodities with AI analysis
+- Stock detail with candlestick charts + technicals
+- Scanner, screener, portfolio with live P&L
+- AI Trading Agent, price alerts, watchlist
+- Command palette, dark/light themes
 
 ---
 
-## Recommended Priority for Company Demo
+## Recommended Additions (Priority Order)
 
-| Priority | Feature | Impact | Effort |
-|----------|---------|--------|--------|
-| 1 | Font size + aria-label fixes | Professional polish | Small |
-| 2 | Export to PDF/CSV | Actionable data | Medium |
-| 3 | User onboarding tour | First impression | Medium |
-| 4 | Empty states | No broken-looking pages | Small |
-| 5 | PWA support | "Install as app" wow factor | Small |
+### 1. Global Market Ticker Tape
 
-Pick which ones you want me to build and I will implement them.
+A scrolling horizontal ticker at the top showing Dow, S&P 500, NASDAQ, FTSE, Nikkei, Hang Seng, SGX Nifty, USD/INR, US 10Y yield, Bitcoin — giving instant global context like Bloomberg terminals always have.
 
+**Files:** `src/components/layout/TickerTape.tsx`, update `TerminalLayout.tsx`
+
+### 2. Economic Calendar
+
+A dedicated section showing upcoming events — RBI policy dates, US Fed meetings, GDP releases, earnings dates for Nifty 50 companies. Bloomberg users live by this.
+
+**Files:** New `src/pages/Calendar.tsx`, new edge function to fetch events
+
+
+
+&nbsp;
+
+### 4. IPO Tracker
+
+Upcoming, ongoing, and recently listed IPOs with subscription data, GMP (grey market premium), and listing performance. Very India-specific and high demand.
+
+**Files:** New `src/pages/IPO.tsx`, edge function for IPO data
+
+### 5. Currency & Forex Dashboard
+
+Beyond just USD/INR — show EUR/INR, GBP/INR, JPY/INR, crypto pairs, with mini charts. Bloomberg always has a dedicated FX screen.
+
+**Files:** Extend commodities edge function or new `src/pages/Forex.tsx`
+
+### 6. Market Alerts & Events Feed
+
+A unified real-time feed combining: circuit breakers, bulk/block deals, insider trades, SEBI announcements. Like Bloomberg's NEWS panel but filtered for actionable events.
+
+**Files:** New `src/components/dashboard/EventsFeed.tsx`
+
+### 7. Keyboard Shortcuts Overlay
+
+Bloomberg is 100% keyboard-driven. Add a `?` shortcut that shows all available hotkeys in a modal — reinforces the pro terminal feel.
+
+**Files:** New `src/components/KeyboardShortcuts.tsx`
+
+---
+
+## Technical Approach
+
+- Global ticker uses the existing `stock-data` edge function with a new `action: "global-indices"` for international data via Yahoo Finance
+- Economic calendar can scrape from public sources or use a free API
+- Multi-chart reuses the existing lightweight-charts integration
+- All new pages follow the existing `TerminalLayout` + sidebar nav pattern
+- New nav items added to sidebar, mobile nav, and command palette
+
+## Suggested Implementation Order
+
+1. **Global Ticker Tape** — small effort, massive visual impact
+2. **Keyboard Shortcuts Overlay** — tiny effort, pro feel
+3. **Economic Calendar** — high utility for traders
+4. **Multi-Chart Compare** — power-user feature
+5. **IPO Tracker** — India-specific differentiator
