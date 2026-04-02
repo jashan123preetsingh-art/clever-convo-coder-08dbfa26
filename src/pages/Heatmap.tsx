@@ -249,7 +249,7 @@ export default function Heatmap() {
         <div>
           <h1 className="text-sm font-bold text-foreground tracking-wide">MARKET HEATMAP</h1>
           <p className="text-[10px] text-muted-foreground mt-0.5">
-            {displayedCount} stocks · {liveMap.size > 0 ? `${liveMap.size} live` : 'Loading...'} · Top {maxPerSector}/sector
+            {displayedCount} stocks · {liveMap.size > 0 ? `${liveMap.size} LIVE` : 'Fetching live data...'} · Top {maxPerSector}/sector · Auto-refresh 15s
           </p>
         </div>
         <div className="flex items-center gap-3">
