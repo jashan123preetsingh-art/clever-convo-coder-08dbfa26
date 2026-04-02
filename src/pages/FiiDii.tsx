@@ -112,9 +112,13 @@ export default function FiiDii() {
           <h1 className="text-lg font-black text-foreground tracking-tight">FII & DII Data</h1>
           <p className="text-[10px] text-muted-foreground">
             Institutional Money Matrix
-            {liveParsed && <span className="text-primary ml-2">● Live from NSE</span>}
+            {liveParsed && <span className="text-primary ml-2">● Live from NSE · {liveParsed.date}</span>}
+            {!liveParsed && !isLoading && <span className="text-accent ml-2">● Sample Data</span>}
             {isLoading && <span className="text-accent animate-pulse ml-2">Loading…</span>}
           </p>
+          {!liveParsed && !isLoading && (
+            <p className="text-[8px] text-accent/70 mt-0.5">Historical trends use sample data — live history requires NSE API integration</p>
+          )}
         </div>
         <span className={`px-3 py-1 rounded-md text-[10px] font-bold border ${
           combined < 0
