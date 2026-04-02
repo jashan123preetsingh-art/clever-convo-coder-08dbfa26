@@ -1,69 +1,61 @@
 
 
-# Improvements Plan for Trade Arsenal Terminal
+# What More We Can Do — Trade Arsenal
 
-## Issues Found
+## Already Done (from previous plan)
+- forwardRef warnings fixed
+- SEO & OG meta tags added
+- Skip-to-content link added
+- QueryClient global defaults set
+- Forgot password flow working
+- Data safety hardening (no more undefined errors)
+- Admin RLS policy for plan switching
 
-### 1. Console Warnings — Sectors Page
-`SectorIcon` and `MiniHeatmap` function components are being passed refs by framer-motion but don't use `forwardRef`. This causes React warnings.
+## Still Pending (Quick Wins)
 
-### 2. Heatmap Colors Hardcoded
-`getHeatColor()` in Heatmap.tsx uses hardcoded HSL values instead of theme CSS variables, so it doesn't adapt to light/dark mode.
+### 1. Font Size Accessibility Audit
+Bump all `text-[7px]` instances (78 occurrences across 6 files) to `text-[8px]` minimum. Small but important for professional polish and WCAG compliance.
 
-### 3. Missing Loading States
-The `QueryClient` is created with no default options — no `staleTime`, no `retry` config. Individual queries set these inconsistently.
+### 2. Aria-Labels on Icon Buttons
+Add `aria-label` attributes to theme toggle, hamburger menu, alert bell, and search buttons in the Header component. Important for accessibility compliance.
 
-### 4. Auth Page — No "Forgot Password" Flow
-Users have no way to reset their password.
+### 3. Polished Empty States
+Add illustrated empty states for Scanner (no results), Watchlist (empty list), and News (no articles) instead of blank areas.
 
-### 5. Landing Page Polish
-The landing page (`Index.tsx`) could use social proof, a demo video placeholder, and a more compelling CTA section.
+## New Feature Ideas (High Impact)
 
-### 6. Accessibility Gaps
-- No `aria-label` on icon-only buttons (theme toggle, hamburger, alert bell)
-- Very small font sizes (`text-[7px]`) may fail WCAG minimum size guidelines
-- No skip-to-content link
+### 4. Export & Reports
+Allow users to export their Portfolio, Scanner results, or AI analysis as PDF/CSV. Very useful for a company demo — shows data can be acted on.
 
-### 7. Empty States
-Pages like Watchlist, Scanner results, and News don't have polished empty/error states.
+### 5. Notification System
+In-app toast notifications for price alerts, portfolio changes, and market events. Makes the app feel alive and professional.
 
-### 8. SEO & Meta Tags
-`index.html` likely has default Vite meta tags — should have proper title, description, OG tags for sharing.
+### 6. User Onboarding Tour
+A first-time guided tour (tooltip walkthrough) highlighting key features — Dashboard, Scanner, AI Agent, Portfolio. Great for impressing new users and company reviewers.
 
----
+### 7. Dark/Light Theme Polish
+The heatmap colors are still hardcoded HSL. Making them theme-aware ensures the app looks polished in both modes.
 
-## Proposed Improvements (Priority Order)
+### 8. PWA Support (Install as App)
+Add a manifest.json and service worker so the app can be installed on mobile/desktop as a native-like app. Very impressive for demos.
 
-### Phase 1: Bug Fixes & Polish
-1. **Fix Sectors forwardRef warnings** — Wrap `SectorIcon` and `MiniHeatmap` with `React.forwardRef`
-2. **Theme-aware Heatmap colors** — Replace hardcoded HSL in `getHeatColor()` with CSS variable-based colors that respect light/dark mode
-3. **Minimum font size audit** — Bump all `text-[7px]` instances to `text-[8px]` minimum for accessibility
+### 9. Landing Page Social Proof
+Add testimonials section, a demo video placeholder, and trust badges to the landing page for a more compelling first impression.
 
-### Phase 2: UX Enhancements
-4. **Add "Forgot Password" to Auth page** — Add a password reset flow using the auth system's `resetPasswordForEmail`
-5. **Add aria-labels to icon buttons** — Theme toggle, hamburger menu, alert bell, search icon
-6. **Better empty/error states** — Add illustrated empty states for Scanner (no results), Watchlist (empty), and API errors
-
-### Phase 3: Performance & SEO
-7. **Global QueryClient defaults** — Set sensible `staleTime` (60s), `retry` (2), and `refetchOnWindowFocus: false` at the QueryClient level
-8. **SEO meta tags** — Update `index.html` with proper title, description, OG image, and favicon
-9. **Add skip-to-content link** — For keyboard navigation accessibility
+### 10. Performance Dashboard for Admin
+Add charts showing user signups over time, active users, and popular features in the Admin panel. Shows the app has real analytics.
 
 ---
 
-## Technical Details
+## Recommended Priority for Company Demo
 
-### Files Modified
-- `src/pages/Sectors.tsx` — forwardRef on SectorIcon and MiniHeatmap
-- `src/pages/Heatmap.tsx` — theme-aware color function
-- `src/pages/Auth.tsx` — forgot password UI + logic
-- `src/App.tsx` — QueryClient default options
-- `src/components/TerminalLayout.tsx` — aria-labels, skip-to-content
-- `index.html` — meta tags, OG tags
-- Multiple files — font size audit (`text-[7px]` → `text-[8px]`)
+| Priority | Feature | Impact | Effort |
+|----------|---------|--------|--------|
+| 1 | Font size + aria-label fixes | Professional polish | Small |
+| 2 | Export to PDF/CSV | Actionable data | Medium |
+| 3 | User onboarding tour | First impression | Medium |
+| 4 | Empty states | No broken-looking pages | Small |
+| 5 | PWA support | "Install as app" wow factor | Small |
 
-### No New Dependencies Required
-
-### Estimated Scope
-~9 files modified, no database changes needed.
+Pick which ones you want me to build and I will implement them.
 
