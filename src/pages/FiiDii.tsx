@@ -145,7 +145,7 @@ export default function FiiDii() {
   return (
     <div className="p-4 max-w-[1600px] mx-auto space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-black text-foreground tracking-tight">FII & DII Data</h1>
           <p className="text-[10px] text-muted-foreground">
@@ -155,10 +155,14 @@ export default function FiiDii() {
             {isLoading && <span className="text-accent animate-pulse ml-2">Loading…</span>}
           </p>
         </div>
-        <span className={`px-3 py-1.5 rounded-md text-[10px] font-bold border ${
-          combined < 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-primary/10 text-primary border-primary/20'
-        }`}>
-          {combined < 0 ? 'NET SELLING' : 'NET BUYING'}
+        <div className="flex items-center gap-3">
+          <LiveRefreshBadge intervalSeconds={30} onRefresh={() => refetch()} isFetching={isFetching} />
+          <span className={`px-3 py-1.5 rounded-md text-[10px] font-bold border ${
+            combined < 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-primary/10 text-primary border-primary/20'
+          }`}>
+            {combined < 0 ? 'NET SELLING' : 'NET BUYING'}
+          </span>
+        </div>
         </span>
       </div>
 
