@@ -285,8 +285,8 @@ export default function OIAnalysis() {
         {/* PCR Trend */}
         <div
           className="t-card p-4">
-          <p className="text-[11px] font-bold text-foreground mb-1">PCR Trend (10 Sessions)</p>
-          <p className="text-[8px] text-muted-foreground mb-3">Put-Call Ratio over recent sessions</p>
+          <p className="text-[11px] font-bold text-foreground mb-1">PCR Trend (10 Sessions) <span className="text-[8px] text-accent font-semibold ml-1">EST.</span></p>
+          <p className="text-[8px] text-muted-foreground mb-3">Estimated Put-Call Ratio trend based on current session OI</p>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={pcrTrend} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
               <defs>
