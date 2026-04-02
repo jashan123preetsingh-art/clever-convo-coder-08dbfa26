@@ -932,6 +932,59 @@ async function getIndices() {
   });
 }
 
+async function getGlobalIndices() {
+  const symbols = ["^DJI", "^GSPC", "^IXIC", "^FTSE", "^N225", "^HSI", "USDINR=X", "BTC-USD", "GC=F"];
+  const names = ["DOW", "S&P 500", "NASDAQ", "FTSE", "NIKKEI", "HANG SENG", "USD/INR", "BTC", "GOLD"];
+  const results = await Promise.allSettled(
+    symbols.map(s => fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(s)}?interval=1d&range=2d`).then(r => r?.json()))
+  );
+  return results.map((r, i) => {
+    if (r.status !== "fulfilled" || !r.value) return { symbol: names[i], name: names[i], price: 0, change_pct: 0 };
+    const res = r.value?.chart?.result?.[0];
+    if (!res?.meta) return { symbol: names[i], name: names[i], price: 0, change_pct: 0 };
+    const meta = res.meta;
+    const prev = meta.chartPreviousClose || meta.previousClose || 0;
+    const price = meta.regularMarketPrice || 0;
+    return {
+      symbol: names[i], name: names[i], price: round(price),
+      change_pct: round(prev ? ((price - prev) / prev) * 100 : 0),
+    };
+  });
+}
+
+async function getForexPairs() {
+  const pairs = [
+    { yahoo: "USDINR=X", display: "USD/INR", name: "US Dollar / Indian Rupee" },
+    { yahoo: "EURINR=X", display: "EUR/INR", name: "Euro / Indian Rupee" },
+    { yahoo: "GBPINR=X", display: "GBP/INR", name: "British Pound / Indian Rupee" },
+    { yahoo: "JPYINR=X", display: "JPY/INR", name: "Japanese Yen / Indian Rupee" },
+    { yahoo: "AEDINR=X", display: "AED/INR", name: "UAE Dirham / Indian Rupee" },
+    { yahoo: "EURUSD=X", display: "EUR/USD", name: "Euro / US Dollar" },
+    { yahoo: "GBPUSD=X", display: "GBP/USD", name: "British Pound / US Dollar" },
+    { yahoo: "USDJPY=X", display: "USD/JPY", name: "US Dollar / Japanese Yen" },
+    { yahoo: "BTC-USD", display: "BTC/USD", name: "Bitcoin / US Dollar" },
+    { yahoo: "ETH-USD", display: "ETH/USD", name: "Ethereum / US Dollar" },
+    { yahoo: "DOGE-USD", display: "DOGE/USD", name: "Dogecoin / US Dollar" },
+    { yahoo: "SOL-USD", display: "SOL/USD", name: "Solana / US Dollar" },
+  ];
+  const results = await Promise.allSettled(
+    pairs.map(p => fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(p.yahoo)}?interval=1d&range=2d`).then(r => r?.json()))
+  );
+  return results.map((r, i) => {
+    if (r.status !== "fulfilled" || !r.value) return { symbol: pairs[i].display, name: pairs[i].name, price: 0, change_pct: 0, prev_close: 0 };
+    const res = r.value?.chart?.result?.[0];
+    if (!res?.meta) return { symbol: pairs[i].display, name: pairs[i].name, price: 0, change_pct: 0, prev_close: 0 };
+    const meta = res.meta;
+    const prev = meta.chartPreviousClose || meta.previousClose || 0;
+    const price = meta.regularMarketPrice || 0;
+    return {
+      symbol: pairs[i].display, name: pairs[i].name, price: round(price) || 0,
+      change_pct: round(prev ? ((price - prev) / prev) * 100 : 0) || 0,
+      prev_close: round(prev) || 0,
+    };
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
