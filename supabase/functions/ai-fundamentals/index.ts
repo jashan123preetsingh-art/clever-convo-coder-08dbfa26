@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const FUNDAMENTALS_MODEL = "google/gemini-2.5-pro";
+const FUNDAMENTALS_MODEL = "google/gemini-2.5-flash";
 
 type Verdict = "STRONG BUY" | "BUY" | "HOLD" | "SELL" | "STRONG SELL";
 type RangeTuple = [number, number];
