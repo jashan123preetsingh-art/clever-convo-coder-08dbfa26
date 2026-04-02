@@ -959,13 +959,13 @@ async function getForexPairs() {
     { yahoo: "GBPINR=X", display: "GBP/INR", name: "British Pound / Indian Rupee" },
     { yahoo: "JPYINR=X", display: "JPY/INR", name: "Japanese Yen / Indian Rupee" },
     { yahoo: "AEDINR=X", display: "AED/INR", name: "UAE Dirham / Indian Rupee" },
-    { yahoo: "EURUSD=X", display: "EUR/USD", name: "Euro / US Dollar" },
-    { yahoo: "GBPUSD=X", display: "GBP/USD", name: "British Pound / US Dollar" },
-    { yahoo: "USDJPY=X", display: "USD/JPY", name: "US Dollar / Japanese Yen" },
-    { yahoo: "BTC-USD", display: "BTC/USD", name: "Bitcoin / US Dollar" },
-    { yahoo: "ETH-USD", display: "ETH/USD", name: "Ethereum / US Dollar" },
-    { yahoo: "DOGE-USD", display: "DOGE/USD", name: "Dogecoin / US Dollar" },
-    { yahoo: "SOL-USD", display: "SOL/USD", name: "Solana / US Dollar" },
+    { yahoo: "SGDINR=X", display: "SGD/INR", name: "Singapore Dollar / Indian Rupee" },
+    { yahoo: "AUDINR=X", display: "AUD/INR", name: "Australian Dollar / Indian Rupee" },
+    { yahoo: "CADINR=X", display: "CAD/INR", name: "Canadian Dollar / Indian Rupee" },
+    { yahoo: "CHFINR=X", display: "CHF/INR", name: "Swiss Franc / Indian Rupee" },
+    { yahoo: "CNHINR=X", display: "CNY/INR", name: "Chinese Yuan / Indian Rupee" },
+    { yahoo: "SARINR=X", display: "SAR/INR", name: "Saudi Riyal / Indian Rupee" },
+    { yahoo: "HKDINR=X", display: "HKD/INR", name: "Hong Kong Dollar / Indian Rupee" },
   ];
   const results = await Promise.allSettled(
     pairs.map(p => fetchSafe(`${YF_BASE}/v8/finance/chart/${encodeURIComponent(p.yahoo)}?interval=1d&range=2d`).then(r => r?.json()))
