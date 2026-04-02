@@ -136,6 +136,13 @@ function SectorDetail({ sectorName }: { sectorName: string }) {
             </tr>
           </thead>
           <tbody>
+            {stocks.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-4 py-12 text-center text-muted-foreground text-[11px]">
+                  No stock data available for this sector. Live data may still be loading.
+                </td>
+              </tr>
+            )}
             {stocks.map((stock, idx) => (
               <motion.tr
                 key={stock.symbol}
