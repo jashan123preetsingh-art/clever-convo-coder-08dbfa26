@@ -1,4 +1,5 @@
 import React, { useMemo, useCallback } from 'react';
+import WorldIndices from '@/components/dashboard/WorldIndices';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getSectorPerformance, NEWS, getAllStocks } from '@/data/mockData';
@@ -183,6 +184,7 @@ export default function Dashboard() {
         <span className="text-[8px] text-muted-foreground/25 font-data whitespace-nowrap px-1.5">{istTime} IST</span>
       </div>
 
+      <WorldIndices />
       <MarketBrief />
       <QuickActionsGrid />
       <IndexCards indices={indices} hasLiveData={hasLiveData} />

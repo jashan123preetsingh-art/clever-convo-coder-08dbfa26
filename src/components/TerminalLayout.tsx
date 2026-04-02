@@ -6,7 +6,6 @@ import { AlertBell } from '@/components/PriceAlerts';
 import { useTheme } from '@/hooks/useTheme';
 import CommandPalette from '@/components/CommandPalette';
 import Header from '@/components/layout/Header';
-import TickerTape from '@/components/layout/TickerTape';
 import Sidebar from '@/components/layout/Sidebar';
 import MobileNav from '@/components/layout/MobileNav';
 import StatusBar from '@/components/layout/StatusBar';
@@ -100,7 +99,7 @@ export default function TerminalLayout({ children }: { children: React.ReactNode
         alertBell={<AlertBell />}
       />
 
-      <TickerTape />
+      
 
       <MobileNav
         navItems={NAV_ITEMS}
