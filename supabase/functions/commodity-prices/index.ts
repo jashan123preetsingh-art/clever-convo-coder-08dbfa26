@@ -84,7 +84,8 @@ const COMMODITIES: Record<string, {
 
 async function fetchYahoo(symbol: string) {
   try {
-    const url = `${YAHOO_BASE}/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+    // Use 5d range to get reliable daily close prices (1d can be empty on holidays)
+    const url = `${YAHOO_BASE}/${encodeURIComponent(symbol)}?interval=1d&range=5d`;
     const resp = await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0" },
       signal: AbortSignal.timeout(8000),
@@ -93,10 +94,17 @@ async function fetchYahoo(symbol: string) {
     const data = await resp.json();
     const result = data?.chart?.result?.[0];
     if (!result) return null;
-    const meta = result.meta;
-    const price = meta.regularMarketPrice;
-    const prevClose = meta.chartPreviousClose || meta.previousClose;
-    const change = prevClose ? price - prevClose : 0;
+
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    // Filter out nulls and get the last two valid closes
+    const validCloses: number[] = closes.filter((c: number | null) => c != null && c > 0);
+
+    if (validCloses.length === 0) return null;
+
+    // Use last settled daily close (NOT regularMarketPrice which includes extended-hours)
+    const price = validCloses[validCloses.length - 1];
+    const prevClose = validCloses.length >= 2 ? validCloses[validCloses.length - 2] : price;
+    const change = price - prevClose;
     const changePct = prevClose ? (change / prevClose) * 100 : 0;
     return { price, change, changePct };
   } catch {
