@@ -12,6 +12,7 @@ import WatchlistWidget from '@/components/WatchlistWidget';
 import EventsFeed from '@/components/dashboard/EventsFeed';
 import DataBadge from '@/components/dashboard/DataBadge';
 import DataStatusBanner from '@/components/DataStatusBanner';
+import DataSourceStatus from '@/components/dashboard/DataSourceStatus';
 import QuickActionsGrid from '@/components/dashboard/QuickActions';
 import IndexCards from '@/components/dashboard/IndexCards';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
@@ -19,6 +20,9 @@ import ExpectedMove from '@/components/dashboard/ExpectedMove';
 import TopMovers from '@/components/dashboard/TopMovers';
 import SectorsList from '@/components/dashboard/SectorsList';
 import NewsWidget from '@/components/dashboard/NewsWidget';
+import IVRankScanner from '@/components/dashboard/IVRankScanner';
+import MostActiveFO from '@/components/dashboard/MostActiveFO';
+import FuturesPremium from '@/components/dashboard/FuturesPremium';
 import type { Stock, FiiDiiEntry } from '@/types/stock';
 import LiveRefreshBadge from '@/components/LiveRefreshBadge';
 
