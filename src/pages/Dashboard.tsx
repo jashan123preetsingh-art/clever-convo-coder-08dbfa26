@@ -144,6 +144,7 @@ export default function Dashboard() {
   return (
     <div className="p-3 sm:p-5 max-w-[1800px] mx-auto space-y-3 sm:space-y-4">
       <DataStatusBanner isUsingMockData={isUsingMockData} isError={isError} />
+      <DataSourceStatus />
 
       {/* Welcome Header */}
       <div className="relative rounded-xl bg-card/40 border border-border/10 p-4 sm:p-6 overflow-hidden animate-in fade-in slide-in-from-bottom-1 duration-300">
@@ -194,7 +195,16 @@ export default function Dashboard() {
         marketOpen={marketOpen}
         dataSource={mm?.dataSource}
       />
+      <FuturesPremium />
       <WatchlistWidget />
+
+      {/* F&O & IV Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 sm:gap-2.5">
+        <MostActiveFO />
+        <div className="col-span-1">
+          <IVRankScanner />
+        </div>
+      </div>
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 sm:gap-2.5">
