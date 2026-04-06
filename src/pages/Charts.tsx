@@ -193,6 +193,7 @@ export default function Charts() {
                   {formatPercent((info as any).change_pct)}
                 </span>
                 {chartLoading && <span className="text-[8px] text-terminal-amber animate-pulse">● LOADING...</span>}
+                {refreshInterval && marketOpen && <span className="text-[8px] text-primary animate-pulse ml-1">● LIVE</span>}
               </div>
               <p className="text-[9px] text-muted-foreground">{(info as any).name} | NSE</p>
             </div>
@@ -218,7 +219,7 @@ export default function Charts() {
           {/* Interval selector */}
           <div className="flex gap-0.5 bg-background rounded p-0.5">
             {INTERVALS.map(i => (
-              <button key={i.key} onClick={() => setInterval(i.key)}
+              <button key={i.key} onClick={() => handleIntervalChange(i.key)}
                 className={`px-2 py-0.5 rounded text-[9px] font-semibold ${interval === i.key ? 'bg-terminal-blue/15 text-terminal-blue' : 'text-muted-foreground hover:text-foreground'}`}>
                 {i.label}
               </button>
