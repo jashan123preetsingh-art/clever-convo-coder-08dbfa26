@@ -104,7 +104,7 @@ export default function Charts() {
         upColor: '#00d68f', downColor: '#ff4757', borderUpColor: '#00d68f', borderDownColor: '#ff4757',
         wickUpColor: '#00d68f80', wickDownColor: '#ff475780',
       });
-      candleSeries.setData(chartData);
+      candleSeries.setData(processedData);
 
       if (indicators.volume) {
         const vs = chart.addSeries(HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'volume' });
