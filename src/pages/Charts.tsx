@@ -3,15 +3,40 @@ import { useParams, Link } from 'react-router-dom';
 import { getStock, getAllStocks, generateCandleData } from '@/data/mockData';
 import { useStockQuote, useStockChart } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent } from '@/utils/format';
+import { isMarketHours } from '@/utils/marketHours';
 
 const POPULAR = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BAJFINANCE', 'ITC', 'TATAMOTORS', 'SUNPHARMA', 'LT', 'MARUTI', 'TITAN', 'ADANIENT', 'WIPRO'];
 const INTERVALS = [
+  { key: '1m', label: '1m' }, { key: '5m', label: '5m' }, { key: '15m', label: '15m' },
   { key: '1d', label: 'D' }, { key: '1wk', label: 'W' }, { key: '1mo', label: 'M' },
 ];
 const RANGES = [
+  { key: '1d', label: '1D' }, { key: '5d', label: '5D' },
   { key: '1mo', label: '1M' }, { key: '3mo', label: '3M' }, { key: '6mo', label: '6M' },
   { key: '1y', label: '1Y' }, { key: '2y', label: '2Y' }, { key: '5y', label: '5Y' }, { key: 'max', label: 'MAX' },
 ];
+
+// Auto-select appropriate range when interval changes
+function getDefaultRange(interval: string): string {
+  switch (interval) {
+    case '1m': return '1d';
+    case '5m': return '5d';
+    case '15m': return '5d';
+    default: return '1y';
+  }
+}
+
+// Determine refresh interval based on chart interval and market state
+function getRefreshInterval(interval: string, marketOpen: boolean): number | false {
+  if (!marketOpen) return false;
+  switch (interval) {
+    case '1m': return 15_000;   // 15s
+    case '5m': return 30_000;   // 30s
+    case '15m': return 60_000;  // 1min
+    case '1d': return 60_000;   // 1min
+    default: return false;
+  }
+}
 
 export default function Charts() {
   const { symbol: paramSymbol } = useParams();
@@ -23,15 +48,21 @@ export default function Charts() {
   const [indicators, setIndicators] = useState({ sma20: true, sma50: true, ema20: false, volume: true, bollinger: false });
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
+  const marketOpen = isMarketHours();
+
+  const refreshInterval = getRefreshInterval(interval, marketOpen);
 
   // Real data
   const { data: quoteData } = useStockQuote(symbol);
-  const { data: realChartData, isLoading: chartLoading } = useStockChart(symbol, interval, range);
+  const { data: realChartData, isLoading: chartLoading, dataUpdatedAt } = useStockChart(symbol, interval, range, {
+    refetchInterval: refreshInterval,
+  });
 
   // Fallback
   const mockStock = getStock(symbol);
   const info = quoteData || mockStock || { ltp: 0, change_pct: 0, name: symbol };
   const currentPrice = (info as any).ltp || undefined;
+  const isIntraday = ['1m', '5m', '15m'].includes(interval);
   const chartData = realChartData?.length > 0 ? realChartData : generateCandleData(symbol, interval === '1wk' ? 250 : interval === '1mo' ? 60 : 500, currentPrice);
 
   useEffect(() => {
