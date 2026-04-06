@@ -65,10 +65,18 @@ export default function Charts() {
   const isIntraday = ['1m', '5m', '15m'].includes(interval);
   const chartData = realChartData?.length > 0 ? realChartData : generateCandleData(symbol, interval === '1wk' ? 250 : interval === '1mo' ? 60 : 500, currentPrice);
 
+  // Auto-adjust range when switching to intraday intervals
+  const handleIntervalChange = (newInterval: string) => {
+    setInterval(newInterval);
+    if (['1m', '5m', '15m'].includes(newInterval)) {
+      setRange(getDefaultRange(newInterval));
+    }
+  };
+
   useEffect(() => {
     if (chartRef.current && chartData.length > 0) renderChart();
     return () => { if (chartInstanceRef.current) { try { chartInstanceRef.current.remove(); } catch {} } };
-  }, [symbol, interval, range, indicators, chartData]);
+  }, [symbol, interval, range, indicators, chartData, dataUpdatedAt]);
 
   const renderChart = async () => {
     if (chartInstanceRef.current) { try { chartInstanceRef.current.remove(); } catch {} }
