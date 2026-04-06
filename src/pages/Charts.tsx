@@ -3,15 +3,40 @@ import { useParams, Link } from 'react-router-dom';
 import { getStock, getAllStocks, generateCandleData } from '@/data/mockData';
 import { useStockQuote, useStockChart } from '@/hooks/useStockData';
 import { formatCurrency, formatPercent } from '@/utils/format';
+import { isMarketHours } from '@/utils/marketHours';
 
 const POPULAR = ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK', 'SBIN', 'BAJFINANCE', 'ITC', 'TATAMOTORS', 'SUNPHARMA', 'LT', 'MARUTI', 'TITAN', 'ADANIENT', 'WIPRO'];
 const INTERVALS = [
+  { key: '1m', label: '1m' }, { key: '5m', label: '5m' }, { key: '15m', label: '15m' },
   { key: '1d', label: 'D' }, { key: '1wk', label: 'W' }, { key: '1mo', label: 'M' },
 ];
 const RANGES = [
+  { key: '1d', label: '1D' }, { key: '5d', label: '5D' },
   { key: '1mo', label: '1M' }, { key: '3mo', label: '3M' }, { key: '6mo', label: '6M' },
   { key: '1y', label: '1Y' }, { key: '2y', label: '2Y' }, { key: '5y', label: '5Y' }, { key: 'max', label: 'MAX' },
 ];
+
+// Auto-select appropriate range when interval changes
+function getDefaultRange(interval: string): string {
+  switch (interval) {
+    case '1m': return '1d';
+    case '5m': return '5d';
+    case '15m': return '5d';
+    default: return '1y';
+  }
+}
+
+// Determine refresh interval based on chart interval and market state
+function getRefreshInterval(interval: string, marketOpen: boolean): number | false {
+  if (!marketOpen) return false;
+  switch (interval) {
+    case '1m': return 15_000;   // 15s
+    case '5m': return 30_000;   // 30s
+    case '15m': return 60_000;  // 1min
+    case '1d': return 60_000;   // 1min
+    default: return false;
+  }
+}
 
 export default function Charts() {
   const { symbol: paramSymbol } = useParams();
@@ -23,21 +48,35 @@ export default function Charts() {
   const [indicators, setIndicators] = useState({ sma20: true, sma50: true, ema20: false, volume: true, bollinger: false });
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
+  const marketOpen = isMarketHours();
+
+  const refreshInterval = getRefreshInterval(interval, marketOpen);
 
   // Real data
   const { data: quoteData } = useStockQuote(symbol);
-  const { data: realChartData, isLoading: chartLoading } = useStockChart(symbol, interval, range);
+  const { data: realChartData, isLoading: chartLoading, dataUpdatedAt } = useStockChart(symbol, interval, range, {
+    refetchInterval: refreshInterval,
+  });
 
   // Fallback
   const mockStock = getStock(symbol);
   const info = quoteData || mockStock || { ltp: 0, change_pct: 0, name: symbol };
   const currentPrice = (info as any).ltp || undefined;
+  const isIntraday = ['1m', '5m', '15m'].includes(interval);
   const chartData = realChartData?.length > 0 ? realChartData : generateCandleData(symbol, interval === '1wk' ? 250 : interval === '1mo' ? 60 : 500, currentPrice);
+
+  // Auto-adjust range when switching to intraday intervals
+  const handleIntervalChange = (newInterval: string) => {
+    setInterval(newInterval);
+    if (['1m', '5m', '15m'].includes(newInterval)) {
+      setRange(getDefaultRange(newInterval));
+    }
+  };
 
   useEffect(() => {
     if (chartRef.current && chartData.length > 0) renderChart();
     return () => { if (chartInstanceRef.current) { try { chartInstanceRef.current.remove(); } catch {} } };
-  }, [symbol, interval, range, indicators, chartData]);
+  }, [symbol, interval, range, indicators, chartData, dataUpdatedAt]);
 
   const renderChart = async () => {
     if (chartInstanceRef.current) { try { chartInstanceRef.current.remove(); } catch {} }
@@ -55,16 +94,22 @@ export default function Charts() {
         handleScroll: { vertTouchDrag: false },
       });
 
+      // For intraday, convert epoch timestamps to proper format
+      const processedData = isIntraday ? chartData.map((c: any) => ({
+        ...c,
+        time: typeof c.time === 'number' ? c.time : Math.floor(new Date(c.time).getTime() / 1000),
+      })) : chartData;
+
       const candleSeries = chart.addSeries(CandlestickSeries, {
         upColor: '#00d68f', downColor: '#ff4757', borderUpColor: '#00d68f', borderDownColor: '#ff4757',
         wickUpColor: '#00d68f80', wickDownColor: '#ff475780',
       });
-      candleSeries.setData(chartData);
+      candleSeries.setData(processedData);
 
       if (indicators.volume) {
         const vs = chart.addSeries(HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'volume' });
         chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
-        vs.setData(chartData.map((c: any) => ({ time: c.time, value: c.volume, color: c.close >= c.open ? '#00d68f12' : '#ff475712' })));
+        vs.setData(processedData.map((c: any) => ({ time: c.time, value: c.volume, color: c.close >= c.open ? '#00d68f12' : '#ff475712' })));
       }
 
       const addSMA = (period: number, color: string, enabled: boolean) => {
@@ -148,6 +193,7 @@ export default function Charts() {
                   {formatPercent((info as any).change_pct)}
                 </span>
                 {chartLoading && <span className="text-[8px] text-terminal-amber animate-pulse">● LOADING...</span>}
+                {refreshInterval && marketOpen && <span className="text-[8px] text-primary animate-pulse ml-1">● LIVE</span>}
               </div>
               <p className="text-[9px] text-muted-foreground">{(info as any).name} | NSE</p>
             </div>
@@ -173,7 +219,7 @@ export default function Charts() {
           {/* Interval selector */}
           <div className="flex gap-0.5 bg-background rounded p-0.5">
             {INTERVALS.map(i => (
-              <button key={i.key} onClick={() => setInterval(i.key)}
+              <button key={i.key} onClick={() => handleIntervalChange(i.key)}
                 className={`px-2 py-0.5 rounded text-[9px] font-semibold ${interval === i.key ? 'bg-terminal-blue/15 text-terminal-blue' : 'text-muted-foreground hover:text-foreground'}`}>
                 {i.label}
               </button>

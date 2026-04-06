@@ -102,11 +102,12 @@ async function getChart(symbol: string, interval = "1d", range = "1y") {
   const timestamps = result.timestamp || [];
   const q = result.indicators?.quote?.[0] || {};
   const candles = [];
+  const isIntraday = ["1m", "2m", "5m", "15m", "30m", "60m", "90m"].includes(interval);
 
   for (let i = 0; i < timestamps.length; i++) {
     if (q.open?.[i] == null) continue;
     candles.push({
-      time: new Date(timestamps[i] * 1000).toISOString().split("T")[0],
+      time: isIntraday ? timestamps[i] : new Date(timestamps[i] * 1000).toISOString().split("T")[0],
       open: round(q.open[i]), high: round(q.high[i]),
       low: round(q.low[i]), close: round(q.close[i]),
       volume: q.volume?.[i] || 0,
