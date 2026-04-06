@@ -94,6 +94,12 @@ export default function Charts() {
         handleScroll: { vertTouchDrag: false },
       });
 
+      // For intraday, convert epoch timestamps to proper format
+      const processedData = isIntraday ? chartData.map((c: any) => ({
+        ...c,
+        time: typeof c.time === 'number' ? c.time : Math.floor(new Date(c.time).getTime() / 1000),
+      })) : chartData;
+
       const candleSeries = chart.addSeries(CandlestickSeries, {
         upColor: '#00d68f', downColor: '#ff4757', borderUpColor: '#00d68f', borderDownColor: '#ff4757',
         wickUpColor: '#00d68f80', wickDownColor: '#ff475780',
