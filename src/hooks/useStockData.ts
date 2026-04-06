@@ -11,12 +11,13 @@ export function useStockQuote(symbol: string) {
   });
 }
 
-export function useStockChart(symbol: string, interval = "1d", range = "1y") {
+export function useStockChart(symbol: string, interval = "1d", range = "1y", options: { refetchInterval?: number | false } = {}) {
   return useQuery({
     queryKey: ["stock-chart", symbol, interval, range],
     queryFn: () => stockApi.getChart(symbol, interval, range),
     enabled: !!symbol,
-    staleTime: 60_000,
+    staleTime: options.refetchInterval ? (options.refetchInterval as number) / 2 : 60_000,
+    refetchInterval: options.refetchInterval || undefined,
     retry: 2,
   });
 }
