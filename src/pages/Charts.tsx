@@ -109,7 +109,7 @@ export default function Charts() {
       if (indicators.volume) {
         const vs = chart.addSeries(HistogramSeries, { priceFormat: { type: 'volume' }, priceScaleId: 'volume' });
         chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
-        vs.setData(chartData.map((c: any) => ({ time: c.time, value: c.volume, color: c.close >= c.open ? '#00d68f12' : '#ff475712' })));
+        vs.setData(processedData.map((c: any) => ({ time: c.time, value: c.volume, color: c.close >= c.open ? '#00d68f12' : '#ff475712' })));
       }
 
       const addSMA = (period: number, color: string, enabled: boolean) => {
